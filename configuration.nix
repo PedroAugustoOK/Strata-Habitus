@@ -59,6 +59,8 @@
     playerctl
     hyprlock
     hypridle
+    pipewire
+    wireplumber
   ];
 
   # Hyprland
@@ -100,6 +102,16 @@
     image    = ./wallpaper.jpg;
     polarity = "dark";
   };
+
+  # Audio
+security.rtkit.enable = true;
+services.pipewire = {
+  enable            = true;
+  alsa.enable       = true;
+  alsa.support32Bit = true;
+  pulse.enable      = true;
+  wireplumber.enable = true;
+};
 
   system.stateVersion = "25.11";
 }

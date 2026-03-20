@@ -1,5 +1,5 @@
 {
-  descroiption = "dotfiles do ankh"
+  description = "dotfiles do ankh";
 
   inputs = {
    nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
@@ -15,9 +15,9 @@
     modules = [
      ./configuration.nix
      home-manager.nixosModules.home-manager {
-     home-manager.useGlobalpkgs    = true;
+     home-manager.useGlobalPkgs    = true;
      home-manager.useUserPackages  = true;
-     home-manager.users.ankh       = import ./home.nix
+     home-manager.users.ankh       = import ./home.nix;
     }
    ];
   };

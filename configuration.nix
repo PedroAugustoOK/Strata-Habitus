@@ -68,6 +68,7 @@
     git wget curl neovim
     networkmanager
     kitty
+    chromium
   ];
 
   # Some programs need SUID wrappers, can be configured further or are

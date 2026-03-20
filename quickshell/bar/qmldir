@@ -1,0 +1,5 @@
+module bar
+Bar 1.0 Bar.qml
+Workspaces 1.0 Workspaces.qml
+Clock 1.0 Clock.qml
+StatusRight 1.0 StatusRight.qml

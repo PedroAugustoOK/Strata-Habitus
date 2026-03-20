@@ -69,6 +69,7 @@
     networkmanager
     kitty
     chromium
+    grimblast
   ];
 
   # Some programs need SUID wrappers, can be configured further or are

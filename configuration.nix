@@ -62,8 +62,6 @@
     pipewire
     wireplumber
     blueman
-    qt6ct
-    libsForQt5.qt5ct
   ];
 
   # Hyprland
@@ -106,11 +104,6 @@
     polarity = "dark";
   };
  
-  environment.sessionVariables = {
-  QT_STYLE_OVERRIDE = "kvantum";
-  QT_QPA_PLATFORMTHEME = "qt6ct";
- };
-
   # Audio
 security.rtkit.enable = true;
 services.pipewire = {

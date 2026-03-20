@@ -62,6 +62,7 @@
     pipewire
     wireplumber
     blueman
+    libnotify
   ];
 
   # Hyprland

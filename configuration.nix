@@ -94,6 +94,22 @@
   # this value at the release version of the first install of this system.
   # Before changing this value read the documentation for this option
   # (e.g. man configuration.nix or on https://nixos.org/nixos/options.html).
+  
+  #Hyprland
+  programs.hyprland.enable = true;
+  programs.hyprland.xwayland.enable = true;
+  #Portais Wayland
+  xdg.portal.enable = true;
+  xdg.portal.extraPortals = [ pkgs.xdg-desktop-portal-hyprland ];
+  #login
+  services.greetd = {
+    enable = true;
+    settings.default_session = {
+      command = "${pkgs.greetd.tuigreet}/bin/tuigreet --time --cmd Hyprland";
+      user    = "greeter";
+    };
+  };
+
   system.stateVersion = "25.11"; # Did you read the comment?
 
   #CLAUDE

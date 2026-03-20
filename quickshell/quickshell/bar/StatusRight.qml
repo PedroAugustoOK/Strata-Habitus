@@ -5,6 +5,16 @@ import QtQuick.Layouts
 RowLayout {
   spacing: 12
 
+  // ── Rede ──────────────────────────────────────────────────
+  Text {
+    id: netLabel
+    color: "#666"
+    font.pixelSize: 11
+    font.family: "JetBrainsMono Nerd Font"
+    text: "󰤭"
+  }
+
+  // ── Volume ─────────────────────────────────────────────────
   Text {
     id: volLabel
     color: "#666"
@@ -13,6 +23,7 @@ RowLayout {
     text: "󰕾 –"
   }
 
+  // ── Bateria ────────────────────────────────────────────────
   Text {
     id: batLabel
     color: "#666"
@@ -21,6 +32,7 @@ RowLayout {
     text: "󰁹 –"
   }
 
+  // ── Processos ──────────────────────────────────────────────
   Process {
     id: volProc
     command: ["sh", "-c", "/run/current-system/sw/bin/wpctl get-volume @DEFAULT_AUDIO_SINK@ | awk '{printf \"%d\", $2*100}'"]
@@ -37,6 +49,15 @@ RowLayout {
     }
   }
 
+  Process {
+    id: netProc
+    command: ["sh", "-c", "/run/current-system/sw/bin/nmcli -t -f active,signal,ssid dev wifi 2>/dev/null | grep '^yes' | awk -F: '{s=$2; i=(s>75?\"󰤨\":s>50?\"󰤥\":s>25?\"󰤢\":\"󰤟\"); print i\" \"$3}'"]
+    stdout: SplitParser {
+      onRead: data => netLabel.text = data.trim() === "" ? "󰤭" : data.trim()
+    }
+  }
+
+  // ── Timers ─────────────────────────────────────────────────
   Timer {
     interval: 500; running: true; repeat: true; triggeredOnStart: true
     onTriggered: volProc.running = true
@@ -45,5 +66,10 @@ RowLayout {
   Timer {
     interval: 30000; running: true; repeat: true; triggeredOnStart: true
     onTriggered: batProc.running = true
+  }
+
+  Timer {
+    interval: 10000; running: true; repeat: true; triggeredOnStart: true
+    onTriggered: netProc.running = true
   }
 }

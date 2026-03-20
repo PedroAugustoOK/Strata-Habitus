@@ -113,6 +113,11 @@
     };
   };
 
+  fonts.packages = with pkgs; [
+  nerd-fonts.jetbrains-mono
+  inter
+ ];
+
   system.stateVersion = "25.11"; # Did you read the comment?
 
   #CLAUDE

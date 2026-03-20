@@ -12,9 +12,9 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
     ags = {
-      url = "github:aylur/ags/v1";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
+  url = "github:aylur/ags";
+  inputs.nixpkgs.follows = "nixpkgs";
+   };
   };
 
   outputs = { self, nixpkgs, home-manager, stylix, ags, ... }: {

@@ -102,6 +102,7 @@
     enable   = true;
     image    = ./wallpaper.jpg;
     polarity = "dark";
+    stylix.targets.qt.enable = false;
   };
 
   # Audio

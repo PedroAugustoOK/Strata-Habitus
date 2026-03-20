@@ -61,6 +61,7 @@
     hypridle
     pipewire
     wireplumber
+    blueman
   ];
 
   # Hyprland
@@ -112,6 +113,11 @@ services.pipewire = {
   pulse.enable      = true;
   wireplumber.enable = true;
 };
+
+  # Bluetooth
+hardware.bluetooth.enable      = true;
+hardware.bluetooth.powerOnBoot = true;
+services.blueman.enable        = true;
 
   system.stateVersion = "25.11";
 }

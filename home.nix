@@ -1,4 +1,4 @@
-{ config, pkgs, ags, ... }:
+{ config, pkgs, ... }:
 
 {
   home.username      = "ankh";
@@ -6,8 +6,4 @@
   home.stateVersion  = "25.11";
 
   programs.home-manager.enable = true;
-
-  home.packages = [
-    ags.packages.${pkgs.system}.default
-  ];
 }

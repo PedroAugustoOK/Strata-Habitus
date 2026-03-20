@@ -70,6 +70,7 @@
     kitty
     chromium
     grimblast
+    quickshell
   ];
 
   # Some programs need SUID wrappers, can be configured further or are
@@ -122,10 +123,12 @@
 
   #CLAUDE
   nix.settings.experimental-features = [ "nix-command" "flakes" ];
-  hardware.opengl.enable = true;
-  hardware.opengl.extraPackages = with pkgs; [
+   hardware.graphics.enable = true;
+   hardware.graphics.extraPackages = with pkgs; [
     intel-media-driver
     intel-vaapi-driver
+   ];
+ 
 ];
 
 stylix = {

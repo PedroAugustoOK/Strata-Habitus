@@ -3,13 +3,14 @@ import Quickshell.Wayland
 import Quickshell.Io
 import QtQuick
 import QtQuick.Layouts
+import ".."
 
 PanelWindow {
   id: launcher
   visible: false
   anchors { top: true; bottom: true; left: true; right: true }
   exclusionMode: ExclusionMode.Ignore
-  WlrLayershell.keyboardFocus: visible ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
+  focusable: true
   color: "transparent"
 
   property var results: []
@@ -50,14 +51,13 @@ PanelWindow {
   }
 
   Rectangle {
-    id: box
     width: 480
     height: contentCol.implicitHeight + 24
     anchors.centerIn: parent
     anchors.verticalCenterOffset: -80
     radius: 12
-    color: "#111113"
-    border.color: "#ffffff10"
+    color: Colors.bg1
+    border.color: Colors.border
     border.width: 1
 
     MouseArea { anchors.fill: parent }
@@ -72,29 +72,26 @@ PanelWindow {
         width: parent.width
         height: 40
         radius: 8
-        color: "#0d0d0f"
-        border.color: "#cf9fff33"
+        color: Colors.bg0
+        border.color: Qt.rgba(Colors.accent.r, Colors.accent.g, Colors.accent.b, 0.3)
         border.width: 1
 
         RowLayout {
           anchors { fill: parent; leftMargin: 12; rightMargin: 12 }
           spacing: 8
-
           Text {
             text: "󰍉"
-            color: "#555"
+            color: Colors.text3
             font.pixelSize: 14
             font.family: "JetBrainsMono Nerd Font"
           }
-
           TextInput {
             id: searchInput
             Layout.fillWidth: true
-            color: "#e0e0e0"
+            color: Colors.text1
             font.pixelSize: 13
             font.family: "JetBrainsMono Nerd Font"
             cursorVisible: true
-
             Keys.onReturnPressed: launcher.launch()
             Keys.onEscapePressed: launcher.close()
             Keys.onUpPressed:   launcher.selected = Math.max(0, launcher.selected - 1)
@@ -117,8 +114,10 @@ PanelWindow {
             width: parent.width
             height: 36
             radius: 6
-            color: launcher.selected === index ? "#1e1a2e" : "transparent"
-            border.color: launcher.selected === index ? "#cf9fff33" : "transparent"
+            color: launcher.selected === index ? Colors.accentDim : "transparent"
+            border.color: launcher.selected === index
+              ? Qt.rgba(Colors.accent.r, Colors.accent.g, Colors.accent.b, 0.2)
+              : "transparent"
             border.width: 1
 
             RowLayout {
@@ -126,13 +125,13 @@ PanelWindow {
               spacing: 10
               Text {
                 text: "󰘔"
-                color: launcher.selected === index ? "#cf9fff" : "#444"
+                color: launcher.selected === index ? Colors.accent : Colors.text3
                 font.pixelSize: 12
                 font.family: "JetBrainsMono Nerd Font"
               }
               Text {
                 text: modelData
-                color: launcher.selected === index ? "#e0e0e0" : "#888"
+                color: launcher.selected === index ? Colors.text0 : Colors.text3
                 font.pixelSize: 12
                 font.family: "JetBrainsMono Nerd Font"
               }

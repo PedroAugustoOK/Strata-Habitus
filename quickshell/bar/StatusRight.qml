@@ -1,48 +1,44 @@
 import Quickshell.Io
 import QtQuick
 import QtQuick.Layouts
+import ".."
 
 RowLayout {
   spacing: 12
 
-  // ── Bluetooth ──────────────────────────────────────────────
   Text {
     id: btLabel
-    color: "#666"
+    color: Colors.accent
     font.pixelSize: 11
     font.family: "JetBrainsMono Nerd Font"
     text: "󰂯"
     visible: false
   }
 
-  // ── Rede ───────────────────────────────────────────────────
   Text {
     id: netLabel
-    color: "#666"
+    color: Colors.text3
     font.pixelSize: 11
     font.family: "JetBrainsMono Nerd Font"
     text: "󰤭"
   }
 
-  // ── Volume ─────────────────────────────────────────────────
   Text {
     id: volLabel
-    color: "#666"
+    color: Colors.text3
     font.pixelSize: 11
     font.family: "JetBrainsMono Nerd Font"
     text: "󰕾 –"
   }
 
-  // ── Bateria ────────────────────────────────────────────────
   Text {
     id: batLabel
-    color: "#666"
+    color: Colors.text3
     font.pixelSize: 11
     font.family: "JetBrainsMono Nerd Font"
     text: "󰁹 –"
   }
 
-  // ── Processos ──────────────────────────────────────────────
   Process {
     id: volProc
     command: ["sh", "-c", "/run/current-system/sw/bin/wpctl get-volume @DEFAULT_AUDIO_SINK@ | awk '{printf \"%d\", $2*100}'"]
@@ -71,11 +67,7 @@ RowLayout {
     id: btProc
     command: ["sh", "-c", "/run/current-system/sw/bin/bluetoothctl show | grep -q 'Powered: yes' && echo 'on' || echo 'off'"]
     stdout: SplitParser {
-      onRead: data => {
-        const on = data.trim() === "on"
-        btLabel.visible = on
-        btLabel.text = "󰂯"
-      }
+      onRead: data => btLabel.visible = data.trim() === "on"
     }
   }
 
@@ -83,29 +75,20 @@ RowLayout {
     id: btConnProc
     command: ["sh", "-c", "/run/current-system/sw/bin/bluetoothctl info 2>/dev/null | grep -q 'Connected: yes' && echo 'connected' || echo 'off'"]
     stdout: SplitParser {
-      onRead: data => {
-        if (data.trim() === "connected") btLabel.text = "󰂱"
-      }
+      onRead: data => btLabel.text = data.trim() === "connected" ? "󰂱" : "󰂯"
     }
   }
 
-  // ── Timers ─────────────────────────────────────────────────
   Timer {
     interval: 500; running: true; repeat: true; triggeredOnStart: true
     onTriggered: volProc.running = true
   }
-
   Timer {
     interval: 30000; running: true; repeat: true; triggeredOnStart: true
     onTriggered: batProc.running = true
   }
-
   Timer {
     interval: 10000; running: true; repeat: true; triggeredOnStart: true
-    onTriggered: {
-      netProc.running = true
-      btProc.running = true
-      btConnProc.running = true
-    }
+    onTriggered: { netProc.running = true; btProc.running = true; btConnProc.running = true }
   }
 }

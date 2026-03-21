@@ -1,6 +1,7 @@
 import Quickshell.Hyprland
 import QtQuick
 import QtQuick.Layouts
+import ".."
 
 RowLayout {
   spacing: 0
@@ -26,7 +27,7 @@ RowLayout {
         width:  focused ? 18 : 6
         height: 6
         radius: 3
-        color:  focused ? "#cf9fff" : (occupied ? "#555" : "#2a2a2e")
+        color:  focused ? Colors.accent : (occupied ? "#555" : "#2a2a2e")
         Behavior on width { NumberAnimation { duration: 150; easing.type: Easing.OutCubic } }
         Behavior on color { ColorAnimation   { duration: 150 } }
       }

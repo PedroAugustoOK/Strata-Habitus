@@ -129,7 +129,7 @@ services.gvfs.enable = true;
 
 #Tema QT
 environment.sessionVariables = {
-  QT_STYLE_OVERRIDE = "adwaita-dark";
+  QT_WAYLAND_DISABLE_WINDOWDECORATION = "1";
 };
 
 qt = {

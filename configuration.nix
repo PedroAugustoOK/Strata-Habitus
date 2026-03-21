@@ -63,6 +63,8 @@
     wireplumber
     blueman
     libnotify
+    nautilus
+    gvfs
   ];
 
   # Hyprland
@@ -119,6 +121,9 @@ services.pipewire = {
 hardware.bluetooth.enable      = true;
 hardware.bluetooth.powerOnBoot = true;
 services.blueman.enable        = true;
+
+#Nautilus
+services.gvfs.enable = true;
 
   system.stateVersion = "25.11";
 }

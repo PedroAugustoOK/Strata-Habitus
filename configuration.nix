@@ -65,6 +65,8 @@
     libnotify
     nautilus
     gvfs
+    adwaita-qt
+    adwaita-qt6
   ];
 
   # Hyprland
@@ -124,6 +126,17 @@ services.blueman.enable        = true;
 
 #Nautilus
 services.gvfs.enable = true;
+
+#Tema QT
+environment.sessionVariables = {
+  QT_STYLE_OVERRIDE = "adwaita-dark";
+};
+
+qt = {
+  enable = true;
+  style = "adwaita-dark";
+  platformTheme = "gnome";
+};
 
   system.stateVersion = "25.11";
 }

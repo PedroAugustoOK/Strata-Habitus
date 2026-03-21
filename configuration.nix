@@ -1,4 +1,4 @@
-{ config, pkgs, ... }:
+{ config, pkgs, lib, ... }:
 
 {
   imports = [ ./hardware-configuration.nix ];
@@ -135,7 +135,7 @@ environment.sessionVariables = {
 qt = {
   enable = true;
   style = "adwaita-dark";
-  platformTheme = "gnome";
+  platformTheme = lib.mkForce "gnome";
 };
 
   system.stateVersion = "25.11";

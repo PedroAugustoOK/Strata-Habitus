@@ -1,5 +1,5 @@
 {
-  description = "dotfiles do ankh";
+  description = "strata";
 
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";

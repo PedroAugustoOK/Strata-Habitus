@@ -13,44 +13,127 @@ ShellRoot {
   Notifications {}
   OSD { id: osd }
 
+  readonly property int barH: 34
+  readonly property int brd: 10
+  readonly property int r: 12
+
   // Borda esquerda
   PanelWindow {
     anchors { top: true; left: true; bottom: true }
-    implicitWidth: 3
+    implicitWidth: brd + r
     color: "transparent"
     exclusionMode: ExclusionMode.Ignore
-    Rectangle {
-      anchors { top: parent.top; bottom: parent.bottom; right: parent.right }
-      anchors.topMargin: 34
-      width: 1
-      color: "#ffffff18"
+    Canvas {
+      anchors.fill: parent
+      Component.onCompleted: requestPaint()
+      onHeightChanged: requestPaint()
+      onPaint: {
+        const ctx = getContext("2d")
+        const bh = barH, b = brd, rv = r
+        ctx.clearRect(0, 0, width, height)
+        ctx.fillStyle = "#111113"
+        ctx.fillRect(0, bh, b, height - bh)
+        ctx.beginPath()
+        ctx.moveTo(b, bh)
+        ctx.lineTo(b, bh + rv)
+        ctx.arc(b + rv, bh + rv, rv, Math.PI, -Math.PI / 2, false)
+        ctx.lineTo(b, bh)
+        ctx.closePath()
+        ctx.fill()
+      }
     }
   }
 
   // Borda direita
   PanelWindow {
     anchors { top: true; right: true; bottom: true }
-    implicitWidth: 3
+    implicitWidth: brd + r
     color: "transparent"
     exclusionMode: ExclusionMode.Ignore
-    Rectangle {
-      anchors { top: parent.top; bottom: parent.bottom; left: parent.left }
-      anchors.topMargin: 34
-      width: 1
-      color: "#ffffff18"
+    Canvas {
+      anchors.fill: parent
+      Component.onCompleted: requestPaint()
+      onHeightChanged: requestPaint()
+      onPaint: {
+        const ctx = getContext("2d")
+        const bh = barH, b = brd, rv = r, w = width
+        ctx.clearRect(0, 0, w, height)
+        ctx.fillStyle = "#111113"
+        ctx.fillRect(rv, bh, b, height - bh)
+        ctx.beginPath()
+        ctx.moveTo(rv, bh)
+        ctx.lineTo(rv, bh + rv)
+        ctx.arc(0, bh + rv, rv, 0, -Math.PI / 2, true)
+        ctx.lineTo(rv, bh)
+        ctx.closePath()
+        ctx.fill()
+      }
     }
   }
 
   // Borda inferior
   PanelWindow {
     anchors { left: true; right: true; bottom: true }
-    implicitHeight: 3
+    implicitHeight: brd
+    color: "#111113"
+    exclusionMode: ExclusionMode.Ignore
+  }
+
+  // Canto inferior esquerdo
+  PanelWindow {
+    anchors { left: true; bottom: true }
+    implicitWidth: brd + r
+    implicitHeight: brd + r
     color: "transparent"
     exclusionMode: ExclusionMode.Ignore
-    Rectangle {
-      anchors { left: parent.left; right: parent.right; top: parent.top }
-      height: 1
-      color: "#ffffff18"
+    Canvas {
+      anchors.fill: parent
+      Component.onCompleted: requestPaint()
+      onPaint: {
+        const ctx = getContext("2d")
+        const b = brd, rv = r, h = height
+        ctx.clearRect(0, 0, width, h)
+        ctx.fillStyle = "#111113"
+        // Borda esquerda do canto
+        ctx.fillRect(0, 0, b, h - b)
+        // Borda inferior do canto
+        ctx.fillRect(b, h - b, rv, b)
+        // Arco convexo
+        ctx.beginPath()
+        ctx.moveTo(b, h - b)
+        ctx.arc(b + rv, h - b - rv, rv, Math.PI / 2, Math.PI, false)
+        ctx.closePath()
+        ctx.fill()
+      }
+    }
+  }
+
+  // Canto inferior direito
+  PanelWindow {
+    anchors { right: true; bottom: true }
+    implicitWidth: brd + r
+    implicitHeight: brd + r
+    color: "transparent"
+    exclusionMode: ExclusionMode.Ignore
+    Canvas {
+      anchors.fill: parent
+      Component.onCompleted: requestPaint()
+      onPaint: {
+        const ctx = getContext("2d")
+        const b = brd, rv = r, w = width, h = height
+        ctx.clearRect(0, 0, w, h)
+        ctx.fillStyle = "#111113"
+        // Borda direita do canto
+        ctx.fillRect(rv, 0, b, h - b)
+        // Borda inferior do canto
+        ctx.fillRect(0, h - b, rv, b)
+        // Arco convexo
+        ctx.beginPath()
+        ctx.moveTo(rv, h - b)
+        ctx.arc(rv - rv, h - b - rv, rv, Math.PI / 2, 0, true)
+        ctx.closePath()
+        ctx.fill()
+      }
     }
   }
 

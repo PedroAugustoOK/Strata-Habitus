@@ -67,11 +67,15 @@
     gvfs
     adwaita-qt
     adwaita-qt6
+    papirus-icon-theme
   ];
 
   # Hyprland
   programs.hyprland.enable        = true;
   programs.hyprland.xwayland.enable = true;
+
+  #Nautilus
+  programs.dconf.enable = true;
 
   # Portais Wayland
   xdg.portal.enable        = true;

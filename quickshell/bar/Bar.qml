@@ -14,10 +14,22 @@ PanelWindow {
   RowLayout {
     anchors { fill: parent; leftMargin: 14; rightMargin: 14 }
     spacing: 0
+
+    // esquerda: workspaces
     Workspaces {}
+
     Item { Layout.fillWidth: true }
-    Clock {}
+
+    // centro: janela ativa
+    ActiveWindow {}
+
     Item { Layout.fillWidth: true }
+
+    // direita: status + relógio
     StatusRight {}
+
+    Item { width: 14 }
+
+    Clock {}
   }
 }

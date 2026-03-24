@@ -11,25 +11,22 @@ PanelWindow {
   exclusiveZone: 34
   color: "#111113"
 
-  RowLayout {
-    anchors { fill: parent; leftMargin: 14; rightMargin: 14 }
-    spacing: 0
+  // esquerda: janela ativa
+  ActiveWindow {
+    anchors { left: parent.left; leftMargin: 14; verticalCenter: parent.verticalCenter }
+  }
 
-    // esquerda: workspaces
-    Workspaces {}
+  // centro absoluto: workspaces
+  Workspaces {
+    anchors.centerIn: parent
+  }
 
-    Item { Layout.fillWidth: true }
+  // direita: status + relógio
+  Row {
+    anchors { right: parent.right; rightMargin: 14; verticalCenter: parent.verticalCenter }
+    spacing: 16
 
-    // centro: janela ativa
-    ActiveWindow {}
-
-    Item { Layout.fillWidth: true }
-
-    // direita: status + relógio
     StatusRight {}
-
-    Item { width: 14 }
-
     Clock {}
   }
 }

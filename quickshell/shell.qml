@@ -6,12 +6,14 @@ import "bar"
 import "launcher"
 import "notifications"
 import "osd"
+import "controlcenter"
 
 ShellRoot {
   Bar {}
   Launcher { id: launcher }
   Notifications {}
   OSD { id: osd }
+  ControlCenter { id: controlCenter }
 
   readonly property int barH: 34
   readonly property int brd: 10
@@ -94,11 +96,8 @@ ShellRoot {
         const b = brd, rv = r, h = height
         ctx.clearRect(0, 0, width, h)
         ctx.fillStyle = "#111113"
-        // Borda esquerda do canto
         ctx.fillRect(0, 0, b, h - b)
-        // Borda inferior do canto
         ctx.fillRect(b, h - b, rv, b)
-        // Arco convexo
         ctx.beginPath()
         ctx.moveTo(b, h - b)
         ctx.arc(b + rv, h - b - rv, rv, Math.PI / 2, Math.PI, false)
@@ -123,11 +122,8 @@ ShellRoot {
         const b = brd, rv = r, w = width, h = height
         ctx.clearRect(0, 0, w, h)
         ctx.fillStyle = "#111113"
-        // Borda direita do canto
         ctx.fillRect(rv, 0, b, h - b)
-        // Borda inferior do canto
         ctx.fillRect(0, h - b, rv, b)
-        // Arco convexo
         ctx.beginPath()
         ctx.moveTo(rv, h - b)
         ctx.arc(rv - rv, h - b - rv, rv, Math.PI / 2, 0, true)
@@ -140,5 +136,10 @@ ShellRoot {
   IpcHandler {
     target: "launcher"
     function toggle(): void { launcher.toggle() }
+  }
+
+  IpcHandler {
+    target: "controlcenter"
+    function toggle(): void { controlCenter.toggle() }
   }
 }

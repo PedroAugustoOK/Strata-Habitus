@@ -4,38 +4,47 @@ import QtQuick.Layouts
 import ".."
 
 RowLayout {
-  spacing: 12
+  spacing: 14
 
+  // WiFi + BT clicáveis para abrir CC
   Text {
     id: btLabel
     color: Colors.accent
-    font.pixelSize: 11
-    font.family: "JetBrainsMono Nerd Font"
+    font { pixelSize: 12; family: "JetBrainsMono Nerd Font" }
     text: "󰂯"
     visible: false
+
+    MouseArea {
+      anchors.fill: parent
+      cursorShape: Qt.PointingHandCursor
+      onClicked: ccToggle.running = true
+    }
   }
 
   Text {
     id: netLabel
-    color: Colors.text3
-    font.pixelSize: 11
-    font.family: "JetBrainsMono Nerd Font"
-    text: "󰤭"
+    color: "#aaaaaa"
+    font { pixelSize: 12; family: "JetBrainsMono Nerd Font" }
+    text: "󱚽"
+
+    MouseArea {
+      anchors.fill: parent
+      cursorShape: Qt.PointingHandCursor
+      onClicked: ccToggle.running = true
+    }
   }
 
   Text {
     id: volLabel
-    color: Colors.text3
-    font.pixelSize: 11
-    font.family: "JetBrainsMono Nerd Font"
+    color: "#aaaaaa"
+    font { pixelSize: 12; family: "JetBrainsMono Nerd Font" }
     text: "󰕾 –"
   }
 
   Text {
     id: batLabel
-    color: Colors.text3
-    font.pixelSize: 11
-    font.family: "JetBrainsMono Nerd Font"
+    color: "#aaaaaa"
+    font { pixelSize: 12; family: "JetBrainsMono Nerd Font" }
     text: "󰁹 –"
   }
 
@@ -57,9 +66,9 @@ RowLayout {
 
   Process {
     id: netProc
-    command: ["sh", "-c", "/run/current-system/sw/bin/nmcli -t -f active,signal,ssid dev wifi 2>/dev/null | grep '^yes' | awk -F: '{s=$2; i=(s>75?\"󰤨\":s>50?\"󰤥\":s>25?\"󰤢\":\"󰤟\"); print i\" \"$3}'"]
+    command: ["sh", "-c", "/run/current-system/sw/bin/nmcli -t -f active,signal,ssid dev wifi 2>/dev/null | grep '^yes' | awk -F: '{s=$2; i=(s>75?\"󱚽\":s>50?\"󱚿\":s>25?\"󱛀\":\"󱛁\"); print i\" \"$3}'"]
     stdout: SplitParser {
-      onRead: data => netLabel.text = data.trim() === "" ? "󰤭" : data.trim()
+      onRead: data => netLabel.text = data.trim() === "" ? "󱚽" : data.trim()
     }
   }
 
@@ -83,12 +92,21 @@ RowLayout {
     interval: 500; running: true; repeat: true; triggeredOnStart: true
     onTriggered: volProc.running = true
   }
+
   Timer {
     interval: 30000; running: true; repeat: true; triggeredOnStart: true
     onTriggered: batProc.running = true
   }
+
   Timer {
     interval: 10000; running: true; repeat: true; triggeredOnStart: true
     onTriggered: { netProc.running = true; btProc.running = true; btConnProc.running = true }
   }
+
+  Process {
+    id: ccToggle
+    command: ["quickshell", "ipc", "call", "controlcenter", "toggle"]
+  }
+
 }
+

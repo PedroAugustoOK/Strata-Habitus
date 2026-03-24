@@ -3,17 +3,22 @@ import Quickshell.Wayland
 import Quickshell.Io
 import QtQuick
 import QtQuick.Layouts
+import QtQuick.Shapes
 import ".."
 
 PanelWindow {
   id: launcher
-  visible: false
-  anchors { top: true; bottom: true; left: true; right: true }
+  anchors { bottom: true; left: true; right: true }
+  implicitHeight: visible ? mainCol.implicitHeight + brd : 0
+  color: "transparent"
   exclusionMode: ExclusionMode.Ignore
   focusable: true
-  color: "transparent"
+  visible: false
 
+  readonly property int brd: 10
   property var results: []
+  property var execs: []
+  property var icons: []
   property int selected: 0
 
   function toggle() {
@@ -26,14 +31,16 @@ PanelWindow {
 
   function search(q) {
     results = []
+    execs = []
+    icons = []
     if (q.length === 0) return
-    searchProc.command = ["sh", "-c", `compgen -c | sort -u | grep -i '${q}' | head -8`]
+    searchProc.command = ["sh", "-c", `~/.config/quickshell/scripts/search-apps.sh '${q}'`]
     searchProc.running = true
   }
 
   function launch() {
     if (results.length === 0) return
-    runProc.command = ["sh", "-c", results[selected] + " &"]
+    runProc.command = ["sh", "-c", execs[selected] + " &"]
     runProc.running = true
     close()
   }
@@ -42,6 +49,8 @@ PanelWindow {
     visible = false
     searchInput.text = ""
     results = []
+    execs = []
+    icons = []
     selected = 0
   }
 
@@ -50,97 +59,120 @@ PanelWindow {
     onClicked: launcher.close()
   }
 
-  Rectangle {
-    width: 480
-    height: contentCol.implicitHeight + 24
-    anchors.centerIn: parent
-    anchors.verticalCenterOffset: -80
-    radius: 12
-    color: Colors.bg1
-    border.color: Colors.border
-    border.width: 1
+  Item {
+    id: mainCol
+    anchors {
+      bottom: parent.bottom
+      bottomMargin: brd
+      horizontalCenter: parent.horizontalCenter
+    }
+    width: 520
+    implicitHeight: resultsList.implicitHeight + (results.length > 0 ? 8 : 0) + searchBox.height + 8
 
     MouseArea { anchors.fill: parent }
 
+    Shape {
+      anchors.fill: parent
+      layer.enabled: true
+      layer.smooth: true
+      preferredRendererType: Shape.CurveRenderer
+      ShapePath {
+        strokeWidth: 0
+        fillColor: Colors.bg1
+        readonly property real r: 14
+        startX: 0; startY: mainCol.implicitHeight
+        PathLine { x: 0; y: r }
+        PathArc { x: r; y: 0; radiusX: r; radiusY: r }
+        PathLine { x: mainCol.width - r; y: 0 }
+        PathArc { x: mainCol.width; y: r; radiusX: r; radiusY: r }
+        PathLine { x: mainCol.width; y: mainCol.implicitHeight }
+        PathLine { x: 0; y: mainCol.implicitHeight }
+      }
+    }
+
     Column {
-      id: contentCol
-      anchors { left: parent.left; right: parent.right; top: parent.top }
-      anchors.margins: 12
-      spacing: 6
+      id: resultsList
+      anchors { bottom: searchBox.top; left: parent.left; right: parent.right }
+      anchors.bottomMargin: 8
+      anchors.leftMargin: 8
+      anchors.rightMargin: 8
+      anchors.topMargin: 8
+      spacing: 2
+      visible: launcher.results.length > 0
 
-      Rectangle {
-        width: parent.width
-        height: 40
-        radius: 8
-        color: Colors.bg0
-        border.color: Qt.rgba(Colors.accent.r, Colors.accent.g, Colors.accent.b, 0.3)
-        border.width: 1
+      Repeater {
+        model: launcher.results
+        delegate: Rectangle {
+          required property string modelData
+          required property int index
+          width: parent.width
+          height: 40
+          radius: 8
+          color: launcher.selected === index ? Colors.accentDim : "transparent"
+          border.color: launcher.selected === index
+            ? Qt.rgba(Colors.accent.r, Colors.accent.g, Colors.accent.b, 0.25)
+            : "transparent"
+          border.width: 1
 
-        RowLayout {
-          anchors { fill: parent; leftMargin: 12; rightMargin: 12 }
-          spacing: 8
-          Text {
-            text: "󰍉"
-            color: Colors.text3
-            font.pixelSize: 14
-            font.family: "JetBrainsMono Nerd Font"
+          RowLayout {
+            anchors { fill: parent; leftMargin: 10; rightMargin: 12 }
+            spacing: 10
+
+            // Ícone
+            Image {
+              source: launcher.icons[index] || ""
+              width: 22
+              height: 26
+              fillMode: Image.PreserveAspectFit
+              Layout.preferredWidth: 26
+              Layout.preferredHeight: 26
+              smooth: true
+              visible: source !== ""
+            }
+
+            Text {
+              text: modelData
+              color: launcher.selected === index ? Colors.text0 : Colors.text2
+              font.pixelSize: 13
+              font.family: "JetBrainsMono Nerd Font"
+              Layout.fillWidth: true
+            }
           }
-          TextInput {
-            id: searchInput
-            Layout.fillWidth: true
-            color: Colors.text1
-            font.pixelSize: 13
-            font.family: "JetBrainsMono Nerd Font"
-            cursorVisible: true
-            Keys.onReturnPressed: launcher.launch()
-            Keys.onEscapePressed: launcher.close()
-            Keys.onUpPressed:   launcher.selected = Math.max(0, launcher.selected - 1)
-            Keys.onDownPressed: launcher.selected = Math.min(launcher.results.length - 1, launcher.selected + 1)
-            onTextChanged: launcher.search(text)
+          MouseArea {
+            anchors.fill: parent
+            onClicked: { launcher.selected = index; launcher.launch() }
           }
         }
       }
+    }
 
-      Column {
-        width: parent.width
-        spacing: 2
-        visible: launcher.results.length > 0
+    Rectangle {
+      id: searchBox
+      anchors { bottom: parent.bottom; left: parent.left; right: parent.right }
+      height: 48
+      color: "transparent"
 
-        Repeater {
-          model: launcher.results
-          delegate: Rectangle {
-            required property string modelData
-            required property int index
-            width: parent.width
-            height: 36
-            radius: 6
-            color: launcher.selected === index ? Colors.accentDim : "transparent"
-            border.color: launcher.selected === index
-              ? Qt.rgba(Colors.accent.r, Colors.accent.g, Colors.accent.b, 0.2)
-              : "transparent"
-            border.width: 1
-
-            RowLayout {
-              anchors { fill: parent; leftMargin: 10; rightMargin: 10 }
-              spacing: 10
-              Text {
-                text: "󰘔"
-                color: launcher.selected === index ? Colors.accent : Colors.text3
-                font.pixelSize: 12
-                font.family: "JetBrainsMono Nerd Font"
-              }
-              Text {
-                text: modelData
-                color: launcher.selected === index ? Colors.text0 : Colors.text3
-                font.pixelSize: 12
-                font.family: "JetBrainsMono Nerd Font"
-              }
-            }
-            MouseArea {
-              anchors.fill: parent
-              onClicked: { launcher.selected = index; launcher.launch() }
-            }
-          }
+      RowLayout {
+        anchors { fill: parent; leftMargin: 16; rightMargin: 16 }
+        spacing: 10
+        Text {
+          text: "󰍉"
+          color: Colors.text3
+          font.pixelSize: 16
+          font.family: "JetBrainsMono Nerd Font"
+        }
+        TextInput {
+          id: searchInput
+          Layout.fillWidth: true
+          color: Colors.text1
+          font.pixelSize: 13
+          font.family: "JetBrainsMono Nerd Font"
+          cursorVisible: true
+          Keys.onReturnPressed: launcher.launch()
+          Keys.onEscapePressed: launcher.close()
+          Keys.onUpPressed:   launcher.selected = Math.max(0, launcher.selected - 1)
+          Keys.onDownPressed: launcher.selected = Math.min(launcher.results.length - 1, launcher.selected + 1)
+          onTextChanged: launcher.search(text)
         }
       }
     }
@@ -151,10 +183,14 @@ PanelWindow {
     command: []
     stdout: SplitParser {
       onRead: data => {
-        if (data.trim() !== "") launcher.results = [...launcher.results, data.trim()]
+        if (data.trim() !== "") {
+          const parts = data.trim().split("|")
+          launcher.results = [...launcher.results, parts[0]]
+          launcher.execs  = [...launcher.execs,   parts[1] || parts[0]]
+          launcher.icons  = [...launcher.icons,   parts[2] || ""]
+        }
       }
     }
-    onRunningChanged: if (!running) launcher.selected = 0
   }
 
   Process { id: runProc; command: [] }

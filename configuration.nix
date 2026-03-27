@@ -52,6 +52,11 @@
     nautilus gvfs pavucontrol playerctl hyprlock hypridle
     pipewire wireplumber blueman libnotify
     adwaita-qt adwaita-qt6 papirus-icon-theme
+    obs-studio
+    bibata-cursors
+    fastfetch
+    vscode
+    spotify
   ];
 
   programs.hyprland.enable          = true;
@@ -65,6 +70,7 @@
     enable         = true;
     wayland.enable = true;
     theme          = "strata";
+    settings.Theme.CursorTheme = "Bibata-Modern-Classic";
     package = pkgs.kdePackages.sddm.override {
       sddm-unwrapped = pkgs.kdePackages.sddm.unwrapped.overrideAttrs (old: {
         postInstall = old.postInstall + ''
@@ -105,6 +111,8 @@
   environment.sessionVariables = {
     QT_WAYLAND_DISABLE_WINDOWDECORATION = "1";
     NIXOS_OZONE_WL                      = "1";
+    XCURSOR_THEME                       = "Bibata-Modern-Classic";
+    XCURSOR_SIZE                        = "24";
   };
 
   qt = {

@@ -8,9 +8,10 @@ import ".."
 PanelWindow {
   id: osdWindow
   anchors { bottom: true; left: true; right: true }
-  implicitHeight: 60
+  implicitHeight: showing ? 60 : 0
   color: "transparent"
   exclusionMode: ExclusionMode.Ignore
+  mask: Region { item: showing ? osdBox : null }
 
   property real value: 0
   property string icon: "󰕾"

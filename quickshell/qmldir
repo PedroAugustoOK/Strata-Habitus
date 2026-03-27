@@ -1,2 +1,3 @@
 module quickshell
 singleton Colors 1.0 Colors.qml
+singleton NotificationService 1.0 NotificationService.qml

@@ -1,0 +1,61 @@
+# ── Strata Habitus — Starship prompt ───────────────────────────────────────
+format = """
+$directory\
+$git_branch\
+$git_status\
+$cmd_duration\
+$line_break\
+$character"""
+
+# Sem nova linha no topo
+add_newline = false
+
+[directory]
+style            = "bold #cf9fff"
+truncation_length = 3
+truncate_to_repo  = true
+read_only        = " 󰌾"
+read_only_style  = "#f28779"
+format           = "[$path]($style)[$read_only]($read_only_style) "
+
+[git_branch]
+symbol    = " "
+style     = "#7bafd4"
+format    = "[$symbol$branch]($style) "
+
+[git_status]
+style     = "#d9bc8c"
+format    = "([$all_status$ahead_behind]($style) )"
+conflicted = "󰞇 "
+ahead      = "⇡$count "
+behind     = "⇣$count "
+diverged   = "⇕ "
+untracked  = "? "
+modified   = "! "
+staged     = "+ "
+deleted    = "✘ "
+
+[cmd_duration]
+min_time          = 2000
+style             = "#888888"
+format            = "[ $duration]($style) "
+
+[character]
+success_symbol = "[❯](bold #cf9fff)"
+error_symbol   = "[❯](bold #f28779)"
+vimcmd_symbol  = "[❮](bold #87c181)"
+
+[nix_shell]
+symbol = " "
+style  = "#87c181"
+format = "[$symbol$state]($style) "
+
+[python]
+symbol = " "
+style  = "#d9bc8c"
+format = "[$symbol$version]($style) "
+
+[nodejs]
+symbol = " "
+style  = "#87c181"
+format = "[$symbol$version]($style) "

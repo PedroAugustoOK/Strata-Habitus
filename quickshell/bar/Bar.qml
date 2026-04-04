@@ -11,22 +11,43 @@ PanelWindow {
   exclusiveZone: 34
   color: "#111113"
 
-  // esquerda: janela ativa
-  ActiveWindow {
-    anchors { left: parent.left; leftMargin: 14; verticalCenter: parent.verticalCenter }
-  }
+  RowLayout {
+    anchors { fill: parent; leftMargin: 10; rightMargin: 10 }
+    spacing: 0
 
-  // centro absoluto: workspaces
-  Workspaces {
-    anchors.centerIn: parent
-  }
+    // ── Esquerda: janela ativa ──────────────────────────────
+    Item {
+      Layout.fillWidth: true
+      Layout.preferredWidth: 1
+      height: parent.height
 
-  // direita: status + relógio
-  Row {
-    anchors { right: parent.right; rightMargin: 14; verticalCenter: parent.verticalCenter }
-    spacing: 16
+      Pill {
+        anchors { left: parent.left; verticalCenter: parent.verticalCenter }
+        ActiveWindow {}
+      }
+    }
 
-    StatusRight {}
-    Clock {}
+    // ── Centro: workspaces ──────────────────────────────────
+    Pill {
+      anchors.centerIn: undefined
+      Layout.alignment: Qt.AlignHCenter | Qt.AlignVCenter
+      paddingH: 10
+      Workspaces {}
+    }
+
+    // ── Direita: status + relógio ───────────────────────────
+    Item {
+      Layout.fillWidth: true
+      Layout.preferredWidth: 1
+      height: parent.height
+
+      Row {
+        anchors { right: parent.right; verticalCenter: parent.verticalCenter }
+        spacing: 6
+
+        Pill { StatusRight {} }
+        Pill { Clock {} }
+      }
+    }
   }
 }

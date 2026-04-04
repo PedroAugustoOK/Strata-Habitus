@@ -1,14 +1,10 @@
 { config, pkgs, lib, ... }:
-
 {
   imports = [ ./hardware-configuration.nix ];
-
   boot.loader.systemd-boot.enable      = true;
   boot.loader.efi.canTouchEfiVariables = true;
-
   networking.hostName              = "nixos";
   networking.networkmanager.enable = true;
-
   time.timeZone      = "America/Porto_Velho";
   i18n.defaultLocale = "pt_BR.UTF-8";
   i18n.extraLocaleSettings = {
@@ -22,19 +18,16 @@
     LC_TELEPHONE      = "pt_BR.UTF-8";
     LC_TIME           = "pt_BR.UTF-8";
   };
-
   services.xserver.xkb = { layout = "br"; variant = ""; };
   console.keyMap = "br-abnt2";
-
   users.users.ankh = {
     isNormalUser = true;
     description  = "Pedro Augusto";
-    extraGroups  = [ "networkmanager" "wheel" ];
+    extraGroups  = [ "networkmanager" "wheel" "video" ];
+    shell        = pkgs.fish;
     packages     = with pkgs; [];
   };
-
   nixpkgs.config.allowUnfree = true;
-
   environment.systemPackages = with pkgs; [
     (stdenv.mkDerivation {
       pname = "sddm-theme-strata";
@@ -49,23 +42,36 @@
     })
     git wget curl neovim networkmanager kitty chromium quickshell
     grimblast wl-clipboard cliphist brightnessctl swww matugen
-    nautilus gvfs pavucontrol playerctl hyprlock hypridle
+    nautilus gvfs pavucontrol
+    pwvucontrol
+    impala
+    bluetui playerctl hyprlock hypridle
     pipewire wireplumber blueman libnotify
     adwaita-qt adwaita-qt6 papirus-icon-theme
     obs-studio
     bibata-cursors
     fastfetch
     vscode
+    gcc
     spotify
+    fish
+    starship
+    loupe
+    loupe
+    zathura
+    libreoffice
+    standardnotes
+    mpv
+    gsettings-desktop-schemas
+    glib
+    vesktop
   ];
-
+  programs.fish.enable = true;
   programs.hyprland.enable          = true;
   programs.hyprland.xwayland.enable = true;
   programs.dconf.enable             = true;
-
   xdg.portal.enable       = true;
   xdg.portal.extraPortals = [ pkgs.xdg-desktop-portal-hyprland ];
-
   services.displayManager.sddm = {
     enable         = true;
     wayland.enable = true;
@@ -80,20 +86,20 @@
     };
     extraPackages = with pkgs.kdePackages; [ qtdeclarative qtsvg ];
   };
-
-  fonts.packages = with pkgs; [ nerd-fonts.jetbrains-mono inter ];
-
+  fonts.packages = with pkgs; [
+    nerd-fonts.jetbrains-mono
+    inter
+    roboto
+    material-symbols
+  ];
   hardware.graphics.enable        = true;
   hardware.graphics.extraPackages = with pkgs; [ intel-media-driver intel-vaapi-driver ];
-
   nix.settings.experimental-features = [ "nix-command" "flakes" ];
-
   stylix = {
     enable   = true;
     image    = ./wallpaper.jpg;
     polarity = "dark";
   };
-
   security.rtkit.enable = true;
   services.pipewire = {
     enable             = true;
@@ -102,28 +108,26 @@
     pulse.enable       = true;
     wireplumber.enable = true;
   };
-
   hardware.bluetooth.enable      = true;
   hardware.bluetooth.powerOnBoot = true;
   services.blueman.enable        = true;
   services.gvfs.enable           = true;
-
+  services.power-profiles-daemon.enable = true;
   environment.sessionVariables = {
     QT_WAYLAND_DISABLE_WINDOWDECORATION = "1";
     NIXOS_OZONE_WL                      = "1";
     XCURSOR_THEME                       = "Bibata-Modern-Classic";
     XCURSOR_SIZE                        = "24";
+    STARSHIP_CONFIG                     = "/home/ankh/dotfiles/starship/starship.toml";
   };
-
   qt = {
-    enable       = true;
-    style        = "adwaita-dark";
+    enable        = true;
+    style         = "adwaita-dark";
     platformTheme = lib.mkForce "gnome";
   };
-
   boot.kernelParams    = [ "quiet" "splash" ];
   boot.initrd.verbose  = false;
   boot.consoleLogLevel = 0;
-
+  services.flatpak.enable = true;
   system.stateVersion = "25.11";
 }

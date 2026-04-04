@@ -3,3 +3,7 @@ Workspaces Workspaces.qml
 Clock Clock.qml
 StatusRight StatusRight.qml
 ActiveWindow ActiveWindow.qml
+SpotifyPlayer 1.0 SpotifyPlayer.qml
+BatteryRing 1.0 BatteryRing.qml
+Tray 1.0 Tray.qml
+SysStats 1.0 SysStats.qml

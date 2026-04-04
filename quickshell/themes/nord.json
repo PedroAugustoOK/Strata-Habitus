@@ -1,0 +1,13 @@
+{
+  "name": "nord",
+  "mode": "dark",
+  "bg0":      "#0d0d0f",
+  "bg1":      "#111113",
+  "bg2":      "#161618",
+  "text0":    "#eceff4",
+  "text1":    "#e5e9f0",
+  "text2":    "#d8dee9",
+  "text3":    "#7b88a1",
+  "accent":   "#88c0d0",
+  "accentDim":"#1a2a30"
+}

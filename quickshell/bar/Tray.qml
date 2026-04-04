@@ -1,0 +1,49 @@
+import Quickshell
+import Quickshell.Services.SystemTray
+import QtQuick
+import QtQuick.Layouts
+import ".."
+
+Rectangle {
+  id: trayPill
+  height: 24
+  radius: 12
+  color:  Colors.bg2
+  width:  trayRow.implicitWidth + 20
+  visible: SystemTray.items.values.length > 0
+
+  Behavior on width { NumberAnimation { duration: 200; easing.type: Easing.InOutQuad } }
+
+  RowLayout {
+    id: trayRow
+    anchors.centerIn: parent
+    spacing: 8
+
+    Repeater {
+      model: SystemTray.items.values
+      delegate: Item {
+        required property SystemTrayItem modelData
+        width: 16; height: 16
+
+        Image {
+          anchors.fill: parent
+          source:       modelData.icon
+          smooth:       true
+          fillMode:     Image.PreserveAspectFit
+        }
+
+        MouseArea {
+          anchors.fill: parent
+          cursorShape:  Qt.PointingHandCursor
+          acceptedButtons: Qt.LeftButton | Qt.RightButton
+          onClicked: function(m) {
+            if (m.button === Qt.LeftButton)
+              modelData.activate()
+            else
+              modelData.secondaryActivate()
+          }
+        }
+      }
+    }
+  }
+}

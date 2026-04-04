@@ -4,81 +4,141 @@ import QtQuick.Layouts
 import ".."
 
 RowLayout {
-  spacing: 10
+  spacing: 8
+  height:  parent.height
+
+  // DND — aparece quando ativo
+  Text {
+    visible: SystemState.dnd
+    text:    "󰂛"
+    color:   Colors.accent
+    font { family: "JetBrainsMono Nerd Font"; pixelSize: 13 }
+    verticalAlignment: Text.AlignVCenter
+  }
+
+  // Caffeine — aparece quando ativo
+  Text {
+    visible: SystemState.caffeine
+    text:    "󰅶"
+    color:   Colors.accent
+    font { family: "JetBrainsMono Nerd Font"; pixelSize: 13 }
+    verticalAlignment: Text.AlignVCenter
+  }
 
   Text {
     id: btLabel
-    color: Colors.accent
-    font { pixelSize: 11; family: "JetBrainsMono Nerd Font" }
-    text: "󰂯"
-    visible: false
+    color: Colors.text3
+    font { family: "Material Symbols Rounded"; pixelSize: 14 }
+    text:  "\uE1A9"
     verticalAlignment: Text.AlignVCenter
     MouseArea {
       anchors.fill: parent
-      cursorShape: Qt.PointingHandCursor
-      onClicked: ccToggle.running = true
+      cursorShape:  Qt.PointingHandCursor
+      onClicked:    ccToggle.running = true
     }
   }
 
   Text {
-    id: netLabel
+    id: wifiLabel
     color: Colors.text3
-    font { pixelSize: 11; family: "JetBrainsMono Nerd Font" }
-    text: "󱚽"
+    font { family: "Material Symbols Rounded"; pixelSize: 14 }
+    text:  "\uE648"
     verticalAlignment: Text.AlignVCenter
     MouseArea {
       anchors.fill: parent
-      cursorShape: Qt.PointingHandCursor
-      onClicked: ccToggle.running = true
+      cursorShape:  Qt.PointingHandCursor
+      onClicked:    ccToggle.running = true
     }
   }
 
-  Text {
-    id: volLabel
-    color: Colors.text3
-    font { pixelSize: 11; family: "JetBrainsMono Nerd Font" }
-    text: "󰕾 –"
-    verticalAlignment: Text.AlignVCenter
+  BatteryRing {
+    id: batRing
+    value:    100
+    charging: false
   }
 
-  Text {
-    id: batLabel
-    color: Colors.text3
-    font { pixelSize: 11; family: "JetBrainsMono Nerd Font" }
-    text: "󰁹 –"
-    verticalAlignment: Text.AlignVCenter
-  }
-
-  Process {
-    id: volProc
-    command: ["sh", "-c", "/run/current-system/sw/bin/wpctl get-volume @DEFAULT_AUDIO_SINK@ | awk '{printf \"%d\", $2*100}'"]
-    stdout: SplitParser { onRead: data => volLabel.text = "󰕾 " + data.trim() + "%" }
-  }
   Process {
     id: batProc
-    command: ["sh", "-c", "cat /sys/class/power_supply/BAT1/capacity 2>/dev/null || echo '–'"]
-    stdout: SplitParser { onRead: data => batLabel.text = "󰁹 " + data.trim() + "%" }
-  }
-  Process {
-    id: netProc
-    command: ["sh", "-c", "/run/current-system/sw/bin/nmcli -t -f active,signal,ssid dev wifi 2>/dev/null | grep '^yes' | awk -F: '{s=$2; i=(s>75?\"󱚽\":s>50?\"󱚿\":s>25?\"󱛀\":\"󱛁\"); print i\" \"$3}'"]
-    stdout: SplitParser { onRead: data => netLabel.text = data.trim() === "" ? "󱚽" : data.trim() }
-  }
-  Process {
-    id: btProc
-    command: ["sh", "-c", "/run/current-system/sw/bin/bluetoothctl show | grep -q 'Powered: yes' && echo 'on' || echo 'off'"]
-    stdout: SplitParser { onRead: data => btLabel.visible = data.trim() === "on" }
-  }
-  Process {
-    id: btConnProc
-    command: ["sh", "-c", "/run/current-system/sw/bin/bluetoothctl info 2>/dev/null | grep -q 'Connected: yes' && echo 'connected' || echo 'off'"]
-    stdout: SplitParser { onRead: data => btLabel.text = data.trim() === "connected" ? "󰂱" : "󰂯" }
+    command: ["sh", "-c",
+      "paste /sys/class/power_supply/BAT1/capacity /sys/class/power_supply/BAT1/status 2>/dev/null || echo '100\tDischarging'"]
+    stdout: SplitParser {
+      onRead: data => {
+        var parts = data.trim().split("\t")
+        batRing.value    = parseInt(parts[0]) || 100
+        batRing.charging = (parts[1] || "").trim() === "Charging"
+      }
+    }
   }
 
-  Timer { interval: 500;   running: true; repeat: true; triggeredOnStart: true; onTriggered: volProc.running = true }
-  Timer { interval: 30000; running: true; repeat: true; triggeredOnStart: true; onTriggered: batProc.running = true }
-  Timer { interval: 10000; running: true; repeat: true; triggeredOnStart: true
-    onTriggered: { netProc.running = true; btProc.running = true; btConnProc.running = true }
+  Process {
+    id: netProc
+    command: ["sh", "-c",
+      "RADIO=$(/run/current-system/sw/bin/nmcli radio wifi 2>/dev/null | tr -d ' \n');" +
+      "if [ \"$RADIO\" != \"enabled\" ]; then echo 'off'; exit; fi;" +
+      "SIG=$(/run/current-system/sw/bin/nmcli -t -f ACTIVE,SIGNAL dev wifi 2>/dev/null | head -1 | cut -d: -f2);" +
+      "if [ -z \"$SIG\" ]; then echo 'on:0'; else echo \"on:$SIG\"; fi"
+    ]
+    stdout: SplitParser {
+      onRead: data => {
+        var t = data.trim()
+        if (t === "off") {
+          wifiLabel.text  = "\uE648"
+          wifiLabel.color = Colors.text3
+          return
+        }
+        var sig = parseInt(t.split(":")[1]) || 0
+        if (sig === 0) {
+          wifiLabel.text  = "\uE648"
+          wifiLabel.color = Colors.text3
+        } else if (sig > 75) {
+          wifiLabel.text  = "\uE63E"
+          wifiLabel.color = Colors.accent
+        } else if (sig > 50) {
+          wifiLabel.text  = "\uE4D9"
+          wifiLabel.color = Colors.accent
+        } else if (sig > 25) {
+          wifiLabel.text  = "\uE4D9"
+          wifiLabel.color = Colors.accent
+        } else {
+          wifiLabel.text  = "\uE4CA"
+          wifiLabel.color = "#d9bc8c"
+        }
+      }
+    }
+  }
+
+  Process {
+    id: btProc
+    command: ["sh", "-c",
+      "POWERED=$(/run/current-system/sw/bin/bluetoothctl show 2>/dev/null | grep 'Powered:' | awk '{print $2}');" +
+      "if [ \"$POWERED\" != \"yes\" ]; then echo 'off'; exit; fi;" +
+      "CONN=$(/run/current-system/sw/bin/bluetoothctl devices Connected 2>/dev/null | wc -l);" +
+      "if [ \"$CONN\" -gt 0 ]; then echo 'connected'; else echo 'on'; fi"
+    ]
+    stdout: SplitParser {
+      onRead: data => {
+        var s = data.trim()
+        if (s === "off") {
+          btLabel.text  = "\uE1A9"
+          btLabel.color = Colors.text3
+        } else if (s === "connected") {
+          btLabel.text  = "\uE1A8"
+          btLabel.color = Colors.accent
+        } else {
+          btLabel.text  = "\uE1A7"
+          btLabel.color = Colors.accent
+        }
+      }
+    }
+  }
+
+  Timer {
+    interval: 500; running: true; repeat: true; triggeredOnStart: true
+    onTriggered: {
+      batProc.running = true
+      netProc.running = true
+      btProc.running  = true
+    }
   }
 
   Process { id: ccToggle; command: ["quickshell", "ipc", "call", "controlcenter", "toggle"] }

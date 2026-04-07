@@ -1,13 +1,1 @@
-{
-  "name": "rosepine",
-  "mode": "light",
-  "bg0":      "#f0ece4",
-  "bg1":      "#e8e4dc",
-  "bg2":      "#dedad2",
-  "text0":    "#1a1a1a",
-  "text1":    "#2a2a2a",
-  "text2":    "#3a3a3a",
-  "text3":    "#777777",
-  "accent":   "#b4637a",
-  "accentDim":"#f2e9e1"
-}
+{"name":"rosepine","mode":"light","bg0":"#f0ece4","bg1":"#e8e4dc","bg2":"#dedad2","text0":"#1a1a1a","text1":"#2a2a2a","text2":"#3a3a3a","text3":"#777777","accent":"#b4637a","accentDim":"#f2e9e1"}

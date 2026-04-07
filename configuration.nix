@@ -63,6 +63,7 @@
     standardnotes
     mpv
     gsettings-desktop-schemas
+    hplipWithPlugin
     glib
     vesktop
   ];
@@ -95,11 +96,6 @@
   hardware.graphics.enable        = true;
   hardware.graphics.extraPackages = with pkgs; [ intel-media-driver intel-vaapi-driver ];
   nix.settings.experimental-features = [ "nix-command" "flakes" ];
-  stylix = {
-    enable   = true;
-    image    = ./wallpaper.jpg;
-    polarity = "dark";
-  };
   security.rtkit.enable = true;
   services.pipewire = {
     enable             = true;
@@ -129,5 +125,17 @@
   boot.initrd.verbose  = false;
   boot.consoleLogLevel = 0;
   services.flatpak.enable = true;
+  services.printing.enable = true;
+  services.udev.packages = [ pkgs.hplipWithPlugin ];
+  services.printing.drivers = [ pkgs.hplipWithPlugin ];
+  security.sudo.extraRules = [
+    {
+      users = [ "ankh" ];
+      commands = [
+        { command = "/run/current-system/sw/bin/tee /etc/chromium/policies/managed/strata.json"; options = [ "NOPASSWD" ]; }
+        { command = "/run/current-system/sw/bin/mkdir"; options = [ "NOPASSWD" ]; }
+      ];
+    }
+  ];
   system.stateVersion = "25.11";
 }

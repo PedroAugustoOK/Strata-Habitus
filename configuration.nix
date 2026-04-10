@@ -51,6 +51,7 @@
     obs-studio
     bibata-cursors
     fastfetch
+    btop
     vscode
     gcc
     spotify
@@ -121,8 +122,9 @@
     style         = "adwaita-dark";
     platformTheme = lib.mkForce "gnome";
   };
-  boot.kernelParams    = [ "quiet" "splash" ];
+  boot.kernelParams = [ "quiet" "splash" "rd.systemd.show_status=false" "rd.udev.log_level=3" "udev.log_priority=3" "vt.global_cursor_default=0" ];
   boot.initrd.verbose  = false;
+  boot.plymouth.enable = true;
   boot.consoleLogLevel = 0;
   services.flatpak.enable = true;
   services.printing.enable = true;

@@ -6,7 +6,24 @@ Rectangle {
 
     property int currentUser: userModel.lastIndex
     property int currentSession: sessionModel.lastIndex
-    property color accentColor: config.accent || "#8aad91"
+    property color accentColor: "#8aad91"
+    property color accentColor: "#8aad91"
+
+    Timer {
+      interval: 100; running: true; repeat: false
+      onTriggered: {
+        var xhr = new XMLHttpRequest()
+        xhr.open("GET", "file:///var/lib/strata/theme.conf", false)
+        xhr.send()
+        var lines = xhr.responseText.split("\n")
+        for (var i = 0; i < lines.length; i++) {
+          if (lines[i].indexOf("accent=") === 0) {
+            root.accentColor = lines[i].replace("accent=", "").trim()
+            break
+          }
+        }
+      }
+    }
     property bool locked: true
     property bool acceptInput: false
 
@@ -16,7 +33,7 @@ Rectangle {
 
     Image {
         anchors.fill: parent
-        source: config.background || ""
+        source: "/var/lib/strata/background.jpg"
         fillMode: Image.PreserveAspectCrop
     }
 

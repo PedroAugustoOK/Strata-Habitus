@@ -4,32 +4,32 @@ import QtQuick.Controls
 Rectangle {
     id: root
 
-    property int currentUser: userModel.lastIndex
-    property int currentSession: sessionModel.lastIndex
-    property color accentColor: "#8aad91"
-    property color accentColor: "#8aad91"
+    property int   currentUser:    userModel.lastIndex
+    property int   currentSession: sessionModel.lastIndex
+    property color accentColor:    "#8aad91"
+    property bool  locked:         true
+    property bool  acceptInput:    false
 
-    Timer {
-      interval: 100; running: true; repeat: false
-      onTriggered: {
-        var xhr = new XMLHttpRequest()
-        xhr.open("GET", "file:///var/lib/strata/theme.conf", false)
-        xhr.send()
-        var lines = xhr.responseText.split("\n")
-        for (var i = 0; i < lines.length; i++) {
-          if (lines[i].indexOf("accent=") === 0) {
-            root.accentColor = lines[i].replace("accent=", "").trim()
-            break
-          }
-        }
-      }
-    }
-    property bool locked: true
-    property bool acceptInput: false
-
-    width: Screen.width
+    width:  Screen.width
     height: Screen.height
-    color: "#0d0d0f"
+    color:  "#0d0d0f"
+
+    // lê accent do tema atual
+    Timer {
+        interval: 100; running: true; repeat: false
+        onTriggered: {
+            var xhr = new XMLHttpRequest()
+            xhr.open("GET", "file:///var/lib/strata/theme.conf", false)
+            xhr.send()
+            var lines = xhr.responseText.split("\n")
+            for (var i = 0; i < lines.length; i++) {
+                if (lines[i].indexOf("accent=") === 0) {
+                    root.accentColor = lines[i].replace("accent=", "").trim()
+                    break
+                }
+            }
+        }
+    }
 
     Image {
         anchors.fill: parent
@@ -51,33 +51,30 @@ Rectangle {
         id: dateLabel
         anchors { top: parent.top; left: parent.left; margins: 40 }
         color: "#ccffffff"
-        font { pixelSize: 15; family: "sans-serif"; weight: Font.Medium }
+        font { pixelSize: 15; family: "Roboto"; weight: Font.Medium }
         text: formatDatePtBr()
-
         Timer {
             interval: 30000; running: true; repeat: true
             onTriggered: dateLabel.text = formatDatePtBr()
-           }   
-         }
+        }
+    }
 
     Row {
         anchors { top: parent.top; right: parent.right; margins: 40 }
         spacing: 16
-        IconBtn { icon: "⏾";  onClicked: sddm.suspend()  }
-        IconBtn { icon: "⟳";  onClicked: sddm.reboot()   }
+        IconBtn { icon: "⏾"; onClicked: sddm.suspend()  }
+        IconBtn { icon: "⟳"; onClicked: sddm.reboot()   }
         IconBtn { icon: "⏻"; onClicked: sddm.powerOff() }
     }
 
-    // ── Delay before accepting input (prevents startup events) ──
     Timer {
         id: startupGuard
-        interval: 800
-        running: true
+        interval: 800; running: true
         onTriggered: acceptInput = true
     }
 
     // ════════════════════════════════════════════════════════
-    //  SCREEN 1 — LOCK
+    //  TELA 1 — BLOQUEIO
     // ════════════════════════════════════════════════════════
     Item {
         id: lockScreen
@@ -88,13 +85,13 @@ Rectangle {
 
         Column {
             anchors.centerIn: parent
-            spacing: 0
+            spacing: -20
 
             Text {
                 id: clockHours
                 anchors.horizontalCenter: parent.horizontalCenter
                 color: "#e8ffffff"
-                font { pixelSize: 140; family: "sans-serif"; weight: Font.Bold; letterSpacing: 4 }
+                font { pixelSize: 140; family: "Roboto"; weight: Font.Bold; letterSpacing: 4 }
                 text: "00"
             }
 
@@ -102,17 +99,26 @@ Rectangle {
                 id: clockMinutes
                 anchors.horizontalCenter: parent.horizontalCenter
                 color: accentColor
-                font { pixelSize: 140; family: "sans-serif"; weight: Font.Bold; letterSpacing: 4 }
+                font { pixelSize: 140; family: "Roboto"; weight: Font.Bold; letterSpacing: 4 }
                 text: "00"
                 opacity: 0.85
+            }
+
+            Item { width: 1; height: 16 }
+
+            Text {
+                anchors.horizontalCenter: parent.horizontalCenter
+                text: formatDatePtBr()
+                color: "#66ffffff"
+                font { pixelSize: 14; family: "Roboto"; weight: Font.Medium; letterSpacing: 1 }
             }
         }
 
         Text {
             anchors { bottom: parent.bottom; bottomMargin: 60; horizontalCenter: parent.horizontalCenter }
-            text: "Pressione qualquer tecla"
-            color: "#66ffffff"
-            font { pixelSize: 13; family: "sans-serif"; weight: Font.Medium; letterSpacing: 1 }
+            text: "Pressione qualquer tecla para desbloquear"
+            color: "#44ffffff"
+            font { pixelSize: 12; family: "Roboto"; letterSpacing: 1 }
         }
 
         Timer {
@@ -128,14 +134,12 @@ Rectangle {
             anchors.fill: parent
             z: 100
             enabled: locked
-            onClicked: {
-                if (acceptInput) unlock()
-            }
+            onClicked: { if (acceptInput) unlock() }
         }
     }
 
     // ════════════════════════════════════════════════════════
-    //  SCREEN 2 — LOGIN
+    //  TELA 2 — LOGIN
     // ════════════════════════════════════════════════════════
     Item {
         id: loginScreen
@@ -146,14 +150,14 @@ Rectangle {
 
         Column {
             anchors.centerIn: parent
-            spacing: 0
+            spacing: -20
             width: 320
 
             Text {
                 anchors.horizontalCenter: parent.horizontalCenter
-                text: userModel.data(userModel.index(currentUser, 0), Qt.UserRole + 1) || "User"
+                text: userModel.data(userModel.index(currentUser, 0), Qt.UserRole + 1) || "Usuário"
                 color: "#eeffffff"
-                font { pixelSize: 24; family: "sans-serif"; weight: Font.DemiBold; letterSpacing: 0.5 }
+                font { pixelSize: 24; family: "Roboto"; weight: Font.DemiBold; letterSpacing: 0.5 }
             }
 
             Item { width: 1; height: 10 }
@@ -161,15 +165,14 @@ Rectangle {
             Rectangle {
                 anchors.horizontalCenter: parent.horizontalCenter
                 width: sessionText.implicitWidth + 24
-                height: 26
-                radius: 6
+                height: 26; radius: 6
                 color: "#18ffffff"
 
                 Text {
                     id: sessionText
                     anchors.centerIn: parent
                     color: "#aaffffff"
-                    font { pixelSize: 11; family: "sans-serif"; weight: Font.Medium }
+                    font { pixelSize: 11; family: "Roboto"; weight: Font.Medium }
                     text: getSessionName(currentSession)
                 }
 
@@ -192,20 +195,18 @@ Rectangle {
                 color: "#15ffffff"
                 border.color: passwordField.activeFocus ? accentColor : "#25ffffff"
                 border.width: 1
-
                 transform: Translate { id: shakeTranslate; x: 0 }
                 Behavior on border.color { ColorAnimation { duration: 200 } }
 
                 TextField {
                     id: passwordField
-                    anchors.fill: parent
-                    anchors.leftMargin: 20; anchors.rightMargin: 50
+                    anchors { fill: parent; leftMargin: 20; rightMargin: 50 }
                     verticalAlignment: Text.AlignVCenter
                     echoMode: TextInput.Password
                     placeholderText: "Senha"
                     color: "#e0ffffff"
                     placeholderTextColor: "#55ffffff"
-                    font { pixelSize: 13; family: "sans-serif" }
+                    font { pixelSize: 13; family: "Roboto" }
                     background: Item {}
                     onAccepted: doLogin()
                     Keys.onPressed: function(event) { errorMsg.visible = false }
@@ -239,7 +240,7 @@ Rectangle {
                 anchors.horizontalCenter: parent.horizontalCenter
                 text: "Senha incorreta"
                 color: "#ff6b6b"
-                font { pixelSize: 12; family: "sans-serif" }
+                font { pixelSize: 12; family: "Roboto" }
                 visible: false
                 opacity: visible ? 1 : 0
                 Behavior on opacity { NumberAnimation { duration: 200 } }
@@ -247,7 +248,6 @@ Rectangle {
         }
     }
 
-    // ── Shake ───────────────────────────────────────────────
     SequentialAnimation {
         id: shakeAnim
         NumberAnimation { target: shakeTranslate; property: "x"; to: -10; duration: 50 }
@@ -256,24 +256,20 @@ Rectangle {
         NumberAnimation { target: shakeTranslate; property: "x"; to: 0;   duration: 50 }
     }
 
-    // ── Helpers ─────────────────────────────────────────────
     function getSessionName(idx) {
         var raw = sessionModel.data(sessionModel.index(idx, 0), Qt.DisplayRole) || ""
         if (raw === "") raw = sessionModel.data(sessionModel.index(idx, 0), Qt.UserRole + 2) || ""
         if (raw === "") raw = sessionModel.data(sessionModel.index(idx, 0), Qt.UserRole + 1) || ""
-        // strip nix store path: extract last meaningful part
         if (raw.indexOf("/nix/store/") !== -1) {
             var parts = raw.split("/")
             for (var i = parts.length - 1; i >= 0; i--) {
-                if (parts[i].indexOf(".desktop") !== -1) {
-                    return parts[i].replace(".desktop", "")
-                }
+                if (parts[i].indexOf(".desktop") !== -1) return parts[i].replace(".desktop", "")
                 if (parts[i] === "wayland-sessions" || parts[i] === "xsessions") continue
                 if (parts[i] === "share") continue
                 if (parts[i].length > 0) return parts[i]
             }
         }
-        return raw || "Session"
+        return raw || "Sessão"
     }
 
     function unlock() {
@@ -296,7 +292,6 @@ Rectangle {
         function onLoginSucceeded() {}
     }
 
-    // ── Key handling with guard ─────────────────────────────
     focus: true
     Keys.onPressed: function(event) {
         if (locked && acceptInput) {
@@ -307,21 +302,18 @@ Rectangle {
 
     Component.onCompleted: root.forceActiveFocus()
 
-    // ── Icon Button ─────────────────────────────────────────
     component IconBtn: Rectangle {
         property string icon
         signal clicked()
         width: 32; height: 32; radius: 16
         color: ma.containsMouse ? "#20ffffff" : "transparent"
         Behavior on color { ColorAnimation { duration: 150 } }
-
         Text {
             anchors.centerIn: parent
             text: parent.icon
             color: "#88ffffff"
             font.pixelSize: 15
         }
-
         MouseArea {
             id: ma
             anchors.fill: parent
@@ -329,12 +321,12 @@ Rectangle {
             cursorShape: Qt.PointingHandCursor
             onClicked: parent.clicked()
         }
-       }
+    }
 
-        function formatDatePtBr() {
-          var dias = ["Domingo","Segunda-feira","Terça-feira","Quarta-feira","Quinta-feira","Sexta-feira","Sábado"]
-          var meses = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"]
-          var d = new Date()
-          return dias[d.getDay()] + ", " + d.getDate() + " de " + meses[d.getMonth()]
-       }
+    function formatDatePtBr() {
+        var dias  = ["Domingo","Segunda-feira","Terça-feira","Quarta-feira","Quinta-feira","Sexta-feira","Sábado"]
+        var meses = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"]
+        var d = new Date()
+        return dias[d.getDay()] + ", " + d.getDate() + " de " + meses[d.getMonth()]
+    }
 }

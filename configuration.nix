@@ -78,6 +78,7 @@
     enable         = true;
     wayland.enable = true;
     theme          = "strata";
+    settings.Theme.ThemeDir = "/var/lib";
     settings.Theme.CursorTheme = "Bibata-Modern-Classic";
     package = pkgs.kdePackages.sddm.override {
       sddm-unwrapped = pkgs.kdePackages.sddm.unwrapped.overrideAttrs (old: {
@@ -143,6 +144,6 @@
       ];
     }
   ];
-  system.activationScripts.strataDir = "mkdir -p /var/lib/strata && chmod 755 /var/lib/strata";
+  system.activationScripts.strataDir = "mkdir -p /var/lib/strata && chmod 755 /var/lib/strata && cp -n /run/current-system/sw/share/sddm/themes/strata/Main.qml /var/lib/strata/Main.qml 2>/dev/null || true && cp -n /run/current-system/sw/share/sddm/themes/strata/metadata.desktop /var/lib/strata/metadata.desktop 2>/dev/null || true";
   system.stateVersion = "25.11";
 }

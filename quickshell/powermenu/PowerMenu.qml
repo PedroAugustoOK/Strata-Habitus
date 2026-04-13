@@ -15,8 +15,8 @@ PanelWindow {
   WlrLayershell.keyboardFocus: WlrKeyboardFocus.OnDemand
 
   property int selectedIdx: 0
-  readonly property real pillW: row.implicitWidth + 32
-  readonly property real pillH: 52
+  readonly property real pillW: row.implicitWidth + 10
+  readonly property real pillH: 44
   readonly property real pillX: (width / 2) - (pillW / 2)
 
   readonly property var actions: [
@@ -34,25 +34,46 @@ PanelWindow {
       visible = true
       selectedIdx = 0
       focusItem.forceActiveFocus()
-      clipper.height = 0
+      pill.width = 8
+      pill.opacity = 0
       openAnim.start()
     }
   }
 
-  function close() { closeAnim.start() }
+  function close() {
+    closeAnim.start()
+  }
 
-  NumberAnimation {
+  SequentialAnimation {
     id: openAnim
-    target: clipper; property: "height"
-    from: 0; to: pillH
-    duration: 260; easing.type: Easing.OutCubic
+    NumberAnimation {
+      target: pill; property: "opacity"
+      from: 0; to: 1
+      duration: 60
+    }
+    NumberAnimation {
+      target: pill; property: "width"
+      from: 8; to: pillW * 1.06
+      duration: 160; easing.type: Easing.OutCubic
+    }
+    NumberAnimation {
+      target: pill; property: "width"
+      to: pillW
+      duration: 80; easing.type: Easing.InOutQuad
+    }
+    ScriptAction { script: focusItem.forceActiveFocus() }
   }
 
   SequentialAnimation {
     id: closeAnim
     NumberAnimation {
-      target: clipper; property: "height"
-      to: 0; duration: 200; easing.type: Easing.InCubic
+      target: pill; property: "width"
+      to: pillH
+      duration: 140; easing.type: Easing.InCubic
+    }
+    NumberAnimation {
+      target: pill; property: "opacity"
+      to: 0; duration: 60
     }
     ScriptAction { script: root.visible = false }
   }
@@ -69,7 +90,8 @@ PanelWindow {
         root.selectedIdx = (root.selectedIdx + 1) % root.actions.length
       } else if (e.key === Qt.Key_Return || e.key === Qt.Key_Space) {
         var a = root.actions[root.selectedIdx]
-        root.close(); a.proc.running = true
+        root.close()
+        a.proc.running = true
       }
     }
   }
@@ -79,64 +101,62 @@ PanelWindow {
     onClicked: root.close()
   }
 
-  Item {
-    id: clipper
-    x: pillX
-    y: 34
-    width: pillW
-    height: 0
+  Rectangle {
+    id: pill
+    x: pillX + (pillW - width) / 2
+    y: 60
+    width: pillH
+    height: pillH
+    radius: 14
+    color: Colors.bg1
+    border.color: Qt.rgba(Colors.accent.r, Colors.accent.g, Colors.accent.b, 0.12)
+    border.width: 1
     clip: true
-    z: 1
+    opacity: 0
 
-    Rectangle {
-      id: pill
-      width: pillW
-      height: pillH
-      radius: 14
-      color: "#16161a"
+    MouseArea { anchors.fill: parent }
 
-      MouseArea { anchors.fill: parent }
+    RowLayout {
+      id: row
+      anchors.centerIn: parent
+      spacing: 2
 
-      RowLayout {
-        id: row
-        anchors.centerIn: parent
-        spacing: 4
+      Repeater {
+        model: root.actions
+        delegate: Rectangle {
+          required property var modelData
+          required property int index
 
-        Repeater {
-          model: root.actions
-          delegate: Rectangle {
-            required property var modelData
-            required property int index
+          readonly property bool selected: root.selectedIdx === index
+          readonly property bool hov: ma.containsMouse
 
-            readonly property bool selected: root.selectedIdx === index
-            readonly property bool hov: ma.containsMouse
+          width: 44; height: 36; radius: 10
+          color: selected
+            ? (modelData.danger ? "#e06c75" : Colors.accent)
+            : hov
+              ? (modelData.danger
+                  ? Qt.rgba(0.88, 0.42, 0.45, 0.15)
+                  : Qt.rgba(Colors.accent.r, Colors.accent.g, Colors.accent.b, 0.12))
+              : "transparent"
+          Behavior on color { ColorAnimation { duration: 130 } }
 
-            width: 50; height: 44; radius: 10
+          Text {
+            anchors.centerIn: parent
+            text: modelData.icon
+            font { pixelSize: 16; family: "JetBrainsMono Nerd Font" }
             color: selected
-              ? (modelData.danger ? "#ff6b6b" : Colors.accent)
+              ? Colors.bg0
               : hov
-                ? (modelData.danger ? "#ff6b6b33" : Qt.rgba(Colors.accent.r, Colors.accent.g, Colors.accent.b, 0.15))
-                : "transparent"
-            Behavior on color { ColorAnimation { duration: 150 } }
+                ? (modelData.danger ? "#e06c75" : Colors.accent)
+                : Colors.text3
+            Behavior on color { ColorAnimation { duration: 130 } }
+          }
 
-            Text {
-              anchors.centerIn: parent
-              text: modelData.icon
-              font { pixelSize: 18; family: "JetBrainsMono Nerd Font" }
-              color: selected
-                ? "#0d0d0f"
-                : hov
-                  ? (modelData.danger ? "#ff6b6b" : Colors.accent)
-                  : Colors.text3
-              Behavior on color { ColorAnimation { duration: 150 } }
-            }
-
-            MouseArea {
-              id: ma; anchors.fill: parent
-              hoverEnabled: true; cursorShape: Qt.PointingHandCursor
-              onEntered: root.selectedIdx = index
-              onClicked: { root.close(); modelData.proc.running = true }
-            }
+          MouseArea {
+            id: ma; anchors.fill: parent
+            hoverEnabled: true; cursorShape: Qt.PointingHandCursor
+            onEntered: root.selectedIdx = index
+            onClicked: { root.close(); modelData.proc.running = true }
           }
         }
       }

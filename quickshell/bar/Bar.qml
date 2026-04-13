@@ -10,7 +10,7 @@ PanelWindow {
   anchors { top: true; left: true; right: true }
   implicitHeight: 34
   exclusiveZone:  34
-  color:          "#111113"
+  color: Colors.bg1
 
   // ── Zona esquerda (do início até as workspaces) ─────────
   Item {
@@ -79,6 +79,15 @@ PanelWindow {
       radius: 12
       color:  Colors.bg2
       width:  stats.implicitWidth + 24
+      MouseArea {
+        anchors.fill: parent
+        cursorShape: Qt.PointingHandCursor
+        onClicked: btopProc.running = true
+      }
+      Process {
+        id: btopProc
+        command: ["kitty", "--title", "btop", "--override", "window_padding_width=0", "btop"]
+      }
       SysStats {
         id: stats
         anchors.centerIn: parent

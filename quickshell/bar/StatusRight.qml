@@ -2,12 +2,9 @@ import Quickshell.Io
 import QtQuick
 import QtQuick.Layouts
 import ".."
-
 RowLayout {
   spacing: 8
   height:  parent.height
-
-  // DND — aparece quando ativo
   Text {
     visible: SystemState.dnd
     text:    "󰂛"
@@ -15,8 +12,6 @@ RowLayout {
     font { family: "JetBrainsMono Nerd Font"; pixelSize: 13 }
     verticalAlignment: Text.AlignVCenter
   }
-
-  // Caffeine — aparece quando ativo
   Text {
     visible: SystemState.caffeine
     text:    "󰅶"
@@ -24,7 +19,6 @@ RowLayout {
     font { family: "JetBrainsMono Nerd Font"; pixelSize: 13 }
     verticalAlignment: Text.AlignVCenter
   }
-
   Text {
     id: btLabel
     color: Colors.text3
@@ -37,7 +31,6 @@ RowLayout {
       onClicked:    ccToggle.running = true
     }
   }
-
   Text {
     id: wifiLabel
     color: Colors.text3
@@ -50,13 +43,11 @@ RowLayout {
       onClicked:    ccToggle.running = true
     }
   }
-
   BatteryRing {
     id: batRing
     value:    100
     charging: false
   }
-
   Process {
     id: batProc
     command: ["sh", "-c",
@@ -69,7 +60,6 @@ RowLayout {
       }
     }
   }
-
   Process {
     id: netProc
     command: ["sh", "-c",
@@ -106,7 +96,6 @@ RowLayout {
       }
     }
   }
-
   Process {
     id: btProc
     command: ["sh", "-c",
@@ -131,7 +120,6 @@ RowLayout {
       }
     }
   }
-
   Timer {
     interval: 500; running: true; repeat: true; triggeredOnStart: true
     onTriggered: {
@@ -140,6 +128,5 @@ RowLayout {
       btProc.running  = true
     }
   }
-
   Process { id: ccToggle; command: ["quickshell", "ipc", "call", "controlcenter", "toggle"] }
 }

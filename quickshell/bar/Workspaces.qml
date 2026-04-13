@@ -53,7 +53,7 @@ Item {
           width:  occupied || focused ? 26 : 6
           height: occupied || focused ? 26 : 6
           radius: width / 2
-          color:  occupied || focused ? "#333338" : "#2a2a2e"
+          color: focused ? Colors.accent : Qt.rgba(Colors.text3.r, Colors.text3.g, Colors.text3.b, 0.3)
 
           Behavior on width  { NumberAnimation { duration: 200; easing.type: Easing.OutCubic } }
           Behavior on height { NumberAnimation { duration: 200; easing.type: Easing.OutCubic } }
@@ -63,7 +63,7 @@ Item {
             anchors.centerIn: parent
             visible: occupied
             text: wsRoot.wsIcons[wsId] || ""
-            color: "#aaaaaa"
+            color: Colors.text3
             font { pixelSize: 13; family: "JetBrainsMono Nerd Font" }
           }
         }
@@ -122,7 +122,7 @@ Item {
     z: 11
     anchors.centerIn: slider
     text: wsRoot.wsIcons[currentIdx + 1] || ""
-    color: "#0d0d0f"
+    color: Colors.bg0
     font { pixelSize: 13; family: "JetBrainsMono Nerd Font" }
     visible: !moveAnim.running
   }

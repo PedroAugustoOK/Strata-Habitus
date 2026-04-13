@@ -7,13 +7,12 @@ import ".."
 PanelWindow {
   id: osdWindow
   anchors { top: true; bottom: true; left: true }
-  implicitWidth: 80
+  implicitWidth: 130
   color: "transparent"
   exclusionMode: ExclusionMode.Ignore
   mask: Region { item: showing ? osdBox : null }
 
-  property real   value:     0
-  property string icon:      "󰕾"
+  property real   value:     100
   property bool   showing:   false
   property real   lastValue: -1
 
@@ -23,14 +22,13 @@ PanelWindow {
     onTriggered: closeAnim.start()
   }
 
-  function show(ic, val) {
-    if (val === lastValue && ic === icon) return
+  function show(val) {
+    if (val === lastValue) return
     lastValue = val
-    icon  = ic
     value = val
     if (!showing) {
       showing = true
-      osdBox.height = osdBox.width
+      osdBox.height = 46
       osdBox.opacity = 0
       openAnim.start()
     }
@@ -46,23 +44,19 @@ PanelWindow {
 
   SequentialAnimation {
     id: closeAnim
-    NumberAnimation { target: osdBox; property: "height"; to: osdBox.width; duration: 160; easing.type: Easing.InCubic }
+    NumberAnimation { target: osdBox; property: "height"; to: 46; duration: 160; easing.type: Easing.InCubic }
     NumberAnimation { target: osdBox; property: "opacity"; to: 0; duration: 60 }
     ScriptAction { script: osdWindow.showing = false }
   }
 
   Process {
-    id: volWatcher
-    command: ["sh", "-c", "while true; do /run/current-system/sw/bin/wpctl get-volume @DEFAULT_AUDIO_SINK@; sleep 0.1; done"]
+    id: brightWatcher
+    command: ["sh", "-c", "while true; do /run/current-system/sw/bin/brightnessctl -m | awk -F, '{print int($4)}'; sleep 0.1; done"]
     running: true
     stdout: SplitParser {
       onRead: data => {
-        const match = data.match(/([\d.]+)/)
-        if (!match) return
-        const vol   = Math.round(parseFloat(match[1]) * 100)
-        const muted = data.includes("MUTED")
-        const ic    = muted ? "󰝟" : vol > 60 ? "󰕾" : vol > 30 ? "󰖀" : "󰕿"
-        osdWindow.show(ic, vol)
+        const val = parseInt(data.trim())
+        if (!isNaN(val)) osdWindow.show(val)
       }
     }
   }
@@ -75,7 +69,7 @@ PanelWindow {
       left:                 parent.left
       verticalCenter:       parent.verticalCenter
       leftMargin:           20
-      verticalCenterOffset: 110
+      verticalCenterOffset: -110
     }
     radius:  16
     color:   Colors.bg1
@@ -88,10 +82,9 @@ PanelWindow {
         top:              parent.top
         topMargin:        14
       }
-      text:  osdWindow.icon
-      color: osdWindow.value === 0 ? "#f28779" : Colors.accent
+      text:  "󰃠"
+      color: Colors.accent
       font { pixelSize: 15; family: "JetBrainsMono Nerd Font" }
-      Behavior on color { ColorAnimation { duration: 150 } }
     }
 
     Rectangle {
@@ -109,9 +102,8 @@ PanelWindow {
         width:  parent.width
         height: parent.height * (osdWindow.value / 100)
         radius: 3
-        color:  osdWindow.value === 0 ? "#f28779" : Colors.accent
+        color:  Colors.accent
         Behavior on height { NumberAnimation { duration: 80; easing.type: Easing.OutCubic } }
-        Behavior on color  { ColorAnimation  { duration: 150 } }
       }
     }
 

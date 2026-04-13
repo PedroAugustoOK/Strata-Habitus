@@ -8,50 +8,73 @@ import ".."
 
 PanelWindow {
   id: launcher
-  anchors { bottom: true; left: true; right: true }
-  implicitHeight: visible ? mainCol.implicitHeight + brd : 0
+  anchors { top: true; left: true; right: true; bottom: true }
+  implicitHeight: 0
   color: "transparent"
   exclusionMode: ExclusionMode.Ignore
   focusable: true
   visible: false
 
-  readonly property int brd: 10
-  property var results: []
-  property var execs: []
-  property var icons: []
+  readonly property int pillW: 480
+  readonly property int pillH: 48
+  readonly property int itemH: 44
+  readonly property int maxResults: 7
+
+  property var allApps: []
+  property var filtered: []
   property int selected: 0
 
   function toggle() {
-    visible = !visible
     if (visible) {
+      closeAnim.start()
+    } else {
+      visible = true
       searchInput.text = ""
-      searchInput.forceActiveFocus()
+      selected = 0
+      filtered = []
+      if (allApps.length === 0 && !indexProc.running) indexProc.running = true
+      pill.width = pillH
+      pill.opacity = 0
+      openAnim.start()
     }
   }
 
-  function search(q) {
-    results = []
-    execs = []
-    icons = []
-    if (q.length === 0) return
-    searchProc.command = ["sh", "-c", `~/.config/quickshell/scripts/search-apps.sh '${q}'`]
-    searchProc.running = true
+  function filterApps(q) {
+    selected = 0
+    if (q.length === 0) { filtered = []; return }
+    const ql = q.toLowerCase()
+    filtered = allApps.filter(a => a.name.toLowerCase().startsWith(ql)).slice(0, maxResults)
   }
 
   function launch() {
-    if (results.length === 0) return
-    runProc.command = ["sh", "-c", execs[selected] + " &"]
+    if (filtered.length === 0) return
+    runProc.command = ["sh", "-c", filtered[selected].exec + " &"]
     runProc.running = true
-    close()
+    closeAnim.start()
   }
 
   function close() {
-    visible = false
-    searchInput.text = ""
-    results = []
-    execs = []
-    icons = []
-    selected = 0
+    closeAnim.start()
+  }
+
+  SequentialAnimation {
+    id: openAnim
+    NumberAnimation { target: pill; property: "opacity"; from: 0; to: 1; duration: 20 }
+    NumberAnimation { target: pill; property: "width"; from: pillH; to: pillW * 1.04; duration: 260; easing.type: Easing.OutCubic }
+    NumberAnimation { target: pill; property: "width"; to: pillW; duration: 80; easing.type: Easing.InOutQuad }
+    ScriptAction { script: searchInput.forceActiveFocus() }
+  }
+
+  SequentialAnimation {
+    id: closeAnim
+    NumberAnimation { target: pill; property: "width"; to: pillH; duration: 140; easing.type: Easing.InCubic }
+    NumberAnimation { target: pill; property: "opacity"; to: 0; duration: 60 }
+    ScriptAction { script: {
+      launcher.visible = false
+      searchInput.text = ""
+      launcher.selected = 0
+      launcher.filtered = []
+    }}
   }
 
   MouseArea {
@@ -59,136 +82,156 @@ PanelWindow {
     onClicked: launcher.close()
   }
 
-  Item {
-    id: mainCol
-    anchors {
-      bottom: parent.bottom
-      bottomMargin: brd
-      horizontalCenter: parent.horizontalCenter
+  Rectangle {
+    id: pill
+    anchors.verticalCenter: parent.verticalCenter
+    x: (parent.width - pillW) / 2 + (pillW - width) / 2
+    width: pillH
+    height: pillH + (filtered.length > 0 ? filtered.length * itemH + 14 : 0)
+    radius: 14
+    color: Colors.bg1
+    border.color: filtered.length > 0
+      ? Qt.rgba(Colors.accent.r, Colors.accent.g, Colors.accent.b, 0.12)
+      : Qt.rgba(1,1,1,0.06)
+    border.width: 1
+    clip: true
+    opacity: 0
+
+    Behavior on height {
+      NumberAnimation { duration: 160; easing.type: Easing.OutCubic }
     }
-    width: 520
-    implicitHeight: resultsList.implicitHeight + (results.length > 0 ? 8 : 0) + searchBox.height + 8
 
     MouseArea { anchors.fill: parent }
 
-    Shape {
-      anchors.fill: parent
-      layer.enabled: true
-      layer.smooth: true
-      preferredRendererType: Shape.CurveRenderer
-      ShapePath {
-        strokeWidth: 0
-        fillColor: Colors.bg1
-        readonly property real r: 14
-        startX: 0; startY: mainCol.implicitHeight
-        PathLine { x: 0; y: r }
-        PathArc { x: r; y: 0; radiusX: r; radiusY: r }
-        PathLine { x: mainCol.width - r; y: 0 }
-        PathArc { x: mainCol.width; y: r; radiusX: r; radiusY: r }
-        PathLine { x: mainCol.width; y: mainCol.implicitHeight }
-        PathLine { x: 0; y: mainCol.implicitHeight }
+    RowLayout {
+      anchors {
+        top: parent.top
+        left: parent.left; leftMargin: 18
+        right: parent.right; rightMargin: 18
       }
-    }
+      height: pillH
+      spacing: 12
 
-    Column {
-      id: resultsList
-      anchors { bottom: searchBox.top; left: parent.left; right: parent.right }
-      anchors.bottomMargin: 8
-      anchors.leftMargin: 8
-      anchors.rightMargin: 8
-      anchors.topMargin: 8
-      spacing: 2
-      visible: launcher.results.length > 0
+      Text {
+        text: "󰍉"
+        color: filtered.length > 0 ? Colors.accent : Colors.text3
+        font { pixelSize: 16; family: "JetBrainsMono Nerd Font" }
+        verticalAlignment: Text.AlignVCenter
+        Behavior on color { ColorAnimation { duration: 150 } }
+      }
 
-      Repeater {
-        model: launcher.results
-        delegate: Rectangle {
-          required property string modelData
-          required property int index
-          width: parent.width
-          height: 40
-          radius: 8
-          color: launcher.selected === index ? Colors.accentDim : "transparent"
-          border.color: launcher.selected === index
-            ? Qt.rgba(Colors.accent.r, Colors.accent.g, Colors.accent.b, 0.25)
-            : "transparent"
-          border.width: 1
+      TextInput {
+        id: searchInput
+        Layout.fillWidth: true
+        color: Colors.text1
+        font { pixelSize: 14; family: "JetBrainsMono Nerd Font" }
+        cursorVisible: true
+        verticalAlignment: TextInput.AlignVCenter
+        selectionColor: Qt.rgba(Colors.accent.r, Colors.accent.g, Colors.accent.b, 0.4)
+        selectedTextColor: Colors.text0
 
-          RowLayout {
-            anchors { fill: parent; leftMargin: 10; rightMargin: 12 }
-            spacing: 10
-
-            // Ícone
-            Image {
-              source: launcher.icons[index] || ""
-              width: 22
-              height: 26
-              fillMode: Image.PreserveAspectFit
-              Layout.preferredWidth: 26
-              Layout.preferredHeight: 26
-              smooth: true
-              visible: source !== ""
-            }
-
-            Text {
-              text: modelData
-              color: launcher.selected === index ? Colors.text0 : Colors.text2
-              font.pixelSize: 13
-              font.family: "JetBrainsMono Nerd Font"
-              Layout.fillWidth: true
-            }
-          }
-          MouseArea {
-            anchors.fill: parent
-            onClicked: { launcher.selected = index; launcher.launch() }
-          }
+        Text {
+          anchors.fill: parent
+          text: "Buscar aplicativo..."
+          color: Colors.text3
+          font { pixelSize: 14; family: "JetBrainsMono Nerd Font" }
+          verticalAlignment: Text.AlignVCenter
+          visible: searchInput.text.length === 0
         }
+
+        Keys.onReturnPressed: launcher.launch()
+        Keys.onEscapePressed: launcher.close()
+        Keys.onUpPressed:     launcher.selected = Math.max(0, launcher.selected - 1)
+        Keys.onDownPressed:   launcher.selected = Math.min(launcher.filtered.length - 1, launcher.selected + 1)
+        onTextChanged:        launcher.filterApps(text)
       }
     }
 
     Rectangle {
-      id: searchBox
-      anchors { bottom: parent.bottom; left: parent.left; right: parent.right }
-      height: 48
-      color: "transparent"
+      anchors {
+        top: parent.top; topMargin: pillH
+        left: parent.left; leftMargin: 12
+        right: parent.right; rightMargin: 12
+      }
+      height: 1
+      color: Qt.rgba(Colors.accent.r, Colors.accent.g, Colors.accent.b, 0.25)
+      opacity: filtered.length > 0 ? 1 : 0
+      Behavior on opacity { NumberAnimation { duration: 120 } }
+    }
 
-      RowLayout {
-        anchors { fill: parent; leftMargin: 16; rightMargin: 16 }
-        spacing: 10
-        Text {
-          text: "󰍉"
-          color: Colors.text3
-          font.pixelSize: 16
-          font.family: "JetBrainsMono Nerd Font"
-        }
-        TextInput {
-          id: searchInput
-          Layout.fillWidth: true
-          color: Colors.text1
-          font.pixelSize: 13
-          font.family: "JetBrainsMono Nerd Font"
-          cursorVisible: true
-          Keys.onReturnPressed: launcher.launch()
-          Keys.onEscapePressed: launcher.close()
-          Keys.onUpPressed:   launcher.selected = Math.max(0, launcher.selected - 1)
-          Keys.onDownPressed: launcher.selected = Math.min(launcher.results.length - 1, launcher.selected + 1)
-          onTextChanged: launcher.search(text)
+    Column {
+      anchors {
+        top: parent.top; topMargin: pillH + 4
+        left: parent.left; leftMargin: 6
+        right: parent.right; rightMargin: 6
+        bottom: parent.bottom; bottomMargin: 6
+      }
+      spacing: 2
+
+      Repeater {
+        model: launcher.filtered
+        delegate: Rectangle {
+          required property var modelData
+          required property int index
+          width: parent.width
+          height: itemH
+          radius: 10
+          color: launcher.selected === index
+            ? Qt.rgba(Colors.accent.r, Colors.accent.g, Colors.accent.b, 0.12)
+            : "transparent"
+          Behavior on color { ColorAnimation { duration: 80 } }
+
+          RowLayout {
+            anchors { fill: parent; leftMargin: 12; rightMargin: 14 }
+            spacing: 12
+            Image {
+              source: modelData.icon || ""
+              Layout.preferredWidth: 22
+              Layout.preferredHeight: 22
+              fillMode: Image.PreserveAspectFit
+              smooth: true
+              visible: source !== ""
+            }
+            Text {
+              text: modelData.name
+              color: launcher.selected === index ? Colors.text0 : Colors.text2
+              font { pixelSize: 13; family: "JetBrainsMono Nerd Font" }
+              Layout.fillWidth: true
+              Behavior on color { ColorAnimation { duration: 80 } }
+            }
+            Text {
+              text: "↵"
+              color: Colors.accent
+              font { pixelSize: 11; family: "JetBrainsMono Nerd Font" }
+              opacity: launcher.selected === index ? 1 : 0
+              Behavior on opacity { NumberAnimation { duration: 80 } }
+            }
+          }
+
+          MouseArea {
+            anchors.fill: parent
+            hoverEnabled: true
+            onEntered: launcher.selected = index
+            onClicked: { launcher.selected = index; launcher.launch() }
+          }
         }
       }
     }
   }
 
   Process {
-    id: searchProc
-    command: []
+    id: indexProc
+    command: ["/home/ankh/.config/quickshell/scripts/index-apps.sh"]
     stdout: SplitParser {
       onRead: data => {
-        if (data.trim() !== "") {
-          const parts = data.trim().split("|")
-          launcher.results = [...launcher.results, parts[0]]
-          launcher.execs  = [...launcher.execs,   parts[1] || parts[0]]
-          launcher.icons  = [...launcher.icons,   parts[2] || ""]
-        }
+        if (data.trim() === "") return
+        const parts = data.trim().split("|")
+        if (parts.length < 2) return
+        launcher.allApps = [...launcher.allApps, {
+          name: parts[0],
+          exec: parts[1],
+          icon: parts[2] || ""
+        }]
       }
     }
   }

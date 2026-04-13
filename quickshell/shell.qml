@@ -6,16 +6,24 @@ import "bar"
 import "launcher"
 import "notifications"
 import "osd"
+import "osd_bright"
+import "themepicker"
 import "controlcenter"
 import "powermenu"
+import "clipboard"
+import "wallpickr"
 
 ShellRoot {
   Bar {}
   Launcher { id: launcher }
   Notifications {}
   OSD {}
+  OsdbRight {}
   ControlCenter { id: controlCenter }
   PowerMenu { id: powerMenu }
+  ThemePicker { id: themePicker }
+  WallPickr { id: wallPickr }
+  Clipboard { id: clipboard }
 
   readonly property int barH: 34
   readonly property int brd: 10
@@ -39,15 +47,15 @@ ShellRoot {
     }
   }
 
-  // Borda esquerda — exatamente brd de largura, sem arco
+  // Borda esquerda
   PanelWindow {
     anchors { top: true; left: true; bottom: true }
     implicitWidth: brd
-    color: "#111113"
+    color: Colors.bg1
     exclusionMode: ExclusionMode.Ignore
   }
 
-  // Arco superior esquerdo — janela separada
+  // Arco superior esquerdo
   PanelWindow {
     anchors { top: true; left: true }
     implicitWidth: brd + r
@@ -55,31 +63,36 @@ ShellRoot {
     color: "transparent"
     exclusionMode: ExclusionMode.Ignore
     Canvas {
+      id: cv1
       anchors.fill: parent
       Component.onCompleted: requestPaint()
       onPaint: {
         const ctx = getContext("2d")
         const bh = barH, b = brd, rv = r
         ctx.clearRect(0, 0, width, height)
-        ctx.fillStyle = "#111113"
+        ctx.fillStyle = Colors.bg1.toString()
         ctx.fillRect(0, 0, b, bh)
         ctx.beginPath()
         ctx.moveTo(b, bh); ctx.lineTo(b, bh + rv)
         ctx.arc(b + rv, bh + rv, rv, Math.PI, -Math.PI / 2, false)
         ctx.lineTo(b, bh); ctx.closePath(); ctx.fill()
       }
+      Connections {
+        target: Colors
+        function onBg1Changed() { cv1.requestPaint() }
+      }
     }
   }
 
-  // Borda direita — exatamente brd de largura, sem arco
+  // Borda direita
   PanelWindow {
     anchors { top: true; right: true; bottom: true }
     implicitWidth: brd
-    color: "#111113"
+    color: Colors.bg1
     exclusionMode: ExclusionMode.Ignore
   }
 
-  // Arco superior direito — janela separada
+  // Arco superior direito
   PanelWindow {
     anchors { top: true; right: true }
     implicitWidth: brd + r
@@ -87,18 +100,23 @@ ShellRoot {
     color: "transparent"
     exclusionMode: ExclusionMode.Ignore
     Canvas {
+      id: cv2
       anchors.fill: parent
       Component.onCompleted: requestPaint()
       onPaint: {
         const ctx = getContext("2d")
         const bh = barH, b = brd, rv = r, w = width
         ctx.clearRect(0, 0, w, height)
-        ctx.fillStyle = "#111113"
+        ctx.fillStyle = Colors.bg1.toString()
         ctx.fillRect(rv, 0, b, bh)
         ctx.beginPath()
         ctx.moveTo(rv, bh); ctx.lineTo(rv, bh + rv)
         ctx.arc(0, bh + rv, rv, 0, -Math.PI / 2, true)
         ctx.lineTo(rv, bh); ctx.closePath(); ctx.fill()
+      }
+      Connections {
+        target: Colors
+        function onBg1Changed() { cv2.requestPaint() }
       }
     }
   }
@@ -107,7 +125,7 @@ ShellRoot {
   PanelWindow {
     anchors { left: true; right: true; bottom: true }
     implicitHeight: brd
-    color: "#111113"
+    color: Colors.bg1
     exclusionMode: ExclusionMode.Ignore
   }
 
@@ -119,19 +137,24 @@ ShellRoot {
     color: "transparent"
     exclusionMode: ExclusionMode.Ignore
     Canvas {
+      id: cv3
       anchors.fill: parent
       Component.onCompleted: requestPaint()
       onPaint: {
         const ctx = getContext("2d")
         const b = brd, rv = r, h = height
         ctx.clearRect(0, 0, width, h)
-        ctx.fillStyle = "#111113"
+        ctx.fillStyle = Colors.bg1.toString()
         ctx.fillRect(0, 0, b, h - b)
         ctx.fillRect(b, h - b, rv, b)
         ctx.beginPath()
         ctx.moveTo(b, h - b)
         ctx.arc(b + rv, h - b - rv, rv, Math.PI / 2, Math.PI, false)
         ctx.closePath(); ctx.fill()
+      }
+      Connections {
+        target: Colors
+        function onBg1Changed() { cv3.requestPaint() }
       }
     }
   }
@@ -144,19 +167,24 @@ ShellRoot {
     color: "transparent"
     exclusionMode: ExclusionMode.Ignore
     Canvas {
+      id: cv4
       anchors.fill: parent
       Component.onCompleted: requestPaint()
       onPaint: {
         const ctx = getContext("2d")
         const b = brd, rv = r, w = width, h = height
         ctx.clearRect(0, 0, w, h)
-        ctx.fillStyle = "#111113"
+        ctx.fillStyle = Colors.bg1.toString()
         ctx.fillRect(rv, 0, b, h - b)
         ctx.fillRect(0, h - b, rv, b)
         ctx.beginPath()
         ctx.moveTo(rv, h - b)
         ctx.arc(0, h - b - rv, rv, Math.PI / 2, 0, true)
         ctx.closePath(); ctx.fill()
+      }
+      Connections {
+        target: Colors
+        function onBg1Changed() { cv4.requestPaint() }
       }
     }
   }
@@ -174,5 +202,20 @@ ShellRoot {
   IpcHandler {
     target: "powermenu"
     function toggle(): void { powerMenu.toggle() }
+
+  }
+  IpcHandler {
+    target: "wallPickr"
+    function toggle(): void { wallPickr.toggle() }
+  }
+
+
+  IpcHandler {
+    target: "clipboard"
+    function toggle(): void { clipboard.toggle() }
+  }
+  IpcHandler {
+    target: "themepicker"
+    function toggle(): void { themePicker.toggle() }
   }
 }

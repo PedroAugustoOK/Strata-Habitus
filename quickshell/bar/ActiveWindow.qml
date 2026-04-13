@@ -1,10 +1,11 @@
 import Quickshell.Io
 import QtQuick
+import ".."
 
 Text {
   id: winTitle
-  color: "#888888"
-  font { pixelSize: 11; family: "JetBrainsMono Nerd Font" }
+  color: Colors.text3
+  font { pixelSize: 11; family: "Roboto" }
   text: ""
 
   Process {
@@ -14,7 +15,7 @@ Text {
       onRead: data => {
         var t = data.trim()
         winTitle.text = t.length > 40 ? t.substring(0, 37) + "…" : t
-        winTitle.color = t === "" ? "transparent" : "#888888"
+        winTitle.color = t === "" ? "transparent" : Colors.text3
       }
     }
   }

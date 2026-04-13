@@ -5,10 +5,9 @@ import QtQuick
 
 QtObject {
   id: root
-
   property bool dnd: false
 
-  property var server: NotificationServer {
+  property NotificationServer server: NotificationServer {
     keepOnReload: true
     onNotification: notif => {
       if (!root.dnd) notif.tracked = true

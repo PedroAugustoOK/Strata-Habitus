@@ -34,6 +34,7 @@ Rectangle {
     Image {
         anchors.fill: parent
         source: "/var/lib/strata/background.jpg"
+        cache: false
         fillMode: Image.PreserveAspectCrop
     }
 
@@ -91,7 +92,7 @@ Rectangle {
                 id: clockHours
                 anchors.horizontalCenter: parent.horizontalCenter
                 color: "#e8ffffff"
-                font { pixelSize: 140; family: "Roboto"; weight: Font.Bold; letterSpacing: 4 }
+                font { pixelSize: 160; family: "Roboto"; weight: Font.Bold; letterSpacing: -4 }
                 text: "00"
             }
 
@@ -99,7 +100,7 @@ Rectangle {
                 id: clockMinutes
                 anchors.horizontalCenter: parent.horizontalCenter
                 color: accentColor
-                font { pixelSize: 140; family: "Roboto"; weight: Font.Bold; letterSpacing: 4 }
+                font { pixelSize: 160; family: "Roboto"; weight: Font.Bold; letterSpacing: -4 }
                 text: "00"
                 opacity: 0.85
             }
@@ -150,7 +151,7 @@ Rectangle {
 
         Column {
             anchors.centerIn: parent
-            spacing: -20
+            spacing: 0
             width: 320
 
             Text {

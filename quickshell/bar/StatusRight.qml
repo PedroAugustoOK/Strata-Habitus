@@ -25,11 +25,6 @@ RowLayout {
     font { family: "Material Symbols Rounded"; pixelSize: 14 }
     text:  "\uE1A9"
     verticalAlignment: Text.AlignVCenter
-    MouseArea {
-      anchors.fill: parent
-      cursorShape:  Qt.PointingHandCursor
-      onClicked:    ccToggle.running = true
-    }
   }
   Text {
     id: wifiLabel
@@ -37,11 +32,6 @@ RowLayout {
     font { family: "Material Symbols Rounded"; pixelSize: 14 }
     text:  "\uE648"
     verticalAlignment: Text.AlignVCenter
-    MouseArea {
-      anchors.fill: parent
-      cursorShape:  Qt.PointingHandCursor
-      onClicked:    ccToggle.running = true
-    }
   }
   BatteryRing {
     id: batRing
@@ -128,5 +118,4 @@ RowLayout {
       btProc.running  = true
     }
   }
-  Process { id: ccToggle; command: ["quickshell", "ipc", "call", "controlcenter", "toggle"] }
 }

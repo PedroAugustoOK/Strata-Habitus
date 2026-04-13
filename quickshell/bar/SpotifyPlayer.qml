@@ -5,10 +5,11 @@ import ".."
 Item {
   id: root
   property string title:    ""
+  property string artist:   ""
   property bool   playing:  false
   property bool   hasTrack: title !== ""
 
-  height: 24
+  height: 28
   width:  hasTrack ? pill.implicitWidth : 0
   opacity: hasTrack ? 1 : 0
   visible: width > 1
@@ -19,15 +20,14 @@ Item {
   Rectangle {
     id: pill
     anchors.fill: parent
-    radius: 12
+    radius: 14
     color:  Colors.bg2
     implicitWidth: innerRow.implicitWidth + 24
-    clip: false
 
     Row {
       id: innerRow
       anchors.centerIn: parent
-      spacing: 6
+      spacing: 8
 
       Text {
         text:  "\uF1BC"
@@ -37,37 +37,22 @@ Item {
         Behavior on color { ColorAnimation { duration: 200 } }
       }
 
-      Text {
-        text:  root.title
-        font { family: "Roboto"; pixelSize: 11 }
-        color: Colors.text2
+      Column {
         anchors.verticalCenter: parent.verticalCenter
-      }
-    }
+        spacing: 1
 
-    // Fade esquerda
-    Rectangle {
-      z: 2
-      anchors { left: parent.left; top: parent.top; bottom: parent.bottom }
-      width: 22
-      radius: 12
-      gradient: Gradient {
-        orientation: Gradient.Horizontal
-        GradientStop { position: 0.0; color: Colors.bg2 }
-        GradientStop { position: 1.0; color: "transparent" }
-      }
-    }
+        Text {
+          text:  root.title
+          font { family: "Roboto"; pixelSize: 10 }
+          color: Colors.text1
+        }
 
-    // Fade direita
-    Rectangle {
-      z: 2
-      anchors { right: parent.right; top: parent.top; bottom: parent.bottom }
-      width: 22
-      radius: 12
-      gradient: Gradient {
-        orientation: Gradient.Horizontal
-        GradientStop { position: 0.0; color: "transparent" }
-        GradientStop { position: 1.0; color: Colors.bg2 }
+        Text {
+          text:  root.artist
+          font { family: "Roboto"; pixelSize: 8 }
+          color: Colors.text3
+          visible: root.artist !== ""
+        }
       }
     }
 
@@ -75,7 +60,7 @@ Item {
       anchors.fill: parent
       acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
       onClicked: function(m) {
-        if      (m.button === Qt.LeftButton)   nextProc.running  = true
+        if      (m.button === Qt.LeftButton)   focusProc.running = true
         else if (m.button === Qt.RightButton)  pauseProc.running = true
         else if (m.button === Qt.MiddleButton) focusProc.running = true
       }
@@ -89,17 +74,19 @@ Item {
   Process {
     id: trackProc
     command: ["sh", "-c",
-      "playerctl -p spotify metadata --format '{{status}}|{{title}}' 2>/dev/null || echo ''"]
+      "playerctl -p spotify metadata --format '{{status}}|{{title}}|{{artist}}' 2>/dev/null || echo ''"]
     stdout: SplitParser {
       onRead: data => {
         var t = data.trim()
         if (t === "" || t.indexOf("|") === -1) {
-          root.title = ""; root.playing = false; return
+          root.title = ""; root.artist = ""; root.playing = false; return
         }
         var parts    = t.split("|")
         root.playing = parts[0] === "Playing"
-        var song     = parts.slice(1).join("|")
-        root.title   = song.length > 30 ? song.substring(0, 28) + "…" : song
+        var song     = parts[1] || ""
+        root.title   = song.length > 28 ? song.substring(0, 26) + "…" : song
+        var art      = parts[2] || ""
+        root.artist  = art.length > 22 ? art.substring(0, 20) + "…" : art
       }
     }
   }

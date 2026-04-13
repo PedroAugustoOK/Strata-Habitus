@@ -12,45 +12,37 @@ PanelWindow {
   exclusiveZone:  34
   color: Colors.bg1
 
-  // ── Zona esquerda (do início até as workspaces) ─────────
+  // ── Esquerda ─────────────────────────────────────────
   Item {
     id: leftZone
-    anchors {
-      left:           parent.left
-      verticalCenter: parent.verticalCenter
-    }
+    anchors { left: parent.left; verticalCenter: parent.verticalCenter }
     width:  wsPill.x - 6
     height: 34
 
-    // Título — fixo à esquerda da zona
     Rectangle {
       id: titlePill
       anchors { left: parent.left; leftMargin: 10; verticalCenter: parent.verticalCenter }
-      height: 24
-      radius: 12
+      height: 28; radius: 14
       color:  Colors.bg2
       width:  winText.implicitWidth + 24
       visible: winText.text !== ""
-
       ActiveWindow {
         id: winText
         anchors.centerIn: parent
       }
     }
 
-    // Spotify — centralizado na zona, independente do título
     SpotifyPlayer {
       id: spotify
       anchors.centerIn: parent
     }
   }
 
-  // ── Centro: Workspaces ──────────────────────────────────
+  // ── Centro: Workspaces ───────────────────────────────
   Rectangle {
     id: wsPill
     anchors.centerIn: parent
-    height: 28
-    radius: 14
+    height: 28; radius: 14
     color:  Colors.bg2
     width:  ws.width + 20
 
@@ -60,7 +52,7 @@ PanelWindow {
     }
   }
 
-  // ── Zona direita (das workspaces até o fim) ─────────────
+  // ── Direita ──────────────────────────────────────────
   Item {
     id: rightZone
     anchors {
@@ -71,54 +63,56 @@ PanelWindow {
     }
     height: 34
 
-    // Stats — CPU e RAM
-    Rectangle {
-      id: statsPill
-      anchors { right: clockPill.left; rightMargin: 6; verticalCenter: parent.verticalCenter }
-      height: 24
-      radius: 12
-      color:  Colors.bg2
-      width:  stats.implicitWidth + 24
-      MouseArea {
-        anchors.fill: parent
-        cursorShape: Qt.PointingHandCursor
-        onClicked: btopProc.running = true
-      }
-      Process {
-        id: btopProc
-        command: ["kitty", "--title", "btop", "--override", "window_padding_width=0", "btop"]
-      }
-      SysStats {
-        id: stats
-        anchors.centerIn: parent
-      }
-    }
-    // Relógio — centralizado na zona
-    Rectangle {
-      id: clockPill
-      anchors.centerIn: parent
-      height: 24
-      radius: 12
-      color:  Colors.bg2
-      width:  clk.implicitWidth + 24
-
-      Clock {
-        id: clk
-        anchors.centerIn: parent
-      }
-    }
-
-    // Status — fixo à direita da zona
-    Rectangle {
-    // Tray — apps em background
+    // tray — fixo à esquerda da zona
     Tray {
       id: trayPill
-      anchors { right: statusPill.left; rightMargin: 6; verticalCenter: parent.verticalCenter }
+      anchors { left: parent.left; leftMargin: 4; verticalCenter: parent.verticalCenter }
     }
+
+    // stats + clock — centralizados na zona direita
+    Row {
+      anchors.centerIn: parent
+      spacing: 6
+
+      Rectangle {
+        id: statsPill
+        height: 28; radius: 14
+        color:  Colors.bg2
+        width:  stats.implicitWidth + 24
+
+        MouseArea {
+          anchors.fill: parent
+          cursorShape: Qt.PointingHandCursor
+          onClicked: btopProc.running = true
+        }
+        Process {
+          id: btopProc
+          command: ["kitty", "--title", "btop", "--override", "window_padding_width=0", "btop"]
+        }
+        SysStats {
+          id: stats
+          anchors.centerIn: parent
+        }
+      }
+
+      Rectangle {
+        id: clockPill
+        height: 28; radius: 14
+        color:  Colors.bg2
+        width:  clk.implicitWidth + 24
+
+        Clock {
+          id: clk
+          anchors.centerIn: parent
+        }
+      }
+    }
+
+    // status — fixo à direita
+    Rectangle {
       id: statusPill
       anchors { right: parent.right; rightMargin: 10; verticalCenter: parent.verticalCenter }
-      height: 24
-      radius: 12
+      height: 28; radius: 14
       color:  Colors.bg2
       width:  sr.implicitWidth + 24
 
@@ -126,6 +120,7 @@ PanelWindow {
         id: sr
         anchors.centerIn: parent
       }
+
       MouseArea {
         anchors.fill: parent
         cursorShape: Qt.PointingHandCursor
@@ -133,5 +128,6 @@ PanelWindow {
       }
     }
   }
+
   Process { id: ccToggle; command: ["quickshell", "ipc", "call", "controlcenter", "toggle"] }
 }

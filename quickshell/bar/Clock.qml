@@ -1,25 +1,57 @@
 import QtQuick
 import ".."
 
-Text {
-  id: clock
-  color: Colors.text1
-  font { pixelSize: 11; family: "Roboto" }
-  verticalAlignment: Text.AlignVCenter
+Row {
+  id: root
+  spacing: 5
+  height: parent.height
 
-  function update() {
-    var dias = ["Dom","Seg","Ter","Qua","Qui","Sex","Sáb"]
-    var d    = new Date()
-    var h    = ("0" + d.getHours()).slice(-2)
-    var m    = ("0" + d.getMinutes()).slice(-2)
-    var dia  = dias[d.getDay()]
-    var dd   = ("0" + d.getDate()).slice(-2)
-    var mm   = ("0" + (d.getMonth() + 1)).slice(-2)
-    clock.text = h + ":" + m + "  •  " + dia + " " + dd + "/" + mm
+  property string h: "00"
+  property string m: "00"
+  property string daydate: "Seg 13"
+
+  Text {
+    anchors.verticalCenter: parent.verticalCenter
+    text: root.h
+    color: Colors.accent
+    font { pixelSize: 13; family: "Roboto"; weight: Font.Bold }
+  }
+
+  Text {
+    anchors.verticalCenter: parent.verticalCenter
+    text: ":"
+    color: Qt.rgba(Colors.accent.r, Colors.accent.g, Colors.accent.b, 0.4)
+    font { pixelSize: 11; family: "Roboto" }
+  }
+
+  Text {
+    anchors.verticalCenter: parent.verticalCenter
+    text: root.m
+    color: Colors.accent
+    font { pixelSize: 13; family: "Roboto"; weight: Font.Bold }
+  }
+
+  Rectangle {
+    width: 1; height: 14
+    color: Qt.rgba(1,1,1,0.08)
+    anchors.verticalCenter: parent.verticalCenter
+  }
+
+  Text {
+    anchors.verticalCenter: parent.verticalCenter
+    text: root.daydate
+    color: Colors.text3
+    font { pixelSize: 10; family: "Roboto" }
   }
 
   Timer {
     interval: 1000; running: true; repeat: true; triggeredOnStart: true
-    onTriggered: clock.update()
+    onTriggered: {
+      var d = new Date()
+      var dias = ["Dom","Seg","Ter","Qua","Qui","Sex","Sáb"]
+      root.h       = ("0" + d.getHours()).slice(-2)
+      root.m       = ("0" + d.getMinutes()).slice(-2)
+      root.daydate = dias[d.getDay()] + " " + ("0" + d.getDate()).slice(-2)
+    }
   }
 }

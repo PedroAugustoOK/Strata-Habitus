@@ -1,63 +1,74 @@
 import Quickshell.Io
 import QtQuick
-import QtQuick.Layouts
 import ".."
 
-RowLayout {
-  spacing: 8
+Row {
+  id: root
+  spacing: 5
   height: parent.height
 
+  property string cpu: "0%"
+  property string ram: "0%"
+
   Text {
-    id: cpuLabel
-    text: "CPU 0%"
-    color: Colors.text3
-    font { pixelSize: 11; family: "Roboto" }
-    verticalAlignment: Text.AlignVCenter
+    anchors.verticalCenter: parent.verticalCenter
+    text: "󰍛"
+    color: Colors.accent
+    font { pixelSize: 13; family: "JetBrainsMono Nerd Font" }
   }
 
   Text {
-    text: "·"
-    color: Colors.text3
-    font { pixelSize: 11; family: "Roboto" }
-    verticalAlignment: Text.AlignVCenter
+    anchors.verticalCenter: parent.verticalCenter
+    text: root.cpu
+    color: Colors.accent
+    font { pixelSize: 12; family: "Roboto"; weight: Font.Bold }
+  }
+
+  Rectangle {
+    width: 1; height: 12
+    color: Qt.rgba(1,1,1,0.08)
+    anchors.verticalCenter: parent.verticalCenter
   }
 
   Text {
-    id: ramLabel
-    text: "RAM 0%"
-    color: Colors.text3
-    font { pixelSize: 11; family: "Roboto" }
-    verticalAlignment: Text.AlignVCenter
+    anchors.verticalCenter: parent.verticalCenter
+    text: "󰘚"
+    color: Colors.accent
+    font { pixelSize: 13; family: "JetBrainsMono Nerd Font" }
+  }
+
+  Text {
+    anchors.verticalCenter: parent.verticalCenter
+    text: root.ram
+    color: Colors.accent
+    font { pixelSize: 12; family: "Roboto"; weight: Font.Bold }
   }
 
   Process {
-    id: cpuProc
-    command: ["sh", "-c",
-      "awk '/^cpu /{u=$2+$4; t=$2+$3+$4+$5; print int(u*100/t)}' /proc/stat"]
+    id: statsProc
+    command: ["sh", "-c", "awk '/MemTotal/{t=$2} /MemAvailable/{a=$2} END{printf \"%d\", (t-a)/t*100}' /proc/meminfo"]
     stdout: SplitParser {
       onRead: data => {
-        var v = parseInt(data.trim()) || 0
-        cpuLabel.text  = "CPU " + v + "%"
-        cpuLabel.color = v > 80 ? "#f28779" : v > 50 ? "#d9bc8c" : Colors.text3
+        root.ram = data.trim() + "%"
       }
     }
   }
 
   Process {
-    id: ramProc
-    command: ["sh", "-c",
-      "awk '/MemTotal/{t=$2} /MemAvailable/{a=$2} END{print int((t-a)*100/t)}' /proc/meminfo"]
+    id: cpuProc
+    command: ["sh", "-c", "grep -m1 'cpu ' /proc/stat | awk '{u=$2+$4; t=$2+$3+$4+$5; if(t>0) printf \"%d\", u*100/t}'"]
     stdout: SplitParser {
       onRead: data => {
-        var v = parseInt(data.trim()) || 0
-        ramLabel.text  = "RAM " + v + "%"
-        ramLabel.color = v > 80 ? "#f28779" : v > 50 ? "#d9bc8c" : Colors.text3
+        if (data.trim() !== "") root.cpu = data.trim() + "%"
       }
     }
   }
 
   Timer {
     interval: 2000; running: true; repeat: true; triggeredOnStart: true
-    onTriggered: { cpuProc.running = true; ramProc.running = true }
+    onTriggered: {
+      statsProc.running = true
+      cpuProc.running = true
+    }
   }
 }

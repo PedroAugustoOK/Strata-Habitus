@@ -45,6 +45,14 @@ refresh_flatpak_cache() {
   fi
 }
 
+get_installed_nix() {
+  awk '/environment\.systemPackages = with pkgs;/,/^\s*\];/' ~/dotfiles/configuration.nix \
+    | grep -v '#\|{\|}\|=\|import\|pkgs\|mkDerivation\|installPhase\|dontBuild\|pname\|version\|\.\|src \|cp \|mkdir\|ln \|environment\|systemPackages\|with ' \
+    | tr ' ' '\n' \
+    | grep -E '^[a-zA-Z][a-zA-Z0-9_-]+$' \
+    | sort -u
+}
+
 case "$MODE" in
   nix_install)
     refresh_nix_cache
@@ -59,10 +67,13 @@ case "$MODE" in
     [ -z "$result" ] && exit 0
     pkg=$(echo "$result" | cut -f1 | xargs)
     clear
-    echo -e "\n  ${AR}adicionando ${pkg}...${R}"
+    echo -e "\n  ${AR}pacote:${R}    $pkg"
+    echo -e "  ${AR}versão:${R}    $(echo "$result" | cut -f2 | xargs)"
+    echo -e "  ${AR}descrição:${R} $(echo "$result" | cut -f3 | xargs)\n"
+    echo -e "  ${AR}adicionando ao configuration.nix...${R}"
     sed -i "/hplipWithPlugin glib vesktop/a\    $pkg" ~/dotfiles/configuration.nix
     echo -e "  ${AR}rebuilding nixos...${R}\n"
-    sudo nixos-rebuild switch --flake ~/dotfiles#galaxybook 2>&1 | tail -5
+    sudo nixos-rebuild switch --flake ~/dotfiles#galaxybook 2>&1 | grep -E "building|copying|activating|error|warning|Done" | tail -8
     echo -e "\n  ${AR}✓ ${pkg} instalado!${R}\n  ${D}enter para fechar${R}"
     read -r
     ;;
@@ -79,18 +90,20 @@ case "$MODE" in
         --preview-window='down:5:wrap')
     [ -z "$result" ] && exit 0
     appid=$(echo "$result" | cut -f3 | xargs)
+    name=$(echo "$result" | cut -f1 | xargs)
+    desc=$(echo "$result" | cut -f2 | xargs)
     clear
-    echo -e "\n  ${AR}instalando ${appid}...${R}\n"
-    flatpak install -y "$appid" 2>&1 | tail -5
+    echo -e "\n  ${AR}nome:${R}      $name"
+    echo -e "  ${AR}descrição:${R} $desc"
+    echo -e "  ${AR}app id:${R}    $appid\n"
+    echo -e "  ${AR}instalando...${R}\n"
+    flatpak install -y "$appid" 2>&1 | grep -E "Instalando|Installing|erro|error" | tail -5
     echo -e "\n  ${AR}✓ instalado!${R}\n  ${D}enter para fechar${R}"
     read -r
     ;;
 
   nix_remove)
-    result=$(awk '/environment.systemPackages/,/^\s*\];/' ~/dotfiles/configuration.nix \
-      | grep -oE '\b[a-zA-Z][a-zA-Z0-9_-]+\b' \
-      | grep -v "with\|pkgs\|stdenv\|mkDerivation\|pname\|version\|src\|dontBuild\|installPhase\|environment\|systemPackages" \
-      | sort -u \
+    result=$(get_installed_nix \
       | fzf "${FZF_BASE[@]}" \
         --header=$'  nix — remover\n  esc = fechar\n' \
         --header-first)
@@ -98,9 +111,9 @@ case "$MODE" in
     pkg=$(echo "$result" | xargs)
     clear
     echo -e "\n  ${AR}removendo ${pkg}...${R}"
-    sed -i "/\b${pkg}\b/d" ~/dotfiles/configuration.nix
+    sed -i "/^\s*${pkg}\s*$/d" ~/dotfiles/configuration.nix
     echo -e "  ${AR}rebuilding nixos...${R}\n"
-    sudo nixos-rebuild switch --flake ~/dotfiles#galaxybook 2>&1 | tail -5
+    sudo nixos-rebuild switch --flake ~/dotfiles#galaxybook 2>&1 | grep -E "building|copying|activating|error|warning|Done" | tail -8
     echo -e "\n  ${AR}✓ ${pkg} removido!${R}\n  ${D}enter para fechar${R}"
     read -r
     ;;
@@ -117,8 +130,9 @@ case "$MODE" in
         --preview-window='down:4:wrap')
     [ -z "$result" ] && exit 0
     appid=$(echo "$result" | cut -f2 | xargs)
+    name=$(echo "$result" | cut -f1 | xargs)
     clear
-    echo -e "\n  ${AR}removendo ${appid}...${R}\n"
+    echo -e "\n  ${AR}removendo ${name}...${R}\n"
     flatpak uninstall -y "$appid"
     echo -e "\n  ${AR}✓ removido!${R}\n  ${D}enter para fechar${R}"
     read -r

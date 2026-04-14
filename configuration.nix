@@ -70,7 +70,6 @@
     spotify fish starship loupe zathura libreoffice
     standardnotes mpv gsettings-desktop-schemas
     hplipWithPlugin glib vesktop
-    neofetch
     fzf
   ];
 

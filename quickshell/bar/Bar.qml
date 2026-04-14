@@ -10,7 +10,6 @@ PanelWindow {
   implicitHeight: 34
   exclusiveZone:  34
   color: Colors.bg1
-  // ── Esquerda ─────────────────────────────────────────
   Item {
     id: leftZone
     anchors { left: parent.left; verticalCenter: parent.verticalCenter }
@@ -33,7 +32,6 @@ PanelWindow {
       anchors.centerIn: parent
     }
   }
-  // ── Centro: Workspaces ───────────────────────────────
   Rectangle {
     id: wsPill
     anchors.centerIn: parent
@@ -45,7 +43,6 @@ PanelWindow {
       anchors.centerIn: parent
     }
   }
-  // ── Direita ──────────────────────────────────────────
   Item {
     id: rightZone
     anchors {
@@ -55,7 +52,6 @@ PanelWindow {
       verticalCenter: parent.verticalCenter
     }
     height: 34
-    // stats + clock — centralizados na zona direita
     Row {
       anchors.centerIn: parent
       spacing: 6
@@ -89,12 +85,10 @@ PanelWindow {
         }
       }
     }
-    // tray — fixo à esquerda do statusPill
     Tray {
       id: trayPill
       anchors { right: statusPill.left; rightMargin: 6; verticalCenter: parent.verticalCenter }
     }
-    // status — fixo à direita (SEM MouseArea — o CC abre pelos ícones dentro do StatusRight)
     Rectangle {
       id: statusPill
       anchors { right: parent.right; rightMargin: 10; verticalCenter: parent.verticalCenter }
@@ -104,7 +98,7 @@ PanelWindow {
       MouseArea {
         anchors.fill: parent
         cursorShape: Qt.PointingHandCursor
-        onClicked: ccToggle.running = true
+        onClicked: { console.log("CLICOU"); ccToggle.running = true }
       }
       StatusRight {
         id: sr

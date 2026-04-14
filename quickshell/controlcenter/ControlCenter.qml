@@ -13,10 +13,11 @@ PanelWindow {
   implicitHeight: 800
   color: "transparent"
   exclusionMode: ExclusionMode.Ignore
-  WlrLayershell.keyboardFocus: WlrKeyboardFocus.OnDemand
+  WlrLayershell.keyboardFocus: WlrKeyboardFocus.Exclusive
   WlrLayershell.layer: WlrLayer.Overlay
   focusable: true
   visible: false
+
 
   function toggle() {
     if (visible) {

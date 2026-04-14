@@ -9,7 +9,7 @@ PanelWindow {
   id: root
   anchors { top: true; right: true }
   implicitWidth: 360
-  implicitHeight: Screen.height
+  implicitHeight: Screen.height - 34
   color: "transparent"
   exclusionMode: ExclusionMode.Ignore
   WlrLayershell.keyboardFocus: WlrKeyboardFocus.None

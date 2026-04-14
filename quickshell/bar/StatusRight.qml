@@ -3,6 +3,7 @@ import QtQuick
 import QtQuick.Layouts
 import ".."
 RowLayout {
+  enabled: false
   spacing: 8
   height:  parent.height
   Text {

@@ -16,7 +16,7 @@ import "wallpickr"
 ShellRoot {
   Bar {}
   Launcher { id: launcher }
-  Notifications {}
+  // Notifications {}
   OSD {}
   OsdbRight {}
   ControlCenter { id: controlCenter }
@@ -29,7 +29,6 @@ ShellRoot {
   readonly property int brd: 10
   readonly property int r: 12
 
-  // Overlay PowerMenu
   PanelWindow {
     anchors { top: true; bottom: true; left: true; right: true }
     color: "transparent"
@@ -47,10 +46,11 @@ ShellRoot {
     }
   }
 
-  // Borda esquerda
+  // Borda esquerda — começa abaixo da bar
   PanelWindow {
-    anchors { top: true; left: true; bottom: true }
+    anchors { left: true; bottom: true }
     implicitWidth: brd
+    implicitHeight: Screen.height - barH
     color: Colors.bg1
     exclusionMode: ExclusionMode.Ignore
   }
@@ -62,6 +62,7 @@ ShellRoot {
     implicitHeight: barH + r
     color: "transparent"
     exclusionMode: ExclusionMode.Ignore
+    mask: Region { item: cv1arc }
     Canvas {
       id: cv1
       anchors.fill: parent
@@ -82,12 +83,19 @@ ShellRoot {
         function onBg1Changed() { cv1.requestPaint() }
       }
     }
+    Item {
+      id: cv1arc
+      x: 0; y: barH
+      width: brd
+      height: r
+    }
   }
 
-  // Borda direita
+  // Borda direita — começa abaixo da bar
   PanelWindow {
-    anchors { top: true; right: true; bottom: true }
+    anchors { right: true; bottom: true }
     implicitWidth: brd
+    implicitHeight: Screen.height - barH
     color: Colors.bg1
     exclusionMode: ExclusionMode.Ignore
   }
@@ -99,6 +107,7 @@ ShellRoot {
     implicitHeight: barH + r
     color: "transparent"
     exclusionMode: ExclusionMode.Ignore
+    mask: Region { item: cv2arc }
     Canvas {
       id: cv2
       anchors.fill: parent
@@ -118,6 +127,12 @@ ShellRoot {
         target: Colors
         function onBg1Changed() { cv2.requestPaint() }
       }
+    }
+    Item {
+      id: cv2arc
+      x: r; y: barH
+      width: brd
+      height: r
     }
   }
 
@@ -193,23 +208,18 @@ ShellRoot {
     target: "launcher"
     function toggle(): void { launcher.toggle() }
   }
-
   IpcHandler {
     target: "controlcenter"
     function toggle(): void { controlCenter.toggle() }
   }
-
   IpcHandler {
     target: "powermenu"
     function toggle(): void { powerMenu.toggle() }
-
   }
   IpcHandler {
     target: "wallPickr"
     function toggle(): void { wallPickr.toggle() }
   }
-
-
   IpcHandler {
     target: "clipboard"
     function toggle(): void { clipboard.toggle() }

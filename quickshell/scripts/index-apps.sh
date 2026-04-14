@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-find /run/current-system/sw/share/applications ~/.local/share/applications -name "*.desktop" 2>/dev/null | while read f; do
+find /run/current-system/sw/share/applications ~/.local/share/applications ~/.local/share/flatpak/exports/share/applications /var/lib/flatpak/exports/share/applications -name "*.desktop" 2>/dev/null | while read f; do
   nodisplay=$(grep -m1 "^NoDisplay=" "$f" | sed 's/NoDisplay=//')
   [ "$nodisplay" = "true" ] && continue
   name=$(grep -m1 "^Name=" "$f" | sed 's/Name=//')

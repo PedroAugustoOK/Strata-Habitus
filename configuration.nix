@@ -21,7 +21,11 @@
   systemd.services.NetworkManager-wait-online.enable = false;
 
   networking.hostName              = "nixos";
-  networking.networkmanager.enable = true;
+  networking.wireless.iwd.enable = true;
+  networking.wireless.iwd.settings = {
+    General.EnableNetworkConfiguration = true;
+    Network.EnableIPv6 = true;
+  };
 
   time.timeZone      = "America/Porto_Velho";
   i18n.defaultLocale = "pt_BR.UTF-8";
@@ -42,7 +46,7 @@
   users.users.ankh = {
     isNormalUser = true;
     description  = "Pedro Augusto";
-    extraGroups  = [ "networkmanager" "wheel" "video" ];
+    extraGroups  = [ "wheel" "video" ];
     shell        = pkgs.fish;
     packages     = with pkgs; [];
   };
@@ -60,7 +64,7 @@
         cp ${./wallpaper.jpg} $out/share/sddm/themes/strata/background.jpg
       '';
     })
-    git wget curl neovim networkmanager kitty chromium quickshell
+    git wget curl neovim kitty chromium quickshell
     grimblast wl-clipboard cliphist brightnessctl swww matugen
     nautilus gvfs pavucontrol pwvucontrol
     impala bluetui playerctl hyprlock hypridle

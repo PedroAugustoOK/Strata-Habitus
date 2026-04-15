@@ -113,7 +113,6 @@ if [ "$COUNT" -gt 0 ]; then
   echo "$WALLPAPER" > "$HOME/.config/quickshell/themes/current-wallpaper"
 fi
 
-kitty @  set-colors --all /home/ankh/dotfiles/kitty/colors.conf 2>/dev/null & 
 hyprctl keyword "general:col.active_border" "rgba($(echo $ACCENT | tr -d '#')ff)"
 echo "Tema aplicado: $NEXT"
 
@@ -134,8 +133,59 @@ SDDM_THEME="/run/current-system/sw/share/sddm/themes/strata"
 WALL_SRC="$(cat $HOME/.config/quickshell/themes/current-wallpaper)"
 magick "$WALL_SRC" -scale 10% -scale 1920x1080! /tmp/strata-bg.jpg 2>/dev/null && sudo /run/current-system/sw/bin/cp /tmp/strata-bg.jpg /var/lib/strata/background.jpg 2>/dev/null & 
 echo "accent=$ACCENT" > /tmp/strata-accent && sudo /run/current-system/sw/bin/tee /var/lib/strata/theme.conf < /tmp/strata-accent > /dev/null 2>/dev/null || true
+# Recarrega fish em todas as sessões
+
+# Atualiza cores do fish via config.fish
+if [ "$MODE" = "light" ]; then
+  sed -i "s/set -g fish_color_command.*/set -g fish_color_command        1a6a9a  # accent — comandos/" ~/.config/fish/config.fish
+  sed -i "s/set -g fish_color_param.*/set -g fish_color_param          2a2a2a  # argumentos/" ~/.config/fish/config.fish
+  sed -i "s/set -g fish_color_error.*/set -g fish_color_error          b4637a  # erros/" ~/.config/fish/config.fish
+  sed -i "s/set -g fish_color_comment.*/set -g fish_color_comment        888888  # comentários/" ~/.config/fish/config.fish
+  sed -i "s/set -g fish_color_quote.*/set -g fish_color_quote          286e38  # strings/" ~/.config/fish/config.fish
+else
+  sed -i "s/set -g fish_color_command.*/set -g fish_color_command        cf9fff  # accent — comandos/" ~/.config/fish/config.fish
+  sed -i "s/set -g fish_color_param.*/set -g fish_color_param          e0e0e0  # argumentos/" ~/.config/fish/config.fish
+  sed -i "s/set -g fish_color_error.*/set -g fish_color_error          f28779  # erros/" ~/.config/fish/config.fish
+  sed -i "s/set -g fish_color_comment.*/set -g fish_color_comment        555555  # comentários/" ~/.config/fish/config.fish
+  sed -i "s/set -g fish_color_quote.*/set -g fish_color_quote          d9bc8c  # strings/" ~/.config/fish/config.fish
+fi
+# Atualiza starship com cores do tema
+if [ "$MODE" = "light" ]; then
+  STAR_DIR="#1a6a9a"
+  STAR_GIT="#286e38"
+  STAR_CHAR="$ACCENT"
+else
+  STAR_DIR="#cf9fff"
+  STAR_GIT="#87c181"
+  STAR_CHAR="$ACCENT"
+fi
+cat > "$HOME/dotfiles/starship/starship.toml" << STAREOF
+# Strata Habitus — Starship prompt
+format = """\
+\$directory\$git_branch\$git_status\$cmd_duration\$line_break\$character"""
+add_newline = false
+[directory]
+style            = "bold $STAR_DIR"
+truncation_length = 3
+truncate_to_repo  = true
+read_only        = " 󰌾"
+read_only_style  = "#f28779"
+format           = "[\$path](\$style)[\$read_only](\$read_only_style) "
+[git_branch]
+style  = "$STAR_GIT"
+format = "[ \$branch](\$style) "
+[git_status]
+style  = "$STAR_CHAR"
+format = "([\$all_status\$ahead_behind](\$style) )"
+[cmd_duration]
+style  = "dimmed $STAR_DIR"
+format = "[ \${duration}](\$style) "
+[character]
+success_symbol = "[❯](bold $STAR_CHAR)"
+error_symbol   = "[❯](bold red)"
+STAREOF
 pkill quickshell
-sleep 0.1
+sleep 0.5
 nohup quickshell > /dev/null 2>&1 &
 disown
 echo "Tema aplicado: $NEXT"

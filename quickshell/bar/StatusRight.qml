@@ -2,43 +2,59 @@ import Quickshell.Io
 import QtQuick
 import QtQuick.Layouts
 import ".."
-RowLayout {
-  enabled: false
-  spacing: 8
-  height:  parent.height
-  Text {
-    visible: SystemState.dnd
-    text:    "󰂛"
-    color:   Colors.accent
-    font { family: "JetBrainsMono Nerd Font"; pixelSize: 13 }
-    verticalAlignment: Text.AlignVCenter
+Item {
+  id: root
+  implicitWidth:  row.implicitWidth
+  implicitHeight: row.implicitHeight
+
+  RowLayout {
+    id: row
+    anchors.fill: parent
+    spacing: 8
+
+    Text {
+      visible: SystemState.dnd
+      text:    "󰂛"
+      color:   Colors.accent
+      font { family: "JetBrainsMono Nerd Font"; pixelSize: 13 }
+      verticalAlignment: Text.AlignVCenter
+    }
+    Text {
+      visible: SystemState.caffeine
+      text:    "󰅶"
+      color:   Colors.accent
+      font { family: "JetBrainsMono Nerd Font"; pixelSize: 13 }
+      verticalAlignment: Text.AlignVCenter
+    }
+    Text {
+      id: btLabel
+      color: Colors.text3
+      font { family: "Material Symbols Rounded"; pixelSize: 14 }
+      text:  "\uE1A9"
+      verticalAlignment: Text.AlignVCenter
+    }
+    Text {
+      id: wifiLabel
+      color: Colors.text3
+      font { family: "Material Symbols Rounded"; pixelSize: 14 }
+      text:  "\uE648"
+      verticalAlignment: Text.AlignVCenter
+    }
+    BatteryRing {
+      id: batRing
+      value:    100
+      charging: false
+    }
   }
-  Text {
-    visible: SystemState.caffeine
-    text:    "󰅶"
-    color:   Colors.accent
-    font { family: "JetBrainsMono Nerd Font"; pixelSize: 13 }
-    verticalAlignment: Text.AlignVCenter
+
+  MouseArea {
+    anchors.fill: parent
+    cursorShape:  Qt.PointingHandCursor
+    onClicked:    ccToggle.running = true
   }
-  Text {
-    id: btLabel
-    color: Colors.text3
-    font { family: "Material Symbols Rounded"; pixelSize: 14 }
-    text:  "\uE1A9"
-    verticalAlignment: Text.AlignVCenter
-  }
-  Text {
-    id: wifiLabel
-    color: Colors.text3
-    font { family: "Material Symbols Rounded"; pixelSize: 14 }
-    text:  "\uE648"
-    verticalAlignment: Text.AlignVCenter
-  }
-  BatteryRing {
-    id: batRing
-    value:    100
-    charging: false
-  }
+
+  Process { id: ccToggle; command: ["quickshell", "ipc", "call", "controlcenter", "toggle"] }
+
   Process {
     id: batProc
     command: ["sh", "-c",
@@ -51,13 +67,14 @@ RowLayout {
       }
     }
   }
+
   Process {
     id: netProc
     command: ["sh", "-c",
-      "RADIO=$(/run/current-system/sw/bin/nmcli radio wifi 2>/dev/null | tr -d ' \n');" +
-      "if [ \"$RADIO\" != \"enabled\" ]; then echo 'off'; exit; fi;" +
-      "SIG=$(/run/current-system/sw/bin/nmcli -t -f ACTIVE,SIGNAL dev wifi 2>/dev/null | head -1 | cut -d: -f2);" +
-      "if [ -z \"$SIG\" ]; then echo 'on:0'; else echo \"on:$SIG\"; fi"
+      "STATE=$(iwctl station wlan0 show 2>/dev/null | grep -i 'State' | awk '{print $NF}');" +
+      "if [ \"$STATE\" != 'connected' ]; then echo 'off'; exit; fi;" +
+      "SIG=$(iwctl station wlan0 show 2>/dev/null | grep -i 'signal' | awk '{print $NF}' | tr -d '-' | tr -d ' ');" +
+      "echo \"on:${SIG:-50}\""
     ]
     stdout: SplitParser {
       onRead: data => {
@@ -67,11 +84,8 @@ RowLayout {
           wifiLabel.color = Colors.text3
           return
         }
-        var sig = parseInt(t.split(":")[1]) || 0
-        if (sig === 0) {
-          wifiLabel.text  = "\uE648"
-          wifiLabel.color = Colors.text3
-        } else if (sig > 75) {
+        var sig = parseInt(t.split(":")[1]) || 50
+        if (sig > 75) {
           wifiLabel.text  = "\uE63E"
           wifiLabel.color = Colors.accent
         } else if (sig > 50) {
@@ -87,12 +101,13 @@ RowLayout {
       }
     }
   }
+
   Process {
     id: btProc
     command: ["sh", "-c",
-      "POWERED=$(/run/current-system/sw/bin/bluetoothctl show 2>/dev/null | grep 'Powered:' | awk '{print $2}');" +
-      "if [ \"$POWERED\" != \"yes\" ]; then echo 'off'; exit; fi;" +
-      "CONN=$(/run/current-system/sw/bin/bluetoothctl devices Connected 2>/dev/null | wc -l);" +
+      "POWERED=$(bluetoothctl show 2>/dev/null | grep 'Powered:' | awk '{print $2}');" +
+      "if [ \"$POWERED\" != 'yes' ]; then echo 'off'; exit; fi;" +
+      "CONN=$(bluetoothctl devices Connected 2>/dev/null | wc -l);" +
       "if [ \"$CONN\" -gt 0 ]; then echo 'connected'; else echo 'on'; fi"
     ]
     stdout: SplitParser {
@@ -111,8 +126,9 @@ RowLayout {
       }
     }
   }
+
   Timer {
-    interval: 500; running: true; repeat: true; triggeredOnStart: true
+    interval: 3000; running: true; repeat: true; triggeredOnStart: true
     onTriggered: {
       batProc.running = true
       netProc.running = true

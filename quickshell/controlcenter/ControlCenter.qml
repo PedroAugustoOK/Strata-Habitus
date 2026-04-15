@@ -18,7 +18,6 @@ PanelWindow {
   focusable: true
   visible: false
 
-
   function toggle() {
     if (visible) {
       closeAnim.start()
@@ -27,7 +26,7 @@ PanelWindow {
       refreshAll()
       keyGrabber.forceActiveFocus()
       panel.opacity = 0
-      panel.scale = 0.85
+      panel.scale = 0.92
       openAnim.start()
     }
   }
@@ -41,34 +40,35 @@ PanelWindow {
     btCheck.running       = true
     powerModeProc.running = true
     ccBatProc.running     = true
+    sinkNameProc.running  = true
   }
 
   SequentialAnimation {
     id: openAnim
     NumberAnimation { target: panel; property: "opacity"; to: 1; duration: 80 }
-    NumberAnimation { target: panel; property: "scale"; from: 0.85; to: 1.02; duration: 220; easing.type: Easing.OutCubic }
+    NumberAnimation { target: panel; property: "scale"; from: 0.92; to: 1.02; duration: 220; easing.type: Easing.OutCubic }
     NumberAnimation { target: panel; property: "scale"; to: 1.0; duration: 80; easing.type: Easing.InOutQuad }
   }
-
   SequentialAnimation {
     id: closeAnim
-    NumberAnimation { target: panel; property: "scale"; to: 0.85; duration: 160; easing.type: Easing.InCubic }
+    NumberAnimation { target: panel; property: "scale"; to: 0.92; duration: 160; easing.type: Easing.InCubic }
     NumberAnimation { target: panel; property: "opacity"; to: 0; duration: 60 }
     ScriptAction { script: root.visible = false }
   }
 
-  property int    powerMode:     1
-  property bool   wifiActive:    true
-  property bool   btActive:      false
-  property bool   btConnected:   false
-  property int    volValue:      0
-  property int    brightValue:   100
-  property string wifiName:      "—"
-  property string uptimeStr:     "—"
-  property int    batValue:      100
-  property bool   batCharging:   false
+  property int    powerMode:    1
+  property bool   wifiActive:   true
+  property bool   btActive:     false
+  property bool   btConnected:  false
+  property int    volValue:     0
+  property int    brightValue:  100
+  property string wifiName:     "—"
+  property string uptimeStr:    "—"
+  property int    batValue:     100
+  property bool   batCharging:  false
   property bool   showBrightPct: false
-  property bool   showVolPct:    false
+  property bool   showVolPct:   false
+  property string sinkName:     "—"
 
   Item {
     id: keyGrabber
@@ -77,21 +77,15 @@ PanelWindow {
       if (e.key === Qt.Key_Escape) root.close()
     }
   }
-
   MouseArea { anchors.fill: parent; onClicked: root.close() }
 
   Rectangle {
     id: panel
-    transformOrigin: Item.Top
-    anchors {
-      top: parent.top
-      right: parent.right
-      topMargin: 44
-      rightMargin: 20
-    }
-    width: 340
+    transformOrigin: Item.TopRight
+    anchors { top: parent.top; right: parent.right; topMargin: 44; rightMargin: 20 }
+    width: 310
     height: col.implicitHeight + 28
-    radius: 16
+    radius: 24
     color: Colors.bg1
     clip: true
     opacity: 0
@@ -100,194 +94,430 @@ PanelWindow {
 
     Column {
       id: col
-      anchors {
-        left: parent.left
-        right: parent.right
-        top: parent.top
-        margins: 16
-      }
+      anchors { left: parent.left; right: parent.right; top: parent.top; margins: 16 }
       spacing: 14
 
-      Rectangle {
+      // ── Header: bateria grande + uptime ──────────────────
+      Row {
         width: parent.width
-        height: 36
-        radius: 10
-        color: Colors.bg2
-        RowLayout {
-          anchors {
-            fill: parent
-            leftMargin: 14
-            rightMargin: 14
-          }
-          Text {
-            text: "󰔚  " + root.uptimeStr
-            color: Colors.text3
-            font { pixelSize: 11; family: "JetBrainsMono Nerd Font" }
-          }
-          Item { Layout.fillWidth: true }
-          Text {
-            text: (root.batCharging ? "󰂄" : root.batValue < 20 ? "󰁺" : root.batValue < 50 ? "󰁼" : root.batValue < 80 ? "󰁾" : "󰁹") + "  " + root.batValue + "%"
-            color: root.batValue < 20 ? "#f28779" : root.batValue < 50 ? "#d9bc8c" : Colors.text2
-            font { pixelSize: 11; family: "JetBrainsMono Nerd Font" }
-          }
-        }
-      }
-
-      Column {
-        width: parent.width
-        spacing: 8
-        Rectangle {
-          id: brightSlider
-          width: parent.width
-          height: 44
-          radius: 12
-          color: Colors.bg2
-          clip: false
-          Rectangle {
-            id: brightFill
-            width: parent.width * (root.brightValue / 100)
-            height: parent.height
-            radius: 12
-            color: Qt.rgba(Colors.accent.r, Colors.accent.g, Colors.accent.b, 0.22)
-            Behavior on width { NumberAnimation { duration: 80 } }
-          }
-          Rectangle {
-            id: brightThumb
-            x: Math.max(0, Math.min(brightSlider.width - width, parent.width * (root.brightValue / 100) - width / 2))
+        Item {
+          width: parent.width / 2
+          height: 52
+          Row {
             anchors.verticalCenter: parent.verticalCenter
-            width: 4
-            height: 28
-            radius: 2
-            color: Colors.accent
-            Behavior on x { NumberAnimation { duration: 80 } }
-          }
-          RowLayout {
-            anchors {
-              fill: parent
-              leftMargin: 14
-              rightMargin: 14
-            }
+            spacing: 0
             Text {
-              text: "󰖙"
+              text: root.batValue
+              font { pixelSize: 38; weight: Font.Bold; family: "Roboto" }
               color: Colors.accent
-              font { pixelSize: 16; family: "JetBrainsMono Nerd Font" }
+              anchors.baseline: parent.bottom
+              anchors.baselineOffset: -6
             }
-            Item { Layout.fillWidth: true }
-            Text {
-              text: root.brightValue + "%"
-              color: "#ffffff80"
-              font { pixelSize: 11; family: "Roboto" }
-              opacity: root.showBrightPct ? 1 : 0
-              Behavior on opacity { NumberAnimation { duration: 200 } }
-            }
-          }
-          Timer { id: brightHideTimer; interval: 1200; onTriggered: root.showBrightPct = false }
-          MouseArea {
-            anchors.fill: parent
-            cursorShape: Qt.PointingHandCursor
-            onClicked: function(m) { applyBright(m.x) }
-            onPositionChanged: function(m) { if (pressed) applyBright(m.x) }
-            function applyBright(mx) {
-              var v = Math.round(Math.max(0, Math.min(100, (mx / width) * 100)))
-              root.brightValue = v; root.showBrightPct = true; brightHideTimer.restart()
-              brightSetProc.command = ["/run/current-system/sw/bin/brightnessctl", "set", v + "%"]
-              brightSetProc.running = true
+            Column {
+              anchors.bottom: parent.bottom
+              anchors.bottomMargin: 8
+              Text {
+                text: "%"
+                font { pixelSize: 14; weight: Font.Medium; family: "Roboto" }
+                color: Colors.accent
+              }
+              Text {
+                text: "BATERIA"
+                font { pixelSize: 8; family: "Roboto"; letterSpacing: 1 }
+                color: Colors.text3
+              }
             }
           }
         }
-
-        Rectangle {
-          id: volSlider
-          width: parent.width
-          height: 44
-          radius: 12
-          color: Colors.bg2
-          clip: false
-          Rectangle {
-            id: volFill
-            width: parent.width * (root.volValue / 100)
-            height: parent.height
-            radius: 12
-            color: root.volValue === 0
-              ? Qt.rgba(0.95, 0.38, 0.38, 0.18)
-              : Qt.rgba(Colors.accent.r, Colors.accent.g, Colors.accent.b, 0.22)
-            Behavior on width { NumberAnimation { duration: 80 } }
-            Behavior on color { ColorAnimation { duration: 150 } }
+        Column {
+          width: parent.width / 2
+          anchors.bottom: undefined
+          spacing: 2
+          Text {
+            text: root.uptimeStr
+            font { pixelSize: 13; family: "Roboto" }
+            color: Colors.text2
+            anchors.right: parent.right
           }
-          Rectangle {
-            id: volThumb
-            x: Math.max(0, Math.min(volSlider.width - width, parent.width * (root.volValue / 100) - width / 2))
-            anchors.verticalCenter: parent.verticalCenter
-            width: 4
-            height: 28
-            radius: 2
-            color: root.volValue === 0 ? "#f28779" : Colors.accent
-            Behavior on x { NumberAnimation { duration: 80 } }
-            Behavior on color { ColorAnimation { duration: 150 } }
-          }
-          RowLayout {
-            anchors {
-              fill: parent
-              leftMargin: 14
-              rightMargin: 14
-            }
-            Text {
-              text: root.volValue === 0 ? "󰝟" : root.volValue < 40 ? "󰕿" : root.volValue < 70 ? "󰖀" : "󰕾"
-              color: root.volValue === 0 ? "#f28779" : Colors.accent
-              font { pixelSize: 16; family: "JetBrainsMono Nerd Font" }
-              Behavior on color { ColorAnimation { duration: 150 } }
-            }
-            Item { Layout.fillWidth: true }
-            Text {
-              text: root.volValue + "%"
-              color: "#ffffff80"
-              font { pixelSize: 11; family: "Roboto" }
-              opacity: root.showVolPct ? 1 : 0
-              Behavior on opacity { NumberAnimation { duration: 200 } }
-            }
-          }
-          Timer { id: volHideTimer; interval: 1200; onTriggered: root.showVolPct = false }
-          MouseArea {
-            anchors.fill: parent
-            cursorShape: Qt.PointingHandCursor
-            onClicked: function(m) { applyVol(m.x) }
-            onPositionChanged: function(m) { if (pressed) applyVol(m.x) }
-            function applyVol(mx) {
-              var v = Math.round(Math.max(0, Math.min(100, (mx / width) * 100)))
-              root.volValue = v; root.showVolPct = true; volHideTimer.restart()
-              volSetProc.command = ["/run/current-system/sw/bin/wpctl", "set-volume", "@DEFAULT_AUDIO_SINK@", (v/100).toFixed(2)]
-              volSetProc.running = true
-            }
+          Text {
+            text: "uptime"
+            font { pixelSize: 9; family: "Roboto" }
+            color: Colors.text3
+            anchors.right: parent.right
           }
         }
       }
 
+      // divider accent
+      Rectangle { width: parent.width; height: 1; color: Qt.rgba(Colors.accent.r, Colors.accent.g, Colors.accent.b, 0.15) }
+
+      // ── Sliders ───────────────────────────────────────────
       Column {
         width: parent.width
-        spacing: 8
+        spacing: 10
 
+        // Brilho
         Row {
           width: parent.width
-          spacing: 8
-          BigTile {
-            width: (parent.width - 16) / 2
-            icon: root.wifiActive ? "󰤨" : "󰤭"
-            iconFont: "JetBrainsMono Nerd Font"
-            title: root.wifiActive ? (root.wifiName !== "—" ? root.wifiName : "WiFi") : "WiFi"
-            subtitle: root.wifiActive ? "Conectado" : "Desativado"
-            active: root.wifiActive
-            onClicked: {
-              root.wifiActive = !root.wifiActive
-              wifiToggleProc.command = ["sh", "-c", "/run/current-system/sw/bin/nmcli radio wifi " + (root.wifiActive ? "on" : "off")]
-              wifiToggleProc.running = true
-            }
-            onSettingsClicked: { root.close(); wifiAppProc.running = true }
+          spacing: 10
+          Text {
+            text: root.brightValue
+            font { pixelSize: 20; weight: Font.Bold; family: "Roboto" }
+            color: "#2a2a2a"
+            width: 34
+            horizontalAlignment: Text.AlignRight
+            anchors.verticalCenter: parent.verticalCenter
           }
-          IconTile {
-            width: (parent.width - 16) / 4
-            icon: SystemState.caffeine ? "󰅶" : "󰄰"
-            iconFont: "JetBrainsMono Nerd Font"
-            active: SystemState.caffeine
+          Item {
+            width: parent.width - 34 - 10 - 10 - 14
+            height: 8
+            anchors.verticalCenter: parent.verticalCenter
+            Rectangle {
+              anchors.fill: parent
+              radius: 4
+              color: Colors.bg2
+            }
+            Rectangle {
+              width: parent.width * (root.brightValue / 100)
+              height: parent.height
+              radius: 4
+              color: Colors.accent
+              Behavior on width { NumberAnimation { duration: 80 } }
+            }
+            Rectangle {
+              x: parent.width * (root.brightValue / 100) - 7
+              y: -3
+              width: 14; height: 14; radius: 7
+              color: Colors.accent
+              Behavior on x { NumberAnimation { duration: 80 } }
+            }
+            MouseArea {
+              anchors { fill: parent; margins: -10 }
+              cursorShape: Qt.PointingHandCursor
+              onClicked: function(m) { applyBright(m.x) }
+              onPositionChanged: function(m) { if (pressed) applyBright(m.x) }
+              function applyBright(mx) {
+                var v = Math.round(Math.max(0, Math.min(100, (mx / width) * 100)))
+                root.brightValue = v
+                brightSetProc.command = ["/run/current-system/sw/bin/brightnessctl", "set", v + "%"]
+                brightSetProc.running = true
+              }
+            }
+          }
+          Text {
+            text: "󰖙"
+            font { pixelSize: 12; family: "JetBrainsMono Nerd Font" }
+            color: Colors.text3
+            width: 14
+            anchors.verticalCenter: parent.verticalCenter
+          }
+        }
+
+        // Volume
+        Row {
+          width: parent.width
+          spacing: 10
+          Text {
+            text: root.volValue
+            font { pixelSize: 20; weight: Font.Bold; family: "Roboto" }
+            color: "#2a2a2a"
+            width: 34
+            horizontalAlignment: Text.AlignRight
+            anchors.verticalCenter: parent.verticalCenter
+          }
+          Item {
+            width: parent.width - 34 - 10 - 10 - 14
+            height: 8
+            anchors.verticalCenter: parent.verticalCenter
+            Rectangle {
+              anchors.fill: parent
+              radius: 4
+              color: Colors.bg2
+            }
+            Rectangle {
+              width: parent.width * (root.volValue / 100)
+              height: parent.height
+              radius: 4
+              color: root.volValue === 0 ? "#f28779" : Colors.accent
+              Behavior on width { NumberAnimation { duration: 80 } }
+              Behavior on color { ColorAnimation { duration: 150 } }
+            }
+            Rectangle {
+              x: parent.width * (root.volValue / 100) - 7
+              y: -3
+              width: 14; height: 14; radius: 7
+              color: root.volValue === 0 ? "#f28779" : Colors.accent
+              Behavior on x { NumberAnimation { duration: 80 } }
+              Behavior on color { ColorAnimation { duration: 150 } }
+            }
+            MouseArea {
+              anchors { fill: parent; margins: -10 }
+              cursorShape: Qt.PointingHandCursor
+              onClicked: function(m) { applyVol(m.x) }
+              onPositionChanged: function(m) { if (pressed) applyVol(m.x) }
+              function applyVol(mx) {
+                var v = Math.round(Math.max(0, Math.min(100, (mx / width) * 100)))
+                root.volValue = v
+                volSetProc.command = ["/run/current-system/sw/bin/wpctl", "set-volume", "@DEFAULT_AUDIO_SINK@", (v/100).toFixed(2)]
+                volSetProc.running = true
+              }
+            }
+          }
+          Text {
+            text: root.volValue === 0 ? "󰝟" : "󰕾"
+            font { pixelSize: 12; family: "JetBrainsMono Nerd Font" }
+            color: root.volValue === 0 ? "#f28779" : Colors.text3
+            width: 14
+            anchors.verticalCenter: parent.verticalCenter
+            Behavior on color { ColorAnimation { duration: 150 } }
+          }
+        }
+      }
+
+      // ── Audio sink ────────────────────────────────────────
+      Rectangle {
+        width: parent.width
+        height: 44
+        radius: 12
+        color: Colors.bg2
+        RowLayout {
+          anchors { fill: parent; leftMargin: 12; rightMargin: 12 }
+          Text {
+            text: "󰋋"
+            font { pixelSize: 14; family: "JetBrainsMono Nerd Font" }
+            color: Colors.accent
+          }
+          Column {
+            Layout.fillWidth: true
+            spacing: 1
+            Text {
+              text: root.sinkName
+              font { pixelSize: 11; family: "Roboto"; weight: Font.Medium }
+              color: Colors.text1
+              elide: Text.ElideRight
+              width: parent.width
+            }
+            Text {
+              text: "saída de áudio"
+              font { pixelSize: 9; family: "Roboto" }
+              color: Colors.text3
+            }
+          }
+          Text {
+            text: "›"
+            font { pixelSize: 14; family: "Roboto" }
+            color: Colors.text3
+          }
+        }
+        MouseArea {
+          anchors.fill: parent
+          cursorShape: Qt.PointingHandCursor
+          onClicked: { root.close(); audioProc.running = true }
+        }
+      }
+
+      // divider
+      Rectangle { width: parent.width; height: 1; color: Qt.rgba(1,1,1,0.04) }
+
+
+      // ── WiFi + BT como lista ──────────────────────────────
+      Column {
+        width: parent.width
+        spacing: 10
+
+        RowLayout {
+          width: parent.width
+          spacing: 0
+          Text {
+            text: "󰤨"
+            font { pixelSize: 14; family: "JetBrainsMono Nerd Font" }
+            color: root.wifiActive ? Colors.accent : Colors.text3
+            Behavior on color { ColorAnimation { duration: 150 } }
+          }
+          Item { Layout.preferredWidth: 10 }
+          Text {
+            text: root.wifiActive ? (root.wifiName !== "—" ? root.wifiName : "WiFi") : "WiFi"
+            font { pixelSize: 13; family: "Roboto"; weight: Font.Medium }
+            color: root.wifiActive ? Colors.text1 : Colors.text3
+            Layout.fillWidth: true
+            elide: Text.ElideRight
+            Behavior on color { ColorAnimation { duration: 150 } }
+          }
+          Rectangle {
+            height: 20
+            width: statusWifi.implicitWidth + 16
+            radius: 6
+            color: root.wifiActive ? Qt.rgba(Colors.accent.r, Colors.accent.g, Colors.accent.b, 0.12) : Colors.bg2
+            Behavior on color { ColorAnimation { duration: 150 } }
+            Text {
+              id: statusWifi
+              anchors.centerIn: parent
+              text: root.wifiActive ? "conectado" : "desligado"
+              font { pixelSize: 9; family: "Roboto" }
+              color: root.wifiActive ? Qt.rgba(Colors.accent.r, Colors.accent.g, Colors.accent.b, 0.9) : Colors.text3
+              Behavior on color { ColorAnimation { duration: 150 } }
+            }
+            MouseArea {
+              z: 10
+              anchors.fill: parent
+              cursorShape: Qt.PointingHandCursor
+              onClicked: {
+                root.wifiActive = !root.wifiActive
+                wifiToggleProc.command = ["sh", "-c", root.wifiActive ? "rfkill unblock wifi" : "rfkill block wifi"]
+                wifiToggleProc.running = true
+              }
+            }
+          }
+          Item { Layout.preferredWidth: 6 }
+          Item {
+            implicitWidth: arrowWifi.implicitWidth + 8
+            implicitHeight: 20
+            Text {
+              id: arrowWifi
+              anchors.centerIn: parent
+              text: "›"
+              font { pixelSize: 13; family: "Roboto" }
+              color: Colors.text3
+            }
+            MouseArea {
+              anchors.fill: parent
+              cursorShape: Qt.PointingHandCursor
+              onClicked: { root.close(); wifiAppProc.running = true }
+            }
+          }
+        }
+
+        RowLayout {
+          width: parent.width
+          spacing: 0
+          Text {
+            text: root.btConnected ? "󰂱" : "󰂯"
+            font { pixelSize: 14; family: "JetBrainsMono Nerd Font" }
+            color: root.btActive ? Colors.accent : Colors.text3
+            Behavior on color { ColorAnimation { duration: 150 } }
+          }
+          Item { Layout.preferredWidth: 10 }
+          Text {
+            text: "Bluetooth"
+            font { pixelSize: 13; family: "Roboto"; weight: Font.Medium }
+            color: root.btActive ? Colors.text1 : Colors.text3
+            Layout.fillWidth: true
+            elide: Text.ElideRight
+            Behavior on color { ColorAnimation { duration: 150 } }
+          }
+          Rectangle {
+            height: 20
+            width: statusBt.implicitWidth + 16
+            radius: 6
+            color: root.btActive ? Qt.rgba(Colors.accent.r, Colors.accent.g, Colors.accent.b, 0.12) : Colors.bg2
+            Behavior on color { ColorAnimation { duration: 150 } }
+            Text {
+              id: statusBt
+              anchors.centerIn: parent
+              text: root.btConnected ? "conectado" : root.btActive ? "ativado" : "desligado"
+              font { pixelSize: 9; family: "Roboto" }
+              color: root.btActive ? Qt.rgba(Colors.accent.r, Colors.accent.g, Colors.accent.b, 0.9) : Colors.text3
+              Behavior on color { ColorAnimation { duration: 150 } }
+            }
+            MouseArea {
+              anchors.fill: parent
+              cursorShape: Qt.PointingHandCursor
+              onClicked: {
+                root.btActive = !root.btActive
+                btToggleProc.command = ["sh", "-c", "/run/current-system/sw/bin/bluetoothctl power " + (root.btActive ? "on" : "off")]
+                btToggleProc.running = true
+              }
+            }
+          }
+          Item { Layout.preferredWidth: 6 }
+          Item {
+            implicitWidth: arrowBt.implicitWidth + 8
+            implicitHeight: 20
+            Text {
+              id: arrowBt
+              anchors.centerIn: parent
+              text: "›"
+              font { pixelSize: 13; family: "Roboto" }
+              color: Colors.text3
+            }
+            MouseArea {
+              anchors.fill: parent
+              cursorShape: Qt.PointingHandCursor
+              onClicked: { root.close(); btAppProc.running = true }
+            }
+          }
+        }
+      }
+
+      // divider
+      Rectangle { width: parent.width; height: 1; color: Qt.rgba(1,1,1,0.04) }
+
+      // ── Toggles inferiores ────────────────────────────────
+      Row {
+        width: parent.width
+        spacing: 6
+
+        Rectangle {
+          width: (parent.width - 12) / 3
+          height: 56
+          radius: 10
+          color: SystemState.dnd ? Qt.rgba(Colors.accent.r, Colors.accent.g, Colors.accent.b, 0.15) : Colors.bg2
+          Behavior on color { ColorAnimation { duration: 150 } }
+          Column {
+            anchors.centerIn: parent
+            spacing: 4
+            Text {
+              anchors.horizontalCenter: parent.horizontalCenter
+              text: SystemState.dnd ? "󰂛" : "󰂚"
+              font { pixelSize: 16; family: "JetBrainsMono Nerd Font" }
+              color: SystemState.dnd ? Colors.accent : Colors.text3
+              Behavior on color { ColorAnimation { duration: 150 } }
+            }
+            Text {
+              anchors.horizontalCenter: parent.horizontalCenter
+              text: "silêncio"
+              font { pixelSize: 8; family: "Roboto" }
+              color: SystemState.dnd ? Colors.accent : Colors.text3
+              Behavior on color { ColorAnimation { duration: 150 } }
+            }
+          }
+          MouseArea {
+            anchors.fill: parent
+            cursorShape: Qt.PointingHandCursor
+            onClicked: {
+              SystemState.dnd = !SystemState.dnd
+              NotificationService.dnd = SystemState.dnd
+            }
+          }
+        }
+
+        Rectangle {
+          width: (parent.width - 12) / 3
+          height: 56
+          radius: 10
+          color: SystemState.caffeine ? Qt.rgba(Colors.accent.r, Colors.accent.g, Colors.accent.b, 0.15) : Colors.bg2
+          Behavior on color { ColorAnimation { duration: 150 } }
+          Column {
+            anchors.centerIn: parent
+            spacing: 4
+            Text {
+              anchors.horizontalCenter: parent.horizontalCenter
+              text: SystemState.caffeine ? "󰅶" : "󰄰"
+              font { pixelSize: 16; family: "JetBrainsMono Nerd Font" }
+              color: SystemState.caffeine ? Colors.accent : Colors.text3
+              Behavior on color { ColorAnimation { duration: 150 } }
+            }
+            Text {
+              anchors.horizontalCenter: parent.horizontalCenter
+              text: "cafeína"
+              font { pixelSize: 8; family: "Roboto" }
+              color: SystemState.caffeine ? Colors.accent : Colors.text3
+              Behavior on color { ColorAnimation { duration: 150 } }
+            }
+          }
+          MouseArea {
+            anchors.fill: parent
+            cursorShape: Qt.PointingHandCursor
             onClicked: {
               SystemState.caffeine = !SystemState.caffeine
               caffeineProc.command = SystemState.caffeine
@@ -296,76 +526,99 @@ PanelWindow {
               caffeineProc.running = true
             }
           }
-          IconTile {
-            width: (parent.width - 16) / 4
-            icon: "󰓃"
-            iconFont: "JetBrainsMono Nerd Font"
-            active: false
-            onClicked: { root.close(); audioProc.running = true }
-          }
         }
 
-        Row {
-          width: parent.width
-          spacing: 8
-          BigTile {
-            width: (parent.width - 16) / 2
-            icon: root.btConnected ? "󰂱" : "󰂯"
-            iconFont: "JetBrainsMono Nerd Font"
-            title: "Bluetooth"
-            subtitle: root.btActive ? "Ativado" : "Desativado"
-            active: root.btActive
-            onClicked: {
-              root.btActive = !root.btActive
-              btToggleProc.command = ["sh", "-c", "/run/current-system/sw/bin/bluetoothctl power " + (root.btActive ? "on" : "off")]
-              btToggleProc.running = true
+        Rectangle {
+          width: (parent.width - 12) / 3
+          height: 56
+          radius: 10
+          color: Colors.bg2
+          Behavior on color { ColorAnimation { duration: 150 } }
+          readonly property var modes:  ["󰾅", "󰓅", "󰌪"]
+          readonly property var labels: ["economia", "balanceado", "performance"]
+          readonly property var cols:   ["#69c880", Colors.accent, "#ffb347"]
+          Column {
+            anchors.centerIn: parent
+            spacing: 4
+            Text {
+              anchors.horizontalCenter: parent.horizontalCenter
+              text: parent.parent.modes[root.powerMode]
+              font { pixelSize: 16; family: "JetBrainsMono Nerd Font" }
+              color: parent.parent.cols[root.powerMode]
+              Behavior on color { ColorAnimation { duration: 150 } }
             }
-            onSettingsClicked: { root.close(); btAppProc.running = true }
-          }
-          IconTile {
-            width: (parent.width - 16) / 4
-            icon: SystemState.dnd ? "󰂛" : "󰂚"
-            iconFont: "JetBrainsMono Nerd Font"
-            active: SystemState.dnd
-            onClicked: {
-              SystemState.dnd = !SystemState.dnd
-              NotificationService.dnd = SystemState.dnd
+            Text {
+              anchors.horizontalCenter: parent.horizontalCenter
+              text: parent.parent.labels[root.powerMode]
+              font { pixelSize: 8; family: "Roboto" }
+              color: parent.parent.cols[root.powerMode]
+              Behavior on color { ColorAnimation { duration: 150 } }
             }
           }
-          PowerModeTile { width: (parent.width - 16) / 4 }
+          MouseArea {
+            anchors.fill: parent
+            cursorShape: Qt.PointingHandCursor
+            onClicked: {
+              root.powerMode = (root.powerMode + 1) % 3
+              powerSetProc.command = ["/run/current-system/sw/bin/powerprofilesctl", "set", ["power-saver", "balanced", "performance"][root.powerMode]]
+              powerSetProc.running = true
+            }
+          }
         }
       }
 
+      // ── Notificações ──────────────────────────────────────
       Column {
         width: parent.width
         spacing: 8
         visible: NotificationService.notifications.length > 0
 
-        Rectangle {
-          width: parent.width
-          height: 1
-          color: "#ffffff08"
-        }
+        Rectangle { width: parent.width; height: 1; color: Qt.rgba(1,1,1,0.04) }
 
         RowLayout {
           width: parent.width
           Text {
-            text: "Notificações"
-            color: "#888"
-            font { pixelSize: 11; family: "Roboto" }
+            text: "notificações"
+            color: Colors.text3
+            font { pixelSize: 10; family: "Roboto" }
             Layout.fillWidth: true
           }
           Row {
             spacing: 6
-            Chip {
-              label: "Silenciar"
-              active: SystemState.dnd
-              onClicked: {
-                SystemState.dnd = !SystemState.dnd
-                NotificationService.dnd = SystemState.dnd
+            Rectangle {
+              height: 20
+              width: 54
+              radius: 10
+              color: SystemState.dnd ? Qt.rgba(Colors.accent.r, Colors.accent.g, Colors.accent.b, 0.15) : Colors.bg2
+              Text {
+                anchors.centerIn: parent
+                text: "silenciar"
+                font { pixelSize: 9; family: "Roboto" }
+                color: SystemState.dnd ? Colors.accent : Colors.text3
+              }
+              MouseArea {
+                anchors.fill: parent
+                cursorShape: Qt.PointingHandCursor
+                onClicked: { SystemState.dnd = !SystemState.dnd; NotificationService.dnd = SystemState.dnd }
               }
             }
-            Chip { label: "Limpar"; active: false; onClicked: NotificationService.dismissAll() }
+            Rectangle {
+              height: 20
+              width: 40
+              radius: 10
+              color: Colors.bg2
+              Text {
+                anchors.centerIn: parent
+                text: "limpar"
+                font { pixelSize: 9; family: "Roboto" }
+                color: Colors.text3
+              }
+              MouseArea {
+                anchors.fill: parent
+                cursorShape: Qt.PointingHandCursor
+                onClicked: NotificationService.dismissAll()
+              }
+            }
           }
         }
 
@@ -379,16 +632,18 @@ PanelWindow {
               required property Notification modelData
               width: parent.width
               height: nc.implicitHeight + 16
-              radius: 10
+              radius: 12
               color: Colors.bg2
+              Rectangle {
+                anchors { left: parent.left; top: parent.top; bottom: parent.bottom; topMargin: 8; bottomMargin: 8 }
+                width: 3
+                radius: 2
+                color: Colors.accent
+                opacity: 0.6
+              }
               Column {
                 id: nc
-                anchors {
-                  left: parent.left
-                  right: parent.right
-                  top: parent.top
-                  margins: 10
-                }
+                anchors { left: parent.left; right: parent.right; top: parent.top; leftMargin: 16; rightMargin: 12; topMargin: 8 }
                 spacing: 2
                 RowLayout {
                   width: parent.width
@@ -400,7 +655,7 @@ PanelWindow {
                   }
                   Text {
                     text: "✕"
-                    color: "#444"
+                    color: Colors.text3
                     font.pixelSize: 10
                     MouseArea {
                       anchors.fill: parent
@@ -411,8 +666,8 @@ PanelWindow {
                 }
                 Text {
                   text: modelData.summary
-                  color: "#ddd"
-                  font { pixelSize: 11; family: "Roboto"; weight: Font.DemiBold }
+                  color: Colors.text1
+                  font { pixelSize: 11; family: "Roboto"; weight: Font.Medium }
                   width: parent.width
                   wrapMode: Text.WordWrap
                   maximumLineCount: 1
@@ -421,7 +676,7 @@ PanelWindow {
                 Text {
                   visible: modelData.body !== ""
                   text: modelData.body
-                  color: "#666"
+                  color: Colors.text3
                   font { pixelSize: 10; family: "Roboto" }
                   width: parent.width
                   wrapMode: Text.WordWrap
@@ -441,9 +696,11 @@ PanelWindow {
   Process { id: volSetProc;     command: [] }
   Process { id: brightSetProc;  command: [] }
   Process { id: caffeineProc;   command: [] }
-  Process { id: audioProc;      command: ["sh", "-c", "/run/current-system/sw/bin/pwvucontrol &"] }
-  Process { id: wifiAppProc;    command: ["sh", "-c", "kitty --title impala /run/current-system/sw/bin/impala &"] }
-  Process { id: btAppProc;      command: ["sh", "-c", "kitty --title bluetui /run/current-system/sw/bin/bluetui &"] }
+  Process { id: powerSetProc;   command: [] }
+  Process { id: audioProc;      command: ["/run/current-system/sw/bin/pwvucontrol"] }
+  Process { id: wifiAppProc;    command: ["hyprctl", "dispatch", "exec", "kitty --title impala impala"] }
+  Process { id: btAppProc;      command: ["hyprctl", "dispatch", "exec", "kitty --title bluetui bluetui"] }
+
   Process {
     id: volProc
     command: ["sh", "-c", "/run/current-system/sw/bin/wpctl get-volume @DEFAULT_AUDIO_SINK@ | awk '{printf \"%d\", $2*100}'"]
@@ -471,14 +728,19 @@ PanelWindow {
     }
   }
   Process {
+    id: sinkNameProc
+    command: ["sh", "-c", "pactl get-default-sink 2>/dev/null | xargs -I{} pactl list sinks 2>/dev/null | grep -A10 'Name: {}' | grep 'Description' | head -1 | sed 's/.*Description: //' || wpctl status | grep -A3 'Sinks:' | grep '\\*' | sed 's/.*\\. //' | sed 's/ *\\[.*//'"]
+    stdout: SplitParser { onRead: data => { if (data.trim() !== "") root.sinkName = data.trim() } }
+  }
+  Process {
     id: wifiNameProc
-    command: ["sh", "-c", "/run/current-system/sw/bin/nmcli -t -f ACTIVE,SSID dev wifi 2>/dev/null | head -1 | cut -d: -f2"]
+    command: ["sh", "-c", "iwctl station wlan0 show 2>/dev/null | grep 'Connected network' | sed 's/.*Connected network\\s*//'"]
     stdout: SplitParser { onRead: data => { if (data.trim() !== "") root.wifiName = data.trim() } }
   }
   Process {
     id: wifiCheck
-    command: ["sh", "-c", "/run/current-system/sw/bin/nmcli radio wifi"]
-    stdout: SplitParser { onRead: data => root.wifiActive = data.trim() === "enabled" }
+    command: ["sh", "-c", "rfkill list wifi 2>/dev/null | grep -c 'Soft blocked: no'"]
+    stdout: SplitParser { onRead: data => root.wifiActive = parseInt(data.trim()) > 0 }
   }
   Process {
     id: btCheck
@@ -503,7 +765,6 @@ PanelWindow {
       }
     }
   }
-  Process { id: powerSetProc; command: [] }
 
   Timer {
     interval: 500; running: root.visible; repeat: true
@@ -513,185 +774,8 @@ PanelWindow {
     interval: 5000; running: root.visible; repeat: true; triggeredOnStart: true
     onTriggered: {
       uptimeProc.running = true; wifiCheck.running = true
-      wifiNameProc.running = true; btCheck.running = true; ccBatProc.running = true
+      wifiNameProc.running = true; btCheck.running = true
+      ccBatProc.running = true; sinkNameProc.running = true
     }
-  }
-
-  component PowerModeTile: Rectangle {
-    height: 76
-    radius: 20
-    color: Colors.bg2
-    readonly property var modes:  ["󰾅", "󰓅", "󰌪"]
-    readonly property var labels: ["Economia", "Balanceado", "Performance"]
-    readonly property var cols:   ["#69c880", Colors.accent, "#ffb347"]
-    Column {
-      anchors.centerIn: parent
-      spacing: 4
-      Text {
-        anchors.horizontalCenter: parent.horizontalCenter
-        text: modes[root.powerMode]
-        color: cols[root.powerMode]
-        font { pixelSize: 22; family: "JetBrainsMono Nerd Font" }
-        Behavior on color { ColorAnimation { duration: 150 } }
-      }
-      Text {
-        anchors.horizontalCenter: parent.horizontalCenter
-        text: labels[root.powerMode]
-        color: cols[root.powerMode]
-        font { pixelSize: 9; family: "Roboto" }
-        Behavior on color { ColorAnimation { duration: 150 } }
-      }
-    }
-    MouseArea {
-      anchors.fill: parent
-      cursorShape: Qt.PointingHandCursor
-      onClicked: {
-        root.powerMode = (root.powerMode + 1) % 3
-        powerSetProc.command = ["/run/current-system/sw/bin/powerprofilesctl", "set", ["power-saver", "balanced", "performance"][root.powerMode]]
-        powerSetProc.running = true
-      }
-    }
-  }
-
-  component BigTile: Rectangle {
-    property string icon
-    property string iconFont: "JetBrainsMono Nerd Font"
-    property string title
-    property string subtitle
-    property bool   active: false
-    signal clicked()
-    signal settingsClicked()
-    height: 76
-    radius: 20
-    color: active ? Qt.rgba(Colors.accent.r, Colors.accent.g, Colors.accent.b, 0.18) : Colors.bg2
-    Behavior on color { ColorAnimation { duration: 150 } }
-    RowLayout {
-      anchors {
-        fill: parent
-        leftMargin: 16
-        rightMargin: 16
-      }
-      spacing: 14
-      Rectangle {
-        width: 42
-        height: 42
-        radius: 21
-        color: active ? Qt.rgba(Colors.accent.r, Colors.accent.g, Colors.accent.b, 0.25) : "#1a1a1d"
-        Behavior on color { ColorAnimation { duration: 150 } }
-        Text {
-          anchors.centerIn: parent
-          text: icon
-          color: active ? Colors.accent : "#666"
-          font { pixelSize: 20; family: iconFont }
-          Behavior on color { ColorAnimation { duration: 150 } }
-        }
-      }
-      Column {
-        spacing: 2
-        Layout.fillWidth: true
-        Item {
-          width: parent.width
-          height: 18
-          clip: true
-          Text {
-            id: titleTxt
-            text: title
-            color: active ? "#eee" : "#888"
-            font { pixelSize: 13; family: "Roboto"; weight: Font.DemiBold }
-            Behavior on color { ColorAnimation { duration: 150 } }
-            SequentialAnimation on x {
-              running: titleTxt.implicitWidth > parent.width
-              loops: Animation.Infinite
-              NumberAnimation { to: 0; duration: 0 }
-              PauseAnimation { duration: 1500 }
-              NumberAnimation { to: -(titleTxt.implicitWidth - parent.width + 8); duration: 2000; easing.type: Easing.InOutQuad }
-              PauseAnimation { duration: 1500 }
-              NumberAnimation { to: 0; duration: 500; easing.type: Easing.InOutQuad }
-            }
-          }
-        }
-        Text {
-          text: subtitle
-          color: active ? Qt.rgba(Colors.accent.r, Colors.accent.g, Colors.accent.b, 0.8) : "#555"
-          font { pixelSize: 10; family: "Roboto" }
-          Behavior on color { ColorAnimation { duration: 150 } }
-        }
-      }
-    }
-    Rectangle {
-      id: sBtn
-      z: 10
-      anchors {
-        top: parent.top
-        right: parent.right
-        topMargin: 6
-        rightMargin: 6
-      }
-      width: 22
-      height: 22
-      radius: 11
-      color: sMa.containsMouse ? "#ffffff18" : "transparent"
-      Behavior on color { ColorAnimation { duration: 100 } }
-      Text {
-        anchors.centerIn: parent
-        text: "󰏖"
-        font { pixelSize: 11; family: "JetBrainsMono Nerd Font" }
-        color: sMa.containsMouse ? "#ccc" : "#444"
-      }
-      MouseArea {
-        id: sMa
-        anchors.fill: parent
-        hoverEnabled: true
-        cursorShape: Qt.PointingHandCursor
-        onClicked: function(m) { m.accepted = true; parent.parent.settingsClicked() }
-      }
-    }
-    MouseArea {
-      anchors.fill: parent
-      cursorShape: Qt.PointingHandCursor
-      onClicked: function(m) {
-        if (!sBtn.contains(Qt.point(m.x - sBtn.x, m.y - sBtn.y))) parent.clicked()
-      }
-    }
-  }
-
-  component IconTile: Rectangle {
-    property string icon
-    property string iconFont: "JetBrainsMono Nerd Font"
-    property bool   active: false
-    signal clicked()
-    signal settingsClicked()
-    height: 76
-    radius: 20
-    color: active ? Qt.rgba(Colors.accent.r, Colors.accent.g, Colors.accent.b, 0.18) : Colors.bg2
-    Behavior on color { ColorAnimation { duration: 150 } }
-    Text {
-      anchors.centerIn: parent
-      text: icon
-      color: active ? Colors.accent : "#666"
-      font { pixelSize: 22; family: iconFont }
-      Behavior on color { ColorAnimation { duration: 150 } }
-    }
-    MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: parent.clicked() }
-  }
-
-  component Chip: Rectangle {
-    property string label
-    property bool   active: false
-    signal clicked()
-    signal settingsClicked()
-    width: ct.implicitWidth + 20
-    height: 26
-    radius: 13
-    color: active ? Qt.rgba(Colors.accent.r, Colors.accent.g, Colors.accent.b, 0.2) : Colors.bg2
-    Behavior on color { ColorAnimation { duration: 150 } }
-    Text {
-      id: ct
-      anchors.centerIn: parent
-      text: label
-      color: active ? Colors.accent : "#555"
-      font { pixelSize: 10; family: "Roboto" }
-    }
-    MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: parent.clicked() }
   }
 }

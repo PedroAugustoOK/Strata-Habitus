@@ -68,7 +68,7 @@
     grimblast wl-clipboard cliphist brightnessctl swww matugen
     nautilus gvfs pavucontrol pwvucontrol
     impala bluetui playerctl hyprlock hypridle
-    pipewire wireplumber blueman libnotify
+    pipewire wireplumber blueman libnotify mako
     adwaita-qt adwaita-qt6 papirus-icon-theme
     obs-studio bibata-cursors fastfetch btop vscode gcc
     spotify fish starship loupe zathura libreoffice
@@ -153,6 +153,7 @@
         { command = "/run/current-system/sw/bin/cp";     options = [ "NOPASSWD" ]; }
         { command = "/run/current-system/sw/bin/sed";    options = [ "NOPASSWD" ]; }
         { command = "/run/current-system/sw/bin/tee /var/lib/strata/theme.conf"; options = [ "NOPASSWD" ]; }
+        { command = "/run/current-system/sw/bin/impala"; options = [ "NOPASSWD" ]; }
       ];
     }
   ];

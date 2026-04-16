@@ -5,7 +5,7 @@ find /run/current-system/sw/share/applications ~/.local/share/applications ~/.lo
   name=$(grep -m1 "^Name=" "$f" | sed 's/Name=//')
   [ -z "$name" ] && continue
   exec=$(grep -m1 "^Exec=" "$f" | sed 's/Exec=//' | sed 's/ %[a-zA-Z]//g' | awk '{print $1}')
-  [ -z "$exec" ] && continue
+  exec=$(grep -m1 "^Exec=" "$f" | sed "s/Exec=//" | sed "s/ @@.*//" | sed "s/ %[a-zA-Z].*//")
   icon=$(grep -m1 "^Icon=" "$f" | sed 's/Icon=//')
   iconpath=""
   for theme in Papirus-Dark Papirus hicolor; do

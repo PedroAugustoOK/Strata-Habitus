@@ -698,7 +698,7 @@ PanelWindow {
   Process { id: caffeineProc;   command: [] }
   Process { id: powerSetProc;   command: [] }
   Process { id: audioProc;      command: ["/run/current-system/sw/bin/pwvucontrol"] }
-  Process { id: wifiAppProc;    command: ["hyprctl", "dispatch", "exec", "kitty --title impala impala"] }
+  Process { id: wifiAppProc;    command: ["hyprctl", "dispatch", "exec", "kitty --title impala sudo impala"] }
   Process { id: btAppProc;      command: ["hyprctl", "dispatch", "exec", "kitty --title bluetui bluetui"] }
 
   Process {

@@ -21,7 +21,7 @@ PanelWindow {
     spacing: 6
 
     Repeater {
-      model: NotificationService.server.trackedNotifications
+      model: NotificationService.notifications
       delegate: Rectangle {
         required property Notification modelData
 

@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 q="$1"
-find /run/current-system/sw/share/applications ~/.local/share/applications -name "*.desktop" 2>/dev/null | while read f; do
+find /run/current-system/sw/share/applications ~/.local/share/applications /var/lib/flatpak/exports/share/applications -name "*.desktop" 2>/dev/null | while read f; do
   name=$(grep -m1 "^Name=" "$f" | sed 's/Name=//')
-  exec=$(grep -m1 "^Exec=" "$f" | sed 's/Exec=//' | sed 's/ %.//g' | awk '{print $1}')
+  exec=$(grep -m1 "^Exec=" "$f" | sed "s/Exec=//" | sed "s/ @@.*//" | sed "s/ %[uUfF].*//")
   icon=$(grep -m1 "^Icon=" "$f" | sed 's/Icon=//')
   if echo "$name" | grep -qi "$q"; then
     iconpath=""

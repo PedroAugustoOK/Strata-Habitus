@@ -149,6 +149,51 @@ else
   sed -i "s/set -g fish_color_comment.*/set -g fish_color_comment        555555  # comentários/" ~/.config/fish/config.fish
   sed -i "s/set -g fish_color_quote.*/set -g fish_color_quote          d9bc8c  # strings/" ~/.config/fish/config.fish
 fi
+# Gera tema btop
+mkdir -p ~/.config/btop/themes
+cat > ~/.config/btop/themes/strata.theme << BTOPEOF
+theme[main_bg]="$BG0"
+theme[main_fg]="$TEXT1"
+theme[title]="$ACCENT"
+theme[hi_fg]="$ACCENT"
+theme[selected_bg]="$BG2"
+theme[selected_fg]="$TEXT1"
+theme[inactive_fg]="$TEXT3"
+theme[graph_text]="$ACCENT"
+theme[meter_bg]="$BG2"
+theme[proc_misc]="$ACCENT"
+theme[cpu_box]="$ACCENT"
+theme[mem_box]="$ACCENT"
+theme[net_box]="$ACCENT"
+theme[proc_box]="$ACCENT"
+theme[div_line]="$BG2"
+theme[temp_start]="$ACCENT"
+theme[temp_mid]="$ACCENT"
+theme[temp_end]="#f28779"
+theme[cpu_start]="$ACCENT"
+theme[cpu_mid]="$ACCENT"
+theme[cpu_end]="#f28779"
+theme[free_start]="$ACCENT"
+theme[free_mid]="$ACCENT"
+theme[free_end]="#f28779"
+theme[cached_start]="$ACCENT"
+theme[cached_mid]="$ACCENT"
+theme[cached_end]="#f28779"
+theme[available_start]="$ACCENT"
+theme[available_mid]="$ACCENT"
+theme[available_end]="#f28779"
+theme[used_start]="$ACCENT"
+theme[used_mid]="$ACCENT"
+theme[used_end]="#f28779"
+theme[download_start]="$ACCENT"
+theme[download_mid]="$ACCENT"
+theme[download_end]="#f28779"
+theme[upload_start]="$ACCENT"
+theme[upload_mid]="$ACCENT"
+theme[upload_end]="#f28779"
+BTOPEOF
+sed -i "s/color_theme = .*/color_theme = "strata"/" ~/.config/btop/btop.conf
+
 # Atualiza starship com cores do tema
 if [ "$MODE" = "light" ]; then
   STAR_DIR="#1a6a9a"

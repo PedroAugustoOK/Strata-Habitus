@@ -127,7 +127,7 @@ PanelWindow {
     anchors.centerIn: parent
     height: 160
     width: 120
-    radius: 14
+    radius: 0
     color: Colors.bg1
     border.color: Qt.rgba(Colors.accent.r, Colors.accent.g, Colors.accent.b, 0.15)
     border.width: 1
@@ -173,7 +173,7 @@ PanelWindow {
 
           Rectangle {
             anchors { fill: parent; margins: -2 }
-            radius: 12
+            radius: 0
             color: "transparent"
             border.color: root.currentWall === modelData ? Colors.accent : Qt.rgba(1,1,1,0.06)
             border.width: 2

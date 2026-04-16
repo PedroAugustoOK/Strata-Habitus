@@ -729,7 +729,7 @@ PanelWindow {
   }
   Process {
     id: sinkNameProc
-    command: ["sh", "-c", "pactl get-default-sink 2>/dev/null | xargs -I{} pactl list sinks 2>/dev/null | grep -A10 'Name: {}' | grep 'Description' | head -1 | sed 's/.*Description: //' || wpctl status | grep -A3 'Sinks:' | grep '\\*' | sed 's/.*\\. //' | sed 's/ *\\[.*//'"]
+    command: ["/home/ankh/.config/quickshell/scripts/get-sink.sh"]
     stdout: SplitParser { onRead: data => { if (data.trim() !== "") root.sinkName = data.trim() } }
   }
   Process {

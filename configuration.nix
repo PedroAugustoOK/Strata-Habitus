@@ -160,4 +160,23 @@
   system.activationScripts.strataDir = "mkdir -p /var/lib/strata && chmod 755 /var/lib/strata && cp /run/current-system/sw/share/sddm/themes/strata/Main.qml /var/lib/strata/Main.qml 2>/dev/null || true && cp -n /run/current-system/sw/share/sddm/themes/strata/metadata.desktop /var/lib/strata/metadata.desktop 2>/dev/null || true";
 
   system.stateVersion = "25.11";
+
+  # WirePlumber auto-switch para bluetooth
+  services.pipewire.wireplumber.extraConfig = {
+    "bluetooth-auto-connect" = {
+      "monitor.bluez.rules" = [{
+        matches = [{ "device.name" = "~bluez_card.*"; }];
+        actions.update-props = {
+          "bluez5.auto-connect" = [ "hfp_hf" "hsp_hs" "a2dp_sink" ];
+          "bluez5.hw-volume" = [ "hfp_hf" "hsp_hs" "a2dp_sink" ];
+        };
+      }];
+    };
+  };
+
+  # Fix PipeWire não detectar áudio no boot
+  systemd.user.services.wireplumber = {
+    after = [ "pipewire.service" ];
+    serviceConfig.ExecStartPre = "/run/current-system/sw/bin/sleep 2";
+  };
 }

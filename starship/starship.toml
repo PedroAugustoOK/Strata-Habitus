@@ -12,11 +12,11 @@ format           = "[$path]($style)[$read_only]($read_only_style) "
 style  = "#87c181"
 format = "[ $branch]($style) "
 [git_status]
-style  = "#88c0d0"
+style  = "#d79921"
 format = "([$all_status$ahead_behind]($style) )"
 [cmd_duration]
 style  = "dimmed #cf9fff"
 format = "[ ${duration}]($style) "
 [character]
-success_symbol = "[❯](bold #88c0d0)"
+success_symbol = "[❯](bold #d79921)"
 error_symbol   = "[❯](bold red)"

@@ -65,6 +65,11 @@
       '';
     })
     git wget curl neovim kitty chromium quickshell
+    (pkgs.vimPlugins.nvim-treesitter.withPlugins (p: [
+      p.nix p.lua p.bash p.python p.javascript p.typescript
+      p.json p.yaml p.toml p.markdown p.html p.css p.c p.cpp
+      p.rust p.go p.fish
+    ]))
     grimblast wl-clipboard cliphist brightnessctl swww matugen
     nautilus gvfs pavucontrol pwvucontrol
     impala bluetui playerctl hyprlock hypridle
@@ -178,6 +183,6 @@
   # Fix PipeWire não detectar áudio no boot
   systemd.user.services.wireplumber = {
     after = [ "pipewire.service" ];
-    serviceConfig.ExecStartPre = "/run/current-system/sw/bin/sleep 2";
+    serviceConfig.ExecStartPre = "/run/current-system/sw/bin/sleep 3";
   };
 }

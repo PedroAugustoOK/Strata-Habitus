@@ -32,7 +32,8 @@ PanelWindow {
       searchInput.text = ""
       selected = 0
       filtered = []
-      allApps = []; indexProc.running = true
+      if (allApps.length === 0) indexProc.running = true
+      else { filtered = filterApps(searchInput.text) }
       pill.width = pillH
       pill.opacity = 0
       openAnim.start()

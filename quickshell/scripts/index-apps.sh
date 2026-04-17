@@ -1,19 +1,27 @@
 #!/usr/bin/env bash
-find /run/current-system/sw/share/applications ~/.local/share/applications ~/.local/share/flatpak/exports/share/applications /var/lib/flatpak/exports/share/applications -name "*.desktop" 2>/dev/null | while read f; do
-  nodisplay=$(grep -m1 "^NoDisplay=" "$f" | sed 's/NoDisplay=//')
-  [ "$nodisplay" = "true" ] && continue
-  name=$(grep -m1 "^Name=" "$f" | sed 's/Name=//')
-  [ -z "$name" ] && continue
-  exec=$(grep -m1 "^Exec=" "$f" | sed 's/Exec=//' | sed 's/ %[a-zA-Z]//g' | awk '{print $1}')
-  exec=$(grep -m1 "^Exec=" "$f" | sed "s/Exec=//" | sed "s/ @@.*//" | sed "s/ %[a-zA-Z].*//")
-  icon=$(grep -m1 "^Icon=" "$f" | sed 's/Icon=//')
-  iconpath=""
-  for theme in Papirus-Dark Papirus hicolor; do
-    for size in 48 64 32 128; do
-      found=$(find "/run/current-system/sw/share/icons/$theme/${size}x${size}" \
-        -name "${icon}.png" -o -name "${icon}.svg" 2>/dev/null | head -1)
-      [ -n "$found" ] && iconpath="$found" && break 2
-    done
-  done
-  echo "$name|$exec|$iconpath"
-done | sort -u
+CACHE="$HOME/.cache/strata-apps.cache"
+if [ "$1" = "--rebuild" ]; then
+  ICON_CACHE=$(mktemp)
+  find /run/current-system/sw/share/icons/Papirus-Dark/48x48 /run/current-system/sw/share/icons/Papirus/48x48 /run/current-system/sw/share/icons/hicolor/48x48 -name "*.png" -o -name "*.svg" 2>/dev/null | while read iconfile; do
+    base=$(basename "$iconfile")
+    name="${base%.*}"
+    echo "$name=$iconfile"
+  done > "$ICON_CACHE"
+  tmp=$(mktemp)
+  find /run/current-system/sw/share/applications /home/ankh/.local/share/applications /var/lib/flatpak/exports/share/applications -name "*.desktop" 2>/dev/null | while read f; do
+    nodisplay=$(grep -m1 "^NoDisplay=" "$f" | sed "s/NoDisplay=//")
+    [ "$nodisplay" = "true" ] && continue
+    name=$(grep -m1 "^Name=" "$f" | sed "s/Name=//")
+    [ -z "$name" ] && continue
+    exec=$(grep -m1 "^Exec=" "$f" | sed "s/Exec=//" | sed "s/ @@.*//" | sed "s/ %[a-zA-Z].*//")
+    [ -z "$exec" ] && continue
+    icon=$(grep -m1 "^Icon=" "$f" | sed "s/Icon=//")
+    iconpath=$(grep -m1 "^${icon}=" "$ICON_CACHE" | cut -d= -f2-)
+    echo "$name|$exec|$iconpath"
+  done | sort -u > "$tmp"
+  mv "$tmp" "$CACHE"
+  rm -f "$ICON_CACHE"
+  exit 0
+fi
+[ -f "$CACHE" ] && cat "$CACHE"
+/run/current-system/sw/bin/bash "$0" --rebuild &

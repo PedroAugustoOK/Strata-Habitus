@@ -203,6 +203,15 @@ else
   echo "QT_STYLE_OVERRIDE=adwaita-dark" > "$HOME/.config/environment.d/qt.conf"
 fi
 
+# Atualiza nvim colorscheme
+if [ "$NEXT" = "gruvbox" ]; then
+  NVIM_THEME="gruvbox"
+elif [ "$NEXT" = "rosepine" ]; then
+  NVIM_THEME="rose-pine-dawn"
+else
+  NVIM_THEME="nord"
+fi
+sed -i "s/colorscheme = \"[^\"]*\"/colorscheme = \"$NVIM_THEME\"/" ~/.config/nvim/lua/plugins/theme.lua
 # Atualiza mako
 cat > "$HOME/.config/mako/config" << MAKOEOF
 sort=-time

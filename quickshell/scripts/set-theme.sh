@@ -194,6 +194,37 @@ theme[upload_end]="#f28779"
 BTOPEOF
 sed -i "s/color_theme = .*/color_theme = "strata"/" ~/.config/btop/btop.conf
 
+# Atualiza mako
+cat > "$HOME/.config/mako/config" << MAKOEOF
+sort=-time
+layer=overlay
+anchor=top-right
+margin=12,16
+padding=14,16
+width=320
+border-size=0
+border-radius=16
+background-color=$BG1
+text-color=$TEXT1
+font=Roboto 11
+default-timeout=5000
+max-icon-size=40
+icons=1
+icon-path=/run/current-system/sw/share/icons/Papirus-Dark:/run/current-system/sw/share/icons/Papirus:/run/current-system/sw/share/icons/hicolor
+
+format=<span size="small" color="$ACCENT">%a</span>\n<b>%s</b>\n<span size="small" color="$TEXT3">%b</span>
+
+[urgency=low]
+text-color=$TEXT3
+default-timeout=3000
+
+[urgency=high]
+border-size=1
+border-color=#f28779
+default-timeout=0
+MAKOEOF
+makoctl reload 2>/dev/null || true
+
 # Atualiza starship com cores do tema
 if [ "$MODE" = "light" ]; then
   STAR_DIR="#1a6a9a"

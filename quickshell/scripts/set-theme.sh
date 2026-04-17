@@ -194,6 +194,15 @@ theme[upload_end]="#f28779"
 BTOPEOF
 sed -i "s/color_theme = .*/color_theme = "strata"/" ~/.config/btop/btop.conf
 
+# Atualiza Qt theme
+if [ "$MODE" = "light" ]; then
+  gsettings set org.gnome.desktop.interface gtk-theme "adwaita" 2>/dev/null || true
+  echo "QT_STYLE_OVERRIDE=adwaita" > "$HOME/.config/environment.d/qt.conf"
+else
+  gsettings set org.gnome.desktop.interface gtk-theme "adwaita-dark" 2>/dev/null || true
+  echo "QT_STYLE_OVERRIDE=adwaita-dark" > "$HOME/.config/environment.d/qt.conf"
+fi
+
 # Atualiza mako
 cat > "$HOME/.config/mako/config" << MAKOEOF
 sort=-time

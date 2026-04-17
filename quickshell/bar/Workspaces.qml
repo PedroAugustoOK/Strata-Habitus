@@ -3,22 +3,28 @@ import Quickshell.Hyprland
 import Quickshell.Io
 import QtQuick
 import ".."
-
 Item {
   id: wsRoot
   width: wsRow.width
   height: 34
-
   property var wsIcons: ({})
   property int currentIdx: Hyprland.focusedWorkspace !== null ? Hyprland.focusedWorkspace.id - 1 : 0
 
+  property int visibleCount: {
+    var max = 5
+    for (var i = 0; i < Hyprland.workspaces.values.length; i++) {
+      var id = Hyprland.workspaces.values[i].id
+      if (id > max) max = id
+    }
+    if (Hyprland.focusedWorkspace !== null && Hyprland.focusedWorkspace.id > max)
+      max = Hyprland.focusedWorkspace.id
+    return max
+  }
+
   onCurrentIdxChanged: {
-    // para qualquer animação em andamento
     moveAnim.stop()
     bounceAnim.stop()
-    // reseta scale
     slider.scale = 0.5
-    // move direto pra nova posição
     moveAnim.to = posForIdx(currentIdx)
     moveAnim.start()
   }
@@ -31,14 +37,12 @@ Item {
     id: wsRow
     spacing: 6
     height: 34
-
     Repeater {
-      model: 5
+      model: wsRoot.visibleCount
       delegate: Item {
         required property int index
         width: 28
         height: 34
-
         readonly property int wsId: index + 1
         readonly property bool focused: Hyprland.focusedWorkspace !== null
                                      && Hyprland.focusedWorkspace.id === wsId
@@ -47,18 +51,15 @@ Item {
             if (Hyprland.workspaces.values[i].id === wsId) return true
           return false
         }
-
         Rectangle {
           anchors.centerIn: parent
           width:  occupied || focused ? 26 : 6
           height: occupied || focused ? 26 : 6
           radius: width / 2
           color: focused ? Colors.accent : Qt.rgba(Colors.text3.r, Colors.text3.g, Colors.text3.b, 0.3)
-
           Behavior on width  { NumberAnimation { duration: 200; easing.type: Easing.OutCubic } }
           Behavior on height { NumberAnimation { duration: 200; easing.type: Easing.OutCubic } }
           Behavior on color  { ColorAnimation  { duration: 200 } }
-
           Text {
             anchors.centerIn: parent
             visible: occupied
@@ -67,7 +68,6 @@ Item {
             font { pixelSize: 13; family: "JetBrainsMono Nerd Font" }
           }
         }
-
         MouseArea {
           anchors.fill: parent
           cursorShape: Qt.PointingHandCursor
@@ -77,7 +77,6 @@ Item {
     }
   }
 
-  // slider
   Rectangle {
     id: slider
     z: 10
@@ -91,7 +90,6 @@ Item {
     transformOrigin: Item.Center
   }
 
-  // move pro destino
   NumberAnimation {
     id: moveAnim
     target: slider
@@ -101,7 +99,6 @@ Item {
     onFinished: bounceAnim.start()
   }
 
-  // bounce na chegada
   SequentialAnimation {
     id: bounceAnim
     NumberAnimation {
@@ -116,7 +113,6 @@ Item {
     }
   }
 
- // ícone no slider
   Text {
     id: sliderIcon
     z: 11

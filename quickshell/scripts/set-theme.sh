@@ -24,6 +24,7 @@ BG1=$(get_val "bg1" "$THEME_FILE")
 BG2=$(get_val "bg2" "$THEME_FILE")
 TEXT0=$(get_val "text0" "$THEME_FILE")
 TEXT1=$(get_val "text1" "$THEME_FILE")
+TEXT3=$(get_val "text3" "$THEME_FILE")
 
 [ "$MODE" = "light" ] && OPACITY="1.0" || OPACITY="0.92"
 

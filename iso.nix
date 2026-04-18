@@ -10,6 +10,8 @@
   ];
   boot.loader.timeout = lib.mkForce 10;
 
+  networking.wireless.enable = lib.mkForce false;
+
   isoImage.makeEfiBootable = true;
   isoImage.makeUsbBootable = true;
   isoImage.isoName = "strata-habitus.iso";

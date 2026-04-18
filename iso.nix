@@ -1,7 +1,7 @@
-{ config, pkgs, lib, username ? "ankh", hostname ? "nixos", ... }:
+{ config, pkgs, lib, modulesPath, username ? "ankh", hostname ? "nixos", ... }:
 {
   imports = [
-    "${pkgs.path}/nixos/modules/installer/cd-dvd/installation-cd-graphical-base.nix"
+    (modulesPath + "/installer/cd-dvd/installation-cd-graphical-base.nix")
     ./configuration.nix
   ];
 

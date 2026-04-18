@@ -222,7 +222,7 @@ PanelWindow {
 
   Process {
     id: indexProc
-    command: ["/home/ankh/.config/quickshell/scripts/index-apps.sh"]
+    command: [Qt.resolvedUrl("../scripts/index-apps.sh").toString().replace("file://", "")]
     stdout: SplitParser {
       onRead: data => {
         if (data.trim() === "") return

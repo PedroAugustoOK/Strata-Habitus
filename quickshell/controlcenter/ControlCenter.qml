@@ -729,7 +729,7 @@ PanelWindow {
   }
   Process {
     id: sinkNameProc
-    command: ["/home/ankh/.config/quickshell/scripts/get-sink.sh"]
+    command: [Paths.scripts + "/get-sink.sh"]
     stdout: SplitParser { onRead: data => { if (data.trim() !== "") root.sinkName = data.trim() } }
   }
   Process {

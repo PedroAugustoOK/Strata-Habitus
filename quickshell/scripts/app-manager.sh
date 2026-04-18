@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 open_search() {
-  hyprctl dispatch exec "kitty --title app-search bash /home/ankh/.config/quickshell/scripts/app-search.sh $1"
+  hyprctl dispatch exec "kitty --title app-search bash $HOME/.config/quickshell/scripts/app-search.sh $1"
   exit 0
 }
 

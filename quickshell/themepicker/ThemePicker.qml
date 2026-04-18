@@ -89,7 +89,7 @@ PanelWindow {
           root.selectedIdx = Math.min(root.themes.length - 1, root.selectedIdx + 1)
         } else if (e.key === Qt.Key_Return) {
           var t = root.themes[root.selectedIdx]
-          themeProc.command = ["bash", "/home/ankh/.config/quickshell/scripts/set-theme.sh", t.name]
+          themeProc.command = ["bash", Paths.scripts + "/set-theme.sh", t.name]
           themeProc.running = true
           root.close()
         }
@@ -191,7 +191,7 @@ PanelWindow {
             z: 20
             onEntered: root.selectedIdx = index
             onClicked: {
-              themeProc.command = ["bash", "/home/ankh/.config/quickshell/scripts/set-theme.sh", modelData.name]
+              themeProc.command = ["bash", Paths.scripts + "/set-theme.sh", modelData.name]
               themeProc.running = true
               root.close()
             }
@@ -206,7 +206,7 @@ PanelWindow {
   }
 
   FileView {
-    path: "/home/ankh/.config/quickshell/themes/current.json"
+    path: Paths.themes + "/current.json"
     watchChanges: true
     onLoaded: {
       try {

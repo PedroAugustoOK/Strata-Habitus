@@ -127,7 +127,7 @@ Item {
 
   Process {
     id: iconProc
-    command: ["/home/ankh/.config/quickshell/scripts/ws-icons.sh"]
+    command: [Paths.scripts + "/ws-icons.sh"]
     stdout: SplitParser {
       onRead: data => {
         var icons = {}

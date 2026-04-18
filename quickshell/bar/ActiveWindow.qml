@@ -10,7 +10,7 @@ Text {
 
   Process {
     id: titleProc
-    command: ["/home/ankh/.config/quickshell/scripts/active-title.sh"]
+    command: [Paths.scripts + "/active-title.sh"]
     stdout: SplitParser {
       onRead: data => {
         var t = data.trim()

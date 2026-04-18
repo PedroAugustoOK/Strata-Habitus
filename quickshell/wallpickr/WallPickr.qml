@@ -13,7 +13,7 @@ PanelWindow {
   focusable: true
   visible: false
 
-  property string wallpapersDir: "/home/ankh/dotfiles/wallpapers"
+  property string wallpapersDir: Paths.wallpapers
   property string currentTheme:  "gruvbox"
   property var    wallpapers:    []
   property string currentWall:   ""
@@ -34,7 +34,7 @@ PanelWindow {
 
   function applyWallpaper(path) {
     currentWall = path
-    saveProc.command = ["sh", "-c", "echo '" + path + "' > /home/ankh/.config/quickshell/themes/current-wallpaper"]
+    saveProc.command = ["sh", "-c", "echo '" + path + "' > " + Paths.themes + "/current-wallpaper"]
     saveProc.running = true
     applyProc.command = ["swww", "img", path,
       "--transition-type", "wave",
@@ -85,7 +85,7 @@ PanelWindow {
 
   Process {
     id: themeProc
-    command: ["sh", "-c", "grep -o '\"name\"[[:space:]]*:[[:space:]]*\"[^\"]*\"' /home/ankh/.config/quickshell/themes/current.json | grep -o '\"[^\"]*\"$' | tr -d '\"'"]
+    command: ["sh", "-c", "grep -o '\"name\"[[:space:]]*:[[:space:]]*\"[^\"]*\"' " + Paths.themes + "/current.json | grep -o '\"[^\"]*\"$' | tr -d '\"'"]
     stdout: SplitParser {
       onRead: data => {
         var t = data.trim()
@@ -110,7 +110,7 @@ PanelWindow {
 
   Process {
     id: currentWallProc
-    command: ["sh", "-c", "cat /home/ankh/.config/quickshell/themes/current-wallpaper 2>/dev/null || echo ''"]
+    command: ["sh", "-c", "cat " + Paths.themes + "/current-wallpaper 2>/dev/null || echo ''"]
     stdout: SplitParser {
       onRead: data => {
         var p = data.trim()

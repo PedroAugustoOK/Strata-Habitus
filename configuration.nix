@@ -1,4 +1,4 @@
-{ config, pkgs, lib, ... }:
+{ config, pkgs, lib, username ? "ankh", hostname ? "nixos", ... }:
 {
   imports = [ ./hardware-configuration.nix ];
   boot.loader.systemd-boot.enable      = true;
@@ -43,7 +43,7 @@
   services.xserver.xkb = { layout = "br"; variant = ""; };
   console.keyMap = "br-abnt2";
 
-  users.users.ankh = {
+  users.users.${username} = {
     isNormalUser = true;
     description  = "Pedro Augusto";
     extraGroups  = [ "wheel" "video" ];
@@ -79,6 +79,7 @@
     spotify fish starship loupe zathura libreoffice
     standardnotes mpv gsettings-desktop-schemas
     hplipWithPlugin glib vesktop
+    qgis
     fzf
   ];
 
@@ -140,7 +141,7 @@
     NIXOS_OZONE_WL                      = "1";
     XCURSOR_THEME                       = "Bibata-Modern-Classic";
     XCURSOR_SIZE                        = "24";
-    STARSHIP_CONFIG                     = "/home/ankh/dotfiles/starship/starship.toml";
+    STARSHIP_CONFIG                     = "/home/${username}/dotfiles/starship/starship.toml";
   };
 
   qt = {
@@ -151,7 +152,7 @@
 
   security.sudo.extraRules = [
     {
-      users = [ "ankh" ];
+      users = [ "${username}" ];
       commands = [
         { command = "/run/current-system/sw/bin/tee /etc/chromium/policies/managed/strata.json"; options = [ "NOPASSWD" ]; }
         { command = "/run/current-system/sw/bin/mkdir";  options = [ "NOPASSWD" ]; }

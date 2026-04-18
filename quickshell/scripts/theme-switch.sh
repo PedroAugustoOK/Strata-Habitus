@@ -19,4 +19,4 @@ for i in "${!THEMES[@]}"; do
 done
 [ -z "$NEXT" ] && NEXT="gruvbox"
 
-bash /home/ankh/.config/quickshell/scripts/set-theme.sh "$NEXT"
+bash $HOME/.config/quickshell/scripts/set-theme.sh "$NEXT"

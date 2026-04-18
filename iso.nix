@@ -8,6 +8,7 @@
   boot.initrd.availableKernelModules = lib.mkForce [
     "xhci_pci" "ahci" "usb_storage" "sd_mod" "nvme"
   ];
+  boot.loader.timeout = lib.mkForce 10;
 
   isoImage.makeEfiBootable = true;
   isoImage.makeUsbBootable = true;

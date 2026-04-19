@@ -10,21 +10,22 @@
 
   isoImage.makeEfiBootable = true;
   isoImage.makeUsbBootable = true;
-  isoImage.isoName = "strata-habitus.iso";
 
   users.users.${username} = {
     isNormalUser = true;
     password = "strata";
-    extraGroups = [ "wheel" "video" "audio" "networkmanager" ];
+    extraGroups = [ "wheel" "video" "audio" "networkmanager" "seat" "input" ];
   };
 
-  services.greetd = {
+  services.greetd = lib.mkForce {
     enable = true;
     settings.default_session = {
-      command = "Hyprland";
+      command = "${pkgs.greetd.tuigreet}/bin/tuigreet --cmd Hyprland";
       user = username;
     };
   };
 
   security.sudo.wheelNeedsPassword = false;
+  security.polkit.enable = true;
+  services.seatd.enable = true;
 }

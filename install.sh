@@ -1,12 +1,16 @@
 #!/usr/bin/env bash
-# Strata Habitus - Script de instalação
 set -e
 
 echo "=== Strata Habitus Installer ==="
 read -p "Username desejado: " USERNAME
 
-# Clona os dotfiles
-git clone https://github.com/PedroAugustoOK/Strata-Habitus.git ~/dotfiles
+# Clona os dotfiles se não existir
+if [ ! -d "$HOME/dotfiles" ]; then
+  git clone https://github.com/PedroAugustoOK/Strata-Habitus.git ~/dotfiles
+else
+  echo "Dotfiles já existem, usando os existentes..."
+  cd ~/dotfiles && git pull
+fi
 
 # Atualiza o username no flake
 sed -i "s/username = \"ankh\"/username = \"$USERNAME\"/" ~/dotfiles/flake.nix

@@ -1,5 +1,6 @@
 { config, pkgs, lib, username ? "ankh", ... }:
 {
+  home.enableNixpkgsReleaseCheck = false;
   home.username      = username;
   home.homeDirectory = "/home/${username}";
   home.stateVersion  = "25.11";

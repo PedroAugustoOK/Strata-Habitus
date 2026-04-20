@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 
+DOTFILES="$HOME/dotfiles"
 THEMES_DIR="$HOME/.config/quickshell/themes"
-WALLPAPERS_DIR="$HOME/dotfiles/wallpapers"
+WALLPAPERS_DIR="$DOTFILES/wallpapers"
 DCONF="/run/current-system/sw/bin/dconf"
 STATE_FILE="$THEMES_DIR/wallpaper-index"
 
@@ -51,7 +52,7 @@ else
   C15="#f5f5f5"
 fi
 
-cat > "$HOME/dotfiles/kitty/colors.conf" << KITTYEOF
+cat > "$DOTFILES/kitty/colors.conf" << KITTYEOF
 background $BG0
 foreground $TEXT1
 selection_background $ACCENT
@@ -124,11 +125,11 @@ G=$(printf "%d" 0x${ACCENT_HEX:2:2})
 B=$(printf "%d" 0x${ACCENT_HEX:4:2})
 ACCENT_RGBA="rgba(${ACCENT_HEX}d9)"
 ACCENT_RGBA_FF="rgba(${ACCENT_HEX}ff)"
-sed -i "30s|rgba(.*)|rgba(${ACCENT_HEX}d9)|" ~/.config/hypr/hyprlock.conf
-sed -i "73s|rgba(.*)|rgba(${ACCENT_HEX}ff)|" ~/.config/hypr/hyprlock.conf
+sed -i "30s|rgba(.*)|rgba(${ACCENT_HEX}d9)|" "$DOTFILES/hyprlock.conf"
+sed -i "73s|rgba(.*)|rgba(${ACCENT_HEX}ff)|" "$DOTFILES/hyprlock.conf"
 # Atualiza cor no Main.qml do SDDM instalado
 bash ~/.config/quickshell/scripts/update-sddm-accent.sh "$ACCENT" 2>/dev/null || true
-sed -i "8s|path.*|path    = $(cat $HOME/.config/quickshell/themes/current-wallpaper)|" ~/.config/hypr/hyprlock.conf
+sed -i "8s|path.*|path    = $(cat $HOME/.config/quickshell/themes/current-wallpaper)|" "$DOTFILES/hyprlock.conf"
 # Atualiza SDDM theme
 SDDM_THEME="/run/current-system/sw/share/sddm/themes/strata"
 WALL_SRC="$(cat $HOME/.config/quickshell/themes/current-wallpaper)"
@@ -138,17 +139,17 @@ echo "accent=$ACCENT" > /tmp/strata-accent && sudo /run/current-system/sw/bin/te
 
 # Atualiza cores do fish via config.fish
 if [ "$MODE" = "light" ]; then
-  sed -i "s/set -g fish_color_command.*/set -g fish_color_command        1a6a9a  # accent — comandos/" ~/.config/fish/config.fish
-  sed -i "s/set -g fish_color_param.*/set -g fish_color_param          2a2a2a  # argumentos/" ~/.config/fish/config.fish
-  sed -i "s/set -g fish_color_error.*/set -g fish_color_error          b4637a  # erros/" ~/.config/fish/config.fish
-  sed -i "s/set -g fish_color_comment.*/set -g fish_color_comment        888888  # comentários/" ~/.config/fish/config.fish
-  sed -i "s/set -g fish_color_quote.*/set -g fish_color_quote          286e38  # strings/" ~/.config/fish/config.fish
+  sed -i "s/set -g fish_color_command.*/set -g fish_color_command        1a6a9a  # accent — comandos/" "$DOTFILES/fish/config.fish"
+  sed -i "s/set -g fish_color_param.*/set -g fish_color_param          2a2a2a  # argumentos/" "$DOTFILES/fish/config.fish"
+  sed -i "s/set -g fish_color_error.*/set -g fish_color_error          b4637a  # erros/" "$DOTFILES/fish/config.fish"
+  sed -i "s/set -g fish_color_comment.*/set -g fish_color_comment        888888  # comentários/" "$DOTFILES/fish/config.fish"
+  sed -i "s/set -g fish_color_quote.*/set -g fish_color_quote          286e38  # strings/" "$DOTFILES/fish/config.fish"
 else
-  sed -i "s/set -g fish_color_command.*/set -g fish_color_command        cf9fff  # accent — comandos/" ~/.config/fish/config.fish
-  sed -i "s/set -g fish_color_param.*/set -g fish_color_param          e0e0e0  # argumentos/" ~/.config/fish/config.fish
-  sed -i "s/set -g fish_color_error.*/set -g fish_color_error          f28779  # erros/" ~/.config/fish/config.fish
-  sed -i "s/set -g fish_color_comment.*/set -g fish_color_comment        555555  # comentários/" ~/.config/fish/config.fish
-  sed -i "s/set -g fish_color_quote.*/set -g fish_color_quote          d9bc8c  # strings/" ~/.config/fish/config.fish
+  sed -i "s/set -g fish_color_command.*/set -g fish_color_command        cf9fff  # accent — comandos/" "$DOTFILES/fish/config.fish"
+  sed -i "s/set -g fish_color_param.*/set -g fish_color_param          e0e0e0  # argumentos/" "$DOTFILES/fish/config.fish"
+  sed -i "s/set -g fish_color_error.*/set -g fish_color_error          f28779  # erros/" "$DOTFILES/fish/config.fish"
+  sed -i "s/set -g fish_color_comment.*/set -g fish_color_comment        555555  # comentários/" "$DOTFILES/fish/config.fish"
+  sed -i "s/set -g fish_color_quote.*/set -g fish_color_quote          d9bc8c  # strings/" "$DOTFILES/fish/config.fish"
 fi
 # Gera tema btop
 mkdir -p ~/.config/btop/themes
@@ -212,9 +213,9 @@ elif [ "$NEXT" = "rosepine" ]; then
 else
   NVIM_THEME="nord"
 fi
-sed -i "s/colorscheme = \"[^\"]*\"/colorscheme = \"$NVIM_THEME\"/" ~/.config/nvim/lua/plugins/theme.lua
+sed -i "s/colorscheme = \"[^\"]*\"/colorscheme = \"$NVIM_THEME\"/" "$DOTFILES/nvim/lua/plugins/theme.lua"
 # Atualiza mako
-cat > "$HOME/.config/mako/config" << MAKOEOF
+cat > "$DOTFILES/mako/config" << MAKOEOF
 sort=-time
 layer=overlay
 anchor=top-right
@@ -254,7 +255,7 @@ else
   STAR_GIT="#87c181"
   STAR_CHAR="$ACCENT"
 fi
-cat > "$HOME/dotfiles/starship/starship.toml" << STAREOF
+cat > "$DOTFILES/starship/starship.toml" << STAREOF
 # Strata Habitus — Starship prompt
 format = """\
 \$directory\$git_branch\$git_status\$cmd_duration\$line_break\$character"""

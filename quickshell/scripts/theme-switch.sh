@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# Cicla para o próximo tema. Delegado ao set-theme.sh.
 
 THEMES_DIR="$HOME/.config/quickshell/themes"
 CURRENT="$THEMES_DIR/current.json"
@@ -9,7 +10,6 @@ get_val() {
 }
 
 CURRENT_NAME=$(get_val "name" "$CURRENT")
-
 NEXT=""
 for i in "${!THEMES[@]}"; do
   if [ "${THEMES[$i]}" = "$CURRENT_NAME" ]; then
@@ -19,4 +19,4 @@ for i in "${!THEMES[@]}"; do
 done
 [ -z "$NEXT" ] && NEXT="gruvbox"
 
-bash $HOME/.config/quickshell/scripts/set-theme.sh "$NEXT"
+exec bash "$HOME/.config/quickshell/scripts/set-theme.sh" "$NEXT"

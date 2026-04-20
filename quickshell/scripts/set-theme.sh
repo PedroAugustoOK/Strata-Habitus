@@ -284,4 +284,16 @@ pkill quickshell
 sleep 0.5
 nohup quickshell > /dev/null 2>&1 &
 disown
+
+# Auto-commit das mudanças de tema no dotfiles
+cd "$DOTFILES" && git add \
+  kitty/colors.conf \
+  mako/config \
+  starship/starship.toml \
+  nvim/lua/plugins/theme.lua \
+  hyprlock.conf \
+  fish/config.fish \
+  quickshell/themes/current.json \
+  && git commit -m "chore: theme → $NEXT" 2>/dev/null || true
+
 echo "Tema aplicado: $NEXT"

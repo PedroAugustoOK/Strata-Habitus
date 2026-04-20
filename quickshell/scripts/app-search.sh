@@ -46,7 +46,7 @@ refresh_flatpak_cache() {
 }
 
 get_installed_nix() {
-  awk '/environment\.systemPackages = with pkgs;/,/^\s*\];/' ~/dotfiles/configuration.nix \
+  awk '/environment\.systemPackages = with pkgs;/,/^\s*\];/' ~/dotfiles/modules/packages.nix \
     | grep -v '#\|{\|}\|=\|import\|pkgs\|mkDerivation\|installPhase\|dontBuild\|pname\|version\|\.\|src \|cp \|mkdir\|ln \|environment\|systemPackages\|with ' \
     | tr ' ' '\n' \
     | grep -E '^[a-zA-Z][a-zA-Z0-9_-]+$' \
@@ -71,13 +71,13 @@ case "$MODE" in
     echo -e "  ${AR}versão:${R}    $(echo "$result" | cut -f2 | xargs)"
     echo -e "  ${AR}descrição:${R} $(echo "$result" | cut -f3 | xargs)\n"
     echo -e "  ${AR}adicionando ao configuration.nix...${R}"
-    sed -i "/hplipWithPlugin glib vesktop/a\    $pkg" ~/dotfiles/configuration.nix
+    sed -i "/hplipWithPlugin glib vesktop/a\    $pkg" ~/dotfiles/modules/packages.nix
     echo -e "  ${AR}rebuilding nixos...${R}\n"
     if sudo nixos-rebuild switch --flake ~/dotfiles#$(hostname) 2>&1 | grep -E "building|copying|activating|error|warning|Done" | tail -8; then
       echo -e "\n  ${AR}✓ ${pkg} instalado!${R}\n  ${D}enter para fechar${R}"
     else
       echo -e "\n  ${AR}✗ falha — revertendo...${R}"
-      sed -i "/^\s*${pkg}\s*$/d" ~/dotfiles/configuration.nix
+      sed -i "/^\s*${pkg}\s*$/d" ~/dotfiles/modules/packages.nix
       sudo nixos-rebuild switch --rollback 2>/dev/null || true
       echo -e "  ${AR}revertido.${R}\n  ${D}enter para fechar${R}"
     fi
@@ -117,13 +117,13 @@ case "$MODE" in
     pkg=$(echo "$result" | xargs)
     clear
     echo -e "\n  ${AR}removendo ${pkg}...${R}"
-    sed -i "/^\s*${pkg}\s*$/d" ~/dotfiles/configuration.nix
+    sed -i "/^\s*${pkg}\s*$/d" ~/dotfiles/modules/packages.nix
     echo -e "  ${AR}rebuilding nixos...${R}\n"
     if sudo nixos-rebuild switch --flake ~/dotfiles#$(hostname) 2>&1 | grep -E "building|copying|activating|error|warning|Done" | tail -8; then
       echo -e "\n  ${AR}✓ ${pkg} removido!${R}\n  ${D}enter para fechar${R}"
     else
       echo -e "\n  ${AR}✗ falha — revertendo...${R}"
-      sed -i "/^\s*\];/i\    $pkg" ~/dotfiles/configuration.nix
+      sed -i "/^\s*\];/i\    $pkg" ~/dotfiles/modules/packages.nix
       sudo nixos-rebuild switch --rollback 2>/dev/null || true
       echo -e "  ${AR}revertido.${R}\n  ${D}enter para fechar${R}"
     fi

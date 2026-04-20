@@ -126,7 +126,6 @@ sed -i "s|^  path    = .*|  path    = $(cat $HOME/.config/quickshell/themes/curr
 # Atualiza cor no Main.qml do SDDM instalado
 bash ~/.config/quickshell/scripts/update-sddm-accent.sh "$ACCENT" 2>/dev/null || true
 # Atualiza SDDM theme
-SDDM_THEME="/run/current-system/sw/share/sddm/themes/strata"
 WALL_SRC="$(cat $HOME/.config/quickshell/themes/current-wallpaper)"
 magick "$WALL_SRC" -scale 10% -scale 1920x1080! /tmp/strata-bg.jpg 2>/dev/null && sudo /run/current-system/sw/bin/cp /tmp/strata-bg.jpg /var/lib/strata/background.jpg 2>/dev/null & 
 echo "accent=$ACCENT" > /tmp/strata-accent && sudo /run/current-system/sw/bin/tee /var/lib/strata/theme.conf < /tmp/strata-accent > /dev/null 2>/dev/null || true
@@ -189,7 +188,7 @@ theme[upload_start]="$ACCENT"
 theme[upload_mid]="$ACCENT"
 theme[upload_end]="#f28779"
 BTOPEOF
-sed -i "s/color_theme = .*/color_theme = "strata"/" ~/.config/btop/btop.conf
+sed -i 's/color_theme = .*/color_theme = "strata"/' ~/.config/btop/btop.conf
 
 # Atualiza Qt theme
 if [ "$MODE" = "light" ]; then

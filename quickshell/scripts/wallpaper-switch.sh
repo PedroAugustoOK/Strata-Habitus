@@ -25,4 +25,7 @@ swww img "$WALLPAPER" --transition-type wave --transition-duration 1.5 --transit
 echo "$WALLPAPER" > "$THEMES_DIR/current-wallpaper"
 sed -i "s|^  path    = .*|  path    = $WALLPAPER|" "$HOME/dotfiles/hyprlock.conf"
 
+cd "$HOME/dotfiles" && git add hyprlock.conf \
+  && git commit -m "chore: wallpaper → $(basename $WALLPAPER)" 2>/dev/null || true
+
 echo "Wallpaper: $(basename $WALLPAPER) ($((INDEX+1))/$COUNT)"

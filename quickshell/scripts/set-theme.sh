@@ -118,18 +118,13 @@ fi
 hyprctl keyword "general:col.active_border" "rgba($(echo $ACCENT | tr -d '#')ff)"
 echo "Tema aplicado: $NEXT"
 
-# Atualiza hyprlock com accent do tema atual
+# Atualiza hyprlock com accent e wallpaper do tema atual
 ACCENT_HEX=$(echo "$ACCENT" | tr -d '#')
-R=$(printf "%d" 0x${ACCENT_HEX:0:2})
-G=$(printf "%d" 0x${ACCENT_HEX:2:2})
-B=$(printf "%d" 0x${ACCENT_HEX:4:2})
-ACCENT_RGBA="rgba(${ACCENT_HEX}d9)"
-ACCENT_RGBA_FF="rgba(${ACCENT_HEX}ff)"
-sed -i "30s|rgba(.*)|rgba(${ACCENT_HEX}d9)|" "$DOTFILES/hyprlock.conf"
-sed -i "73s|rgba(.*)|rgba(${ACCENT_HEX}ff)|" "$DOTFILES/hyprlock.conf"
+sed -i "s|^  color   = rgba([a-f0-9]*88)|  color   = rgba(${ACCENT_HEX}88)|" "$DOTFILES/hyprlock.conf"
+sed -i "s|check_color.*=.*rgba([^)]*)|  check_color       = rgba(${ACCENT_HEX}ff)|" "$DOTFILES/hyprlock.conf"
+sed -i "s|^  path    = .*|  path    = $(cat $HOME/.config/quickshell/themes/current-wallpaper)|" "$DOTFILES/hyprlock.conf"
 # Atualiza cor no Main.qml do SDDM instalado
 bash ~/.config/quickshell/scripts/update-sddm-accent.sh "$ACCENT" 2>/dev/null || true
-sed -i "8s|path.*|path    = $(cat $HOME/.config/quickshell/themes/current-wallpaper)|" "$DOTFILES/hyprlock.conf"
 # Atualiza SDDM theme
 SDDM_THEME="/run/current-system/sw/share/sddm/themes/strata"
 WALL_SRC="$(cat $HOME/.config/quickshell/themes/current-wallpaper)"

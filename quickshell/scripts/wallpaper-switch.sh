@@ -21,4 +21,8 @@ echo "$INDEX" > "$STATE_FILE"
 
 WALLPAPER="${WALLPAPERS[$INDEX]}"
 swww img "$WALLPAPER" --transition-type wave --transition-duration 1.5 --transition-wave 80,80
+
+echo "$WALLPAPER" > "$THEMES_DIR/current-wallpaper"
+sed -i "s|^  path    = .*|  path    = $WALLPAPER|" "$HOME/dotfiles/hyprlock.conf"
+
 echo "Wallpaper: $(basename $WALLPAPER) ($((INDEX+1))/$COUNT)"

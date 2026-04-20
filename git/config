@@ -2,6 +2,9 @@
     name  = Pedro Augusto
     email = pedro13marchetti@pm.me
 
+[credential]
+    helper = store
+
 [core]
     editor     = nvim
     autocrlf   = input

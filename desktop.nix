@@ -2,7 +2,7 @@
 {
   imports = [ ./configuration.nix ];
 
-  networking.hostName = hostname;
+  networking.hostName = lib.mkForce hostname;
 
   hardware.nvidia = {
     modesetting.enable = true;

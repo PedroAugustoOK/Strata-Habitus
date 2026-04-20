@@ -5,7 +5,7 @@
     (stdenv.mkDerivation {
       pname = "sddm-theme-strata";
       version = "1.0";
-      src = ../modules/sddm-theme;
+      src = ./sddm-theme;
       dontBuild = true;
       installPhase = ''
         mkdir -p $out/share/sddm/themes/strata
@@ -42,5 +42,14 @@
     intel-media-driver intel-vaapi-driver
   ];
 
-  nix.settings.experimental-features = [ "nix-command" "flakes" ];
+  nix.settings.experimental-features  = [ "nix-command" "flakes" ];
+  nix.settings.keep-outputs            = true;
+  nix.settings.keep-derivations        = true;
+  nix.settings.auto-optimise-store     = true;
+
+  nix.gc = {
+    automatic = true;
+    dates     = "weekly";
+    options   = "--delete-older-than 30d";
+  };
 }

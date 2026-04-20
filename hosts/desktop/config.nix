@@ -17,6 +17,5 @@
   services.xserver.videoDrivers = [ "nvidia" ];
   hardware.graphics.enable = true;
 
-  # Root com senha para emergências
-  users.users.root.initialPassword = "strata";
+  # Sem senha root — acesso via sudo com usuário wheel
 }

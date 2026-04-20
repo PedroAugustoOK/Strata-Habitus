@@ -1,8 +1,6 @@
-# Strata Habitus — Notas e melhorias pendentes
+# Strata Habitus — Melhorias pendentes
 
-## Pendente
-
-### 1. eza + bat + zoxide
+### eza + bat + zoxide
 Substitutas modernas para `ls`, `cat` e `cd`.
 - `eza`: listagem com ícones, cores e git status
 - `bat`: cat com syntax highlighting e numeração
@@ -18,7 +16,7 @@ Para implementar:
   abbr -a cat 'bat'
   ```
 
-### 10. stylix
+### stylix
 Sistema de temas declarativo via Nix que propaga cores automaticamente para
 todos os apps (kitty, fish, mako, nvim, hyprlock, etc.), eliminando o
 `set-theme.sh` de 290 linhas.
@@ -28,10 +26,9 @@ Para implementar:
 - Configurar `stylix.image` (wallpaper base para gerar paleta)
 - Configurar `stylix.base16Scheme` com o tema desejado
 - Remover o sistema manual de temas (set-theme.sh, themes/*.json, etc.)
-- Referência: https://stylix.danth.me
 
-### 5. hardware-configuration do desktop
-Gerar o arquivo de hardware no desktop com:
+### hardware-configuration do desktop
+Gerar o arquivo de hardware na máquina desktop com:
 ```bash
 sudo nixos-generate-config --show-hardware-config > ~/dotfiles/hosts/desktop/hardware.nix
 ```

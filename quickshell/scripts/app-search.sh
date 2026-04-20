@@ -73,8 +73,14 @@ case "$MODE" in
     echo -e "  ${AR}adicionando ao configuration.nix...${R}"
     sed -i "/hplipWithPlugin glib vesktop/a\    $pkg" ~/dotfiles/configuration.nix
     echo -e "  ${AR}rebuilding nixos...${R}\n"
-    sudo nixos-rebuild switch --flake ~/dotfiles#$(hostname) 2>&1 | grep -E "building|copying|activating|error|warning|Done" | tail -8
-    echo -e "\n  ${AR}✓ ${pkg} instalado!${R}\n  ${D}enter para fechar${R}"
+    if sudo nixos-rebuild switch --flake ~/dotfiles#$(hostname) 2>&1 | grep -E "building|copying|activating|error|warning|Done" | tail -8; then
+      echo -e "\n  ${AR}✓ ${pkg} instalado!${R}\n  ${D}enter para fechar${R}"
+    else
+      echo -e "\n  ${AR}✗ falha — revertendo...${R}"
+      sed -i "/^\s*${pkg}\s*$/d" ~/dotfiles/configuration.nix
+      sudo nixos-rebuild switch --rollback 2>/dev/null || true
+      echo -e "  ${AR}revertido.${R}\n  ${D}enter para fechar${R}"
+    fi
     read -r
     ;;
 
@@ -113,8 +119,14 @@ case "$MODE" in
     echo -e "\n  ${AR}removendo ${pkg}...${R}"
     sed -i "/^\s*${pkg}\s*$/d" ~/dotfiles/configuration.nix
     echo -e "  ${AR}rebuilding nixos...${R}\n"
-    sudo nixos-rebuild switch --flake ~/dotfiles#$(hostname) 2>&1 | grep -E "building|copying|activating|error|warning|Done" | tail -8
-    echo -e "\n  ${AR}✓ ${pkg} removido!${R}\n  ${D}enter para fechar${R}"
+    if sudo nixos-rebuild switch --flake ~/dotfiles#$(hostname) 2>&1 | grep -E "building|copying|activating|error|warning|Done" | tail -8; then
+      echo -e "\n  ${AR}✓ ${pkg} removido!${R}\n  ${D}enter para fechar${R}"
+    else
+      echo -e "\n  ${AR}✗ falha — revertendo...${R}"
+      sed -i "/^\s*\];/i\    $pkg" ~/dotfiles/configuration.nix
+      sudo nixos-rebuild switch --rollback 2>/dev/null || true
+      echo -e "  ${AR}revertido.${R}\n  ${D}enter para fechar${R}"
+    fi
     read -r
     ;;
 

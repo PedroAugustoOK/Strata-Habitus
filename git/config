@@ -1,6 +1,6 @@
 [user]
     name  = Pedro Augusto
-    email = # TODO: adicionar email
+    email = pedro13marchetti@pm.me
 
 [core]
     editor     = nvim

@@ -73,7 +73,7 @@ case "$MODE" in
     echo -e "  ${AR}adicionando ao configuration.nix...${R}"
     sed -i "/hplipWithPlugin glib vesktop/a\    $pkg" ~/dotfiles/configuration.nix
     echo -e "  ${AR}rebuilding nixos...${R}\n"
-    sudo nixos-rebuild switch --flake ~/dotfiles#galaxybook 2>&1 | grep -E "building|copying|activating|error|warning|Done" | tail -8
+    sudo nixos-rebuild switch --flake ~/dotfiles#nixos 2>&1 | grep -E "building|copying|activating|error|warning|Done" | tail -8
     echo -e "\n  ${AR}✓ ${pkg} instalado!${R}\n  ${D}enter para fechar${R}"
     read -r
     ;;
@@ -113,7 +113,7 @@ case "$MODE" in
     echo -e "\n  ${AR}removendo ${pkg}...${R}"
     sed -i "/^\s*${pkg}\s*$/d" ~/dotfiles/configuration.nix
     echo -e "  ${AR}rebuilding nixos...${R}\n"
-    sudo nixos-rebuild switch --flake ~/dotfiles#galaxybook 2>&1 | grep -E "building|copying|activating|error|warning|Done" | tail -8
+    sudo nixos-rebuild switch --flake ~/dotfiles#nixos 2>&1 | grep -E "building|copying|activating|error|warning|Done" | tail -8
     echo -e "\n  ${AR}✓ ${pkg} removido!${R}\n  ${D}enter para fechar${R}"
     read -r
     ;;

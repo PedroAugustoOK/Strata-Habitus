@@ -4,14 +4,14 @@ set -e
 echo "=== Strata Habitus Installer ==="
 read -p "Username desejado: " USERNAME
 echo "Targets disponíveis:"
-echo "  1) galaxybook (Intel, sem GPU dedicada)"
+echo "  1) nixos (Intel, sem GPU dedicada)"
 echo "  2) desktop (NVIDIA)"
 read -p "Escolha (1 ou 2): " TARGET_NUM
 
 if [ "$TARGET_NUM" = "2" ]; then
   TARGET="desktop"
 else
-  TARGET="galaxybook"
+  TARGET="nixos"
 fi
 
 if [ ! -d "$HOME/dotfiles/.git" ]; then

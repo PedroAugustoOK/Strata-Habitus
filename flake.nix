@@ -20,7 +20,7 @@
       home-manager.users.${username} = import ./home.nix;
     };
   in {
-    nixosConfigurations.galaxybook = nixpkgs.lib.nixosSystem {
+    nixosConfigurations.nixos = nixpkgs.lib.nixosSystem {
       inherit system;
       specialArgs = { inherit username hostname; };
       modules = [

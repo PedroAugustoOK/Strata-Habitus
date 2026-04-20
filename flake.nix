@@ -6,7 +6,39 @@
       url = "github:nix-community/home-manager";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+
+    nixosConfigurations.desktop = nixpkgs.lib.nixosSystem {
+      inherit system;
+      specialArgs = { inherit username; hostname = "desktop"; };
+      modules = [
+        ./desktop.nix
+        home-manager.nixosModules.home-manager
+        {
+          home-manager.useGlobalPkgs = true;
+          home-manager.useUserPackages = true;
+          home-manager.backupFileExtension = "backup";
+          home-manager.extraSpecialArgs = { inherit username; };
+          home-manager.users.${username} = import ./home.nix;
+        }
+      ];
+    };
   };
+
+    nixosConfigurations.desktop = nixpkgs.lib.nixosSystem {
+      inherit system;
+      specialArgs = { inherit username; hostname = "desktop"; };
+      modules = [
+        ./desktop.nix
+        home-manager.nixosModules.home-manager
+        {
+          home-manager.useGlobalPkgs = true;
+          home-manager.useUserPackages = true;
+          home-manager.backupFileExtension = "backup";
+          home-manager.extraSpecialArgs = { inherit username; };
+          home-manager.users.${username} = import ./home.nix;
+        }
+      ];
+    };
   outputs = { self, nixpkgs, home-manager, ... }:
   let
     username = "ankh";
@@ -21,6 +53,22 @@
         home-manager.nixosModules.home-manager
         {
           home-manager.useGlobalPkgs   = true;
+          home-manager.useUserPackages = true;
+          home-manager.backupFileExtension = "backup";
+          home-manager.extraSpecialArgs = { inherit username; };
+          home-manager.users.${username} = import ./home.nix;
+        }
+      ];
+    };
+
+    nixosConfigurations.desktop = nixpkgs.lib.nixosSystem {
+      inherit system;
+      specialArgs = { inherit username; hostname = "desktop"; };
+      modules = [
+        ./desktop.nix
+        home-manager.nixosModules.home-manager
+        {
+          home-manager.useGlobalPkgs = true;
           home-manager.useUserPackages = true;
           home-manager.backupFileExtension = "backup";
           home-manager.extraSpecialArgs = { inherit username; };
@@ -44,5 +92,37 @@
         }
       ];
     };
+
+    nixosConfigurations.desktop = nixpkgs.lib.nixosSystem {
+      inherit system;
+      specialArgs = { inherit username; hostname = "desktop"; };
+      modules = [
+        ./desktop.nix
+        home-manager.nixosModules.home-manager
+        {
+          home-manager.useGlobalPkgs = true;
+          home-manager.useUserPackages = true;
+          home-manager.backupFileExtension = "backup";
+          home-manager.extraSpecialArgs = { inherit username; };
+          home-manager.users.${username} = import ./home.nix;
+        }
+      ];
+    };
   };
+
+    nixosConfigurations.desktop = nixpkgs.lib.nixosSystem {
+      inherit system;
+      specialArgs = { inherit username; hostname = "desktop"; };
+      modules = [
+        ./desktop.nix
+        home-manager.nixosModules.home-manager
+        {
+          home-manager.useGlobalPkgs = true;
+          home-manager.useUserPackages = true;
+          home-manager.backupFileExtension = "backup";
+          home-manager.extraSpecialArgs = { inherit username; };
+          home-manager.users.${username} = import ./home.nix;
+        }
+      ];
+    };
 }

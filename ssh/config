@@ -1,0 +1,11 @@
+Host *
+    ServerAliveInterval  60
+    ServerAliveCountMax  3
+    AddKeysToAgent       yes
+    IdentityFile         ~/.ssh/id_ed25519
+
+# Exemplo de host:
+# Host meuservidor
+#     HostName     192.168.1.100
+#     User         ankh
+#     IdentityFile ~/.ssh/id_ed25519

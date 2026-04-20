@@ -3,6 +3,9 @@
 # Starship
 starship init fish | source
 
+# direnv
+direnv hook fish | source
+
 # Variáveis de ambiente
 set -gx EDITOR nvim
 set -gx VISUAL nvim

@@ -1,5 +1,6 @@
 { pkgs, lib, username ? "ankh", ... }: {
-  programs.fish.enable              = true;
+  programs.nix-ld.enable = true;
+  programs.fish.enable   = true;
   programs.hyprland.enable          = true;
   programs.hyprland.xwayland.enable = true;
   programs.dconf.enable             = true;

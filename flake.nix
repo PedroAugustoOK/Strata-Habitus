@@ -25,6 +25,7 @@
       specialArgs = { inherit username hostname; };
       modules = [
         ./configuration.nix
+        ./hosts/nixos/hardware.nix
         home-manager.nixosModules.home-manager
         hmModule
       ];
@@ -34,7 +35,9 @@
       inherit system;
       specialArgs = { inherit username; hostname = "desktop"; };
       modules = [
-        ./desktop.nix
+        ./configuration.nix
+        ./hosts/desktop/hardware.nix
+        ./hosts/desktop/config.nix
         home-manager.nixosModules.home-manager
         hmModule
       ];

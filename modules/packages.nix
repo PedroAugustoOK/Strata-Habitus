@@ -29,6 +29,7 @@
     standardnotes mpv gsettings-desktop-schemas
     hplipWithPlugin glib vesktop
     qgis fzf
+    direnv nix-direnv
   ];
 
   fonts.packages = with pkgs; [

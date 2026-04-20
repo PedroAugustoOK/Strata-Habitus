@@ -1,7 +1,5 @@
 { config, pkgs, lib, username ? "ankh", hostname ? "desktop", ... }:
 {
-  imports = [ ./configuration.nix ];
-
   networking.hostName = lib.mkForce hostname;
 
   # Boot normal sem splash para debug

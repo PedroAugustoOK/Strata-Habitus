@@ -1,7 +1,6 @@
 { pkgs, username ? "ankh", hostname ? "nixos", ... }:
 {
   imports = [
-    ./hardware-configuration.nix
     ./modules/boot.nix
     ./modules/network.nix
     ./modules/locale.nix

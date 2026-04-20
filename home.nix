@@ -28,4 +28,11 @@ in {
 
   # Ferramentas
   xdg.configFile."fastfetch".source = link "fastfetch";
+
+  # Git e SSH
+  home.file.".gitconfig".source    = link "git/config";
+  home.file.".ssh/config" = {
+    source = link "ssh/config";
+    force  = true;
+  };
 }

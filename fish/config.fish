@@ -26,11 +26,11 @@ abbr -a rebuild 'sudo nixos-rebuild switch --flake ~/dotfiles#'(hostname)
 set fish_greeting ""
 
 # Cores do Fish (syntax highlighting alinhado com o Strata)
-set -g fish_color_command        1a6a9a  # accent — comandos
-set -g fish_color_param          2a2a2a  # argumentos
-set -g fish_color_error          b4637a  # erros
-set -g fish_color_comment        888888  # comentários
-set -g fish_color_quote          286e38  # strings
+set -g fish_color_command        cf9fff  # accent — comandos
+set -g fish_color_param          e0e0e0  # argumentos
+set -g fish_color_error          f28779  # erros
+set -g fish_color_comment        555555  # comentários
+set -g fish_color_quote          d9bc8c  # strings
 set -g fish_color_redirection    7bafd4  # redirecionamentos
 set -g fish_color_operator       80c4c4  # operadores
 set -g fish_color_autosuggestion 444444  # sugestões automáticas

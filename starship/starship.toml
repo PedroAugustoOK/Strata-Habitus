@@ -2,21 +2,21 @@
 format = """$directory$git_branch$git_status$cmd_duration$line_break$character"""
 add_newline = false
 [directory]
-style            = "bold #cf9fff"
+style            = "bold #1a6a9a"
 truncation_length = 3
 truncate_to_repo  = true
 read_only        = " 󰌾"
 read_only_style  = "#f28779"
 format           = "[$path]($style)[$read_only]($read_only_style) "
 [git_branch]
-style  = "#87c181"
+style  = "#286e38"
 format = "[ $branch]($style) "
 [git_status]
-style  = "#d79921"
+style  = "#b4637a"
 format = "([$all_status$ahead_behind]($style) )"
 [cmd_duration]
-style  = "dimmed #cf9fff"
+style  = "dimmed #1a6a9a"
 format = "[ ${duration}]($style) "
 [character]
-success_symbol = "[❯](bold #d79921)"
+success_symbol = "[❯](bold #b4637a)"
 error_symbol   = "[❯](bold red)"

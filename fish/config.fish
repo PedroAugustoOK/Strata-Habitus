@@ -36,3 +36,6 @@ set -g fish_color_operator       80c4c4  # operadores
 set -g fish_color_autosuggestion 444444  # sugestões automáticas
 set -g fish_color_valid_path     --underline
 
+export PATH="$HOME/.local/bin:$PATH"
+export PATH="$HOME/.local/bin:$PATH"
+export PATH="$HOME/.local/bin:$PATH"

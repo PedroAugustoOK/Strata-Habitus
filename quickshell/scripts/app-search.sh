@@ -4,9 +4,9 @@ MODE=$1
 CACHE="$HOME/.cache/strata-nix-packages.txt"
 FCACHE="$HOME/.cache/strata-flatpak-packages.txt"
 
-ACCENT=$(cat ~/.config/quickshell/themes/current.json 2>/dev/null | grep -o '"accent":"[^"]*"' | cut -d'"' -f4)
-BG0=$(cat ~/.config/quickshell/themes/current.json 2>/dev/null | grep -o '"bg0":"[^"]*"' | cut -d'"' -f4)
-BG1=$(cat ~/.config/quickshell/themes/current.json 2>/dev/null | grep -o '"bg1":"[^"]*"' | cut -d'"' -f4)
+ACCENT=$(cat ~/dotfiles/state/current-theme.json 2>/dev/null | grep -o '"accent":"[^"]*"' | cut -d'"' -f4)
+BG0=$(cat ~/dotfiles/state/current-theme.json 2>/dev/null | grep -o '"bg0":"[^"]*"' | cut -d'"' -f4)
+BG1=$(cat ~/dotfiles/state/current-theme.json 2>/dev/null | grep -o '"bg1":"[^"]*"' | cut -d'"' -f4)
 [ -z "$ACCENT" ] && ACCENT="#d79921"
 [ -z "$BG0" ]    && BG0="#0d0d0f"
 [ -z "$BG1" ]    && BG1="#111113"

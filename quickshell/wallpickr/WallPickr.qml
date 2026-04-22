@@ -17,7 +17,6 @@ PanelWindow {
   property string currentTheme:  "gruvbox"
   property var    wallpapers:    []
   property string currentWall:   ""
-
   function toggle() {
     if (visible) {
       closeAnim.start()
@@ -34,12 +33,7 @@ PanelWindow {
 
   function applyWallpaper(path) {
     currentWall = path
-    saveProc.command = ["sh", "-c", "echo '" + path + "' > " + Paths.themes + "/current-wallpaper"]
-    saveProc.running = true
-    applyProc.command = ["swww", "img", path,
-      "--transition-type", "wave",
-      "--transition-duration", "1.5",
-      "--transition-wave", "80,80"]
+    applyProc.command = ["bash", Paths.scripts + "/wallpaper.sh", path]
     applyProc.running = true
     closeAnim.start()
   }
@@ -85,7 +79,7 @@ PanelWindow {
 
   Process {
     id: themeProc
-    command: ["sh", "-c", "grep -o '\"name\"[[:space:]]*:[[:space:]]*\"[^\"]*\"' " + Paths.themes + "/current.json | grep -o '\"[^\"]*\"$' | tr -d '\"'"]
+    command: ["sh", "-c", "grep -o '\"name\"[[:space:]]*:[[:space:]]*\"[^\"]*\"' " + Paths.state + "/current-theme.json | grep -o '\"[^\"]*\"$' | tr -d '\"'"]
     stdout: SplitParser {
       onRead: data => {
         var t = data.trim()
@@ -110,7 +104,7 @@ PanelWindow {
 
   Process {
     id: currentWallProc
-    command: ["sh", "-c", "cat " + Paths.themes + "/current-wallpaper 2>/dev/null || echo ''"]
+    command: ["sh", "-c", "cat " + Paths.state + "/current-wallpaper 2>/dev/null || echo ''"]
     stdout: SplitParser {
       onRead: data => {
         var p = data.trim()
@@ -120,7 +114,6 @@ PanelWindow {
   }
 
   Process { id: applyProc; command: [] }
-  Process { id: saveProc;  command: [] }
 
   Rectangle {
     id: pill

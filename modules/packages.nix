@@ -1,4 +1,4 @@
-{ pkgs, ... }: {
+{ pkgs, hostname ? "nixos", ... }: {
   nixpkgs.config.allowUnfree = true;
 
   environment.systemPackages = with pkgs; [
@@ -19,16 +19,18 @@
       p.json p.yaml p.toml p.markdown p.html p.css p.c p.cpp
       p.rust p.go p.fish
     ]))
-    grimblast wl-clipboard cliphist brightnessctl swww matugen
+    grimblast wl-clipboard cliphist brightnessctl awww matugen
     nautilus gvfs pavucontrol pwvucontrol
     impala bluetui playerctl hyprlock hypridle
     pipewire wireplumber blueman libnotify mako
-    adwaita-qt adwaita-qt6 papirus-icon-theme
+    adwaita-qt adwaita-qt6 papirus-icon-theme papirus-folders
     obs-studio bibata-cursors fastfetch btop vscode gcc
     spotify fish starship loupe zathura libreoffice
     standardnotes mpv gsettings-desktop-schemas
     hplipWithPlugin glib vesktop
+    ollama codex
     qgis fzf
+    eza bat zoxide
     direnv nix-direnv
   ];
 
@@ -52,4 +54,10 @@
     dates     = "weekly";
     options   = "--delete-older-than 30d";
   };
+
+  services.ollama = {
+    enable = true;
+    package = if hostname == "desktop" then pkgs.ollama-cuda else pkgs.ollama;
+  };
+
 }

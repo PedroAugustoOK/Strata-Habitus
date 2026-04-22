@@ -21,7 +21,7 @@ require("lazy").setup({
     { import = "plugins" },
   },
   defaults = { lazy = false, version = false },
-  install = { colorscheme = { "tokyonight" } },
+  install = { colorscheme = { "nord" } },
   checker = { enabled = false },
   performance = {
     rtp = {

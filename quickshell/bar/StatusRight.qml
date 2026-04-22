@@ -57,8 +57,7 @@ Item {
 
   Process {
     id: batProc
-    command: ["sh", "-c",
-      "paste /sys/class/power_supply/BAT1/capacity /sys/class/power_supply/BAT1/status 2>/dev/null || echo '100\tDischarging'"]
+    command: ["bash", Paths.scripts + "/battery-status.sh"]
     stdout: SplitParser {
       onRead: data => {
         var parts = data.trim().split("\t")
@@ -70,12 +69,7 @@ Item {
 
   Process {
     id: netProc
-    command: ["sh", "-c",
-      "STATE=$(iwctl station wlan0 show 2>/dev/null | grep -i 'State' | awk '{print $NF}');" +
-      "if [ \"$STATE\" != 'connected' ]; then echo 'off'; exit; fi;" +
-      "SIG=$(iwctl station wlan0 show 2>/dev/null | grep -i 'signal' | awk '{print $NF}' | tr -d '-' | tr -d ' ');" +
-      "echo \"on:${SIG:-50}\""
-    ]
+    command: ["bash", Paths.scripts + "/wifi-status.sh"]
     stdout: SplitParser {
       onRead: data => {
         var t = data.trim()

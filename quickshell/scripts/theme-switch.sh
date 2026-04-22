@@ -1,9 +1,8 @@
 #!/usr/bin/env bash
-# Cicla para o próximo tema. Delegado ao set-theme.sh.
 
-THEMES_DIR="$HOME/.config/quickshell/themes"
-CURRENT="$THEMES_DIR/current.json"
-THEMES=("gruvbox" "rosepine" "nord")
+THEMES_DIR="$HOME/dotfiles/quickshell/themes"
+CURRENT="$HOME/dotfiles/state/current-theme.json"
+THEMES=("gruvbox" "rosepine" "nord" "tokyonight" "everforest" "kanagawa" "catppuccinlatte" "flexoki" "oxocarbon")
 
 get_val() {
   grep -o "\"$1\"[[:space:]]*:[[:space:]]*\"[^\"]*\"" "$2" | grep -o '"[^"]*"$' | tr -d '"'

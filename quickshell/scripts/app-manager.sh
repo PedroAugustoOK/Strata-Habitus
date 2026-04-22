@@ -5,7 +5,7 @@ open_search() {
   exit 0
 }
 
-ACCENT=$(cat ~/.config/quickshell/themes/current.json 2>/dev/null | grep -o '"accent":"[^"]*"' | cut -d'"' -f4)
+ACCENT=$(cat ~/dotfiles/state/current-theme.json 2>/dev/null | grep -o '"accent":"[^"]*"' | cut -d'"' -f4)
 [ -z "$ACCENT" ] && ACCENT="#d79921"
 
 # Converte hex para cor ANSI 256 aproximada — usa laranja/amarelo como fallback

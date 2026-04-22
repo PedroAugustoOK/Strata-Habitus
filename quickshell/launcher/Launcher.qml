@@ -43,13 +43,44 @@ PanelWindow {
   function filterApps(q) {
     selected = 0
     if (q.length === 0) { filtered = []; return }
-    const ql = q.toLowerCase()
-    filtered = allApps.filter(a => a.name.toLowerCase().startsWith(ql)).slice(0, maxResults)
+    const terms = q.toLowerCase().trim().split(/\s+/).filter(Boolean)
+    const ranked = []
+
+    for (const app of allApps) {
+      const name = (app.name || "").toLowerCase()
+      const generic = (app.genericName || "").toLowerCase()
+      const keywords = (app.keywords || "").toLowerCase()
+      const desktop = (app.desktopFile || "").toLowerCase()
+      const haystack = `${name} ${generic} ${keywords} ${desktop}`
+
+      if (!terms.every(term => haystack.indexOf(term) !== -1)) continue
+
+      let score = 0
+      for (const term of terms) {
+        if (name.startsWith(term)) score += 120
+        else if (name.indexOf(term) !== -1) score += 70
+
+        if (generic.startsWith(term)) score += 45
+        else if (generic.indexOf(term) !== -1) score += 25
+
+        if (keywords.indexOf(term) !== -1) score += 18
+        if (desktop.indexOf(term) !== -1) score += 10
+      }
+
+      ranked.push({ app, score })
+    }
+
+    ranked.sort((a, b) => {
+      if (b.score !== a.score) return b.score - a.score
+      return a.app.name.localeCompare(b.app.name)
+    })
+
+    filtered = ranked.slice(0, maxResults).map(entry => entry.app)
   }
 
   function launch() {
     if (filtered.length === 0) return
-    runProc.command = ["sh", "-c", filtered[selected].exec + " &"]
+    runProc.command = ["/run/current-system/sw/bin/gio", "launch", filtered[selected].desktopFile]
     runProc.running = true
     closeAnim.start()
   }
@@ -226,14 +257,19 @@ PanelWindow {
     stdout: SplitParser {
       onRead: data => {
         if (data.trim() === "") return
-        const parts = data.trim().split("|")
+        const parts = data.trim().split("\t")
         if (parts.length < 2) return
         launcher.allApps = [...launcher.allApps, {
           name: parts[0],
-          exec: parts[1],
-          icon: parts[2] || ""
+          desktopFile: parts[1],
+          icon: parts[2] || "",
+          genericName: parts[3] || "",
+          keywords: parts[4] || ""
         }]
       }
+    }
+    onRunningChanged: {
+      if (running) launcher.allApps = []
     }
   }
 

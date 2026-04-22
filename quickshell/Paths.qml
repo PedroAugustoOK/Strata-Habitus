@@ -8,5 +8,7 @@ QtObject {
   readonly property string scripts: config + "/scripts"
   readonly property string themes: config + "/themes"
   readonly property string dotfiles: home + "/dotfiles"
+  readonly property string generated: dotfiles + "/generated"
+  readonly property string state: dotfiles + "/state"
   readonly property string wallpapers: dotfiles + "/wallpapers"
 }

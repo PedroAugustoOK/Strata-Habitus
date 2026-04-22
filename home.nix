@@ -24,11 +24,34 @@ in {
     };
   };
 
+  # btop declarativo: color_theme fixo em "strata" (~/.config/btop/btop.conf
+  # fica read-only no /nix/store). set-theme.sh só reescreve strata.theme
+  # em ~/.config/btop/themes/, que continua writable.
+  programs.btop = {
+    enable = true;
+    settings = {
+      color_theme = "strata";
+      theme_background = true;
+    };
+  };
+
+  # Entrada custom pro nvim: Terminal=false + kitty explícito, pra Nautilus/xdg-open
+  # não depender de "default terminal" do ambiente (que no Hyprland puro não existe).
+  xdg.desktopEntries.nvim-kitty = {
+    name       = "Neovim (kitty)";
+    genericName = "Editor de texto";
+    exec       = "kitty -e nvim %F";
+    terminal   = false;
+    icon       = "nvim";
+    categories = [ "Utility" "TextEditor" ];
+    mimeType   = [ "text/plain" "text/markdown" "text/x-shellscript" ];
+  };
+
   # Associações de arquivo (docs, txt, PDF, imagens, mídia)
   xdg.mimeApps = {
     enable = true;
     defaultApplications = {
-      "text/plain"                  = "nvim.desktop";
+      "text/plain"                  = "nvim-kitty.desktop";
       "application/pdf"             = "org.pwmt.zathura.desktop";
       "image/jpeg"                  = "org.gnome.Loupe.desktop";
       "image/png"                   = "org.gnome.Loupe.desktop";
@@ -59,18 +82,18 @@ in {
 
   # Hyprland (monitores vêm do arquivo por host)
   xdg.configFile."hypr/hyprland.conf".source = link "hyprland.conf";
-  xdg.configFile."hypr/hyprlock.conf".source  = link "hyprlock.conf";
+  xdg.configFile."hypr/hyprlock.conf".source  = link "generated/hypr/hyprlock.conf";
   xdg.configFile."hypr/hypridle.conf".source  = link "hypridle.conf";
   xdg.configFile."hypr/monitors.conf".source  = link "hosts/${hostname}/hyprland-monitors.conf";
 
   # Shell & terminal
   xdg.configFile."fish/config.fish".source = link "fish/config.fish";
   xdg.configFile."kitty/kitty.conf".source = link "kitty/kitty.conf";
-  xdg.configFile."kitty/colors.conf".source = link "kitty/colors.conf";
+  xdg.configFile."kitty/strata-theme.conf".source = link "generated/kitty/colors.conf";
 
   # Desktop UI
   xdg.configFile."quickshell".source = link "quickshell";
-  xdg.configFile."mako/config".source = link "mako/config";
+  xdg.configFile."mako/config".source = link "generated/mako/config";
 
   # Editor
   xdg.configFile."nvim".source = link "nvim";

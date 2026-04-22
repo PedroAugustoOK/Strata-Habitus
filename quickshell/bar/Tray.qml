@@ -25,6 +25,15 @@ Rectangle {
         required property SystemTrayItem modelData
         width: 16; height: 16
 
+        Rectangle {
+          anchors.centerIn: parent
+          width: 20
+          height: 20
+          radius: 10
+          color: Colors.darkMode ? "transparent" : Qt.rgba(0, 0, 0, 0.08)
+          visible: !Colors.darkMode
+        }
+
         Image {
           anchors.fill: parent
           source:       modelData.icon

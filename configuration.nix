@@ -8,6 +8,7 @@
     ./modules/packages.nix
     ./modules/desktop.nix
     ./modules/security.nix
+    ./modules/chromium.nix
     ./modules/update.nix
   ];
 

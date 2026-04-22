@@ -163,7 +163,7 @@ PanelWindow {
           Text {
             text: root.brightValue
             font { pixelSize: 20; weight: Font.Bold; family: "Roboto" }
-            color: "#2a2a2a"
+            color: Colors.text1
             width: 34
             horizontalAlignment: Text.AlignRight
             anchors.verticalCenter: parent.verticalCenter
@@ -220,7 +220,7 @@ PanelWindow {
           Text {
             text: root.volValue
             font { pixelSize: 20; weight: Font.Bold; family: "Roboto" }
-            color: "#2a2a2a"
+            color: Colors.text1
             width: 34
             horizontalAlignment: Text.AlignRight
             anchors.verticalCenter: parent.verticalCenter
@@ -718,7 +718,7 @@ PanelWindow {
   }
   Process {
     id: ccBatProc
-    command: ["sh", "-c", "paste /sys/class/power_supply/BAT1/capacity /sys/class/power_supply/BAT1/status 2>/dev/null || echo '100\tDischarging'"]
+    command: ["bash", Paths.scripts + "/battery-status.sh"]
     stdout: SplitParser {
       onRead: data => {
         var p = data.trim().split("\t")
@@ -734,7 +734,7 @@ PanelWindow {
   }
   Process {
     id: wifiNameProc
-    command: ["sh", "-c", "iwctl station wlan0 show 2>/dev/null | grep 'Connected network' | sed 's/.*Connected network\\s*//'"]
+    command: ["bash", Paths.scripts + "/wifi-name.sh"]
     stdout: SplitParser { onRead: data => { if (data.trim() !== "") root.wifiName = data.trim() } }
   }
   Process {

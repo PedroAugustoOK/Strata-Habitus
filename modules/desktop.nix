@@ -37,7 +37,7 @@
     NIXOS_OZONE_WL                      = "1";
     XCURSOR_THEME                       = "Bibata-Modern-Classic";
     XCURSOR_SIZE                        = "24";
-    STARSHIP_CONFIG                     = "/home/${username}/dotfiles/starship/starship.toml";
+    STARSHIP_CONFIG                     = "/home/${username}/dotfiles/generated/starship/starship.toml";
   };
 
   qt = {

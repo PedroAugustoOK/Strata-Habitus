@@ -22,7 +22,7 @@ else
   nix-shell -p git --run "git -C $HOME/dotfiles pull"
 fi
 
-sed -i "s/username = \"ankh\"/username = \"$USERNAME\"/" ~/dotfiles/flake.nix
+sed -i "s/username = \".*\";/username = \"$USERNAME\";/" ~/dotfiles/flake.nix
 
 sudo nixos-rebuild switch --flake ~/dotfiles#$TARGET
 

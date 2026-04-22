@@ -93,6 +93,7 @@
 - O Kitty ganhou tentativa de reload em runtime via remote control, mas o caso do `rosepine` ainda nao foi resolvido visualmente.
 - `papirus-folders` foi adicionado e a logica de recolorir pastas por tema foi introduzida, mas ainda nao esta consistente no runtime.
 - Foram adicionados binds pensados para teclado 68%, incluindo screenshot, volume, brilho e media.
+- `home.nix` agora declara `xdg.userDirs` com nomes em portugues e `createDirectories = true`, cobrindo Desktop, Documentos, Downloads, Musica, Imagens, Publico, Modelos e Videos.
 
 ## Proximo passo recomendado
 - Corrigir primeiro o reload do Kitty no `rosepine` e a recoloracao confiavel dos icones de pasta do Papirus.

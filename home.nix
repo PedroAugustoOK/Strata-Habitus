@@ -80,6 +80,19 @@ in {
     };
   };
 
+  xdg.userDirs = {
+    enable = true;
+    createDirectories = true;
+    desktop = "$HOME/Área de Trabalho";
+    documents = "$HOME/Documentos";
+    download = "$HOME/Downloads";
+    music = "$HOME/Música";
+    pictures = "$HOME/Imagens";
+    publicShare = "$HOME/Público";
+    templates = "$HOME/Modelos";
+    videos = "$HOME/Vídeos";
+  };
+
   # Hyprland (monitores vêm do arquivo por host)
   xdg.configFile."hypr/hyprland.conf".source = link "hyprland.conf";
   xdg.configFile."hypr/hyprlock.conf".source  = link "generated/hypr/hyprlock.conf";

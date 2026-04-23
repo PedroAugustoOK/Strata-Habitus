@@ -3,6 +3,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 REPO_DIR="${REPO_DIR:-$SCRIPT_DIR}"
+NIX_CONFIG_VALUE="${NIX_CONFIG:-experimental-features = nix-command flakes}"
 HOSTNAME_VALUE=""
 USERNAME_VALUE=""
 TIMEZONE_VALUE=""
@@ -279,10 +280,10 @@ main() {
   write_host_monitors
 
   log "Validando host gerado"
-  nix eval --impure --json "path:$REPO_DIR#nixosConfigurations.$HOSTNAME_VALUE.config.networking.hostName" >/dev/null
+  NIX_CONFIG="$NIX_CONFIG_VALUE" nix eval --impure --json "path:$REPO_DIR#nixosConfigurations.$HOSTNAME_VALUE.config.networking.hostName" >/dev/null
 
   log "Aplicando configuracao"
-  nixos-rebuild switch --flake "path:$REPO_DIR#$HOSTNAME_VALUE"
+  NIX_CONFIG="$NIX_CONFIG_VALUE" nixos-rebuild switch --flake "path:$REPO_DIR#$HOSTNAME_VALUE"
 
   printf '\nBootstrap concluido. Reinicie o sistema.\n'
 }

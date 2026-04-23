@@ -227,14 +227,17 @@ detect_recommended_disk() {
   local first_internal=""
   local first_any=""
   local line
-  local name size type model tran rm
+  local name size type rest
+  local tran rm
 
   disks="$(list_disks)"
   [ -n "$disks" ] || return 1
 
   while IFS= read -r line; do
     [ -n "$line" ] || continue
-    read -r name size type model tran rm <<<"$line"
+    read -r name size type rest <<<"$line"
+    tran="$(printf '%s\n' "$line" | awk '{print $(NF-1)}')"
+    rm="$(printf '%s\n' "$line" | awk '{print $NF}')"
 
     if [ -z "$first_any" ]; then
       first_any="$name"
@@ -268,9 +271,14 @@ choose_disk() {
   while IFS= read -r line; do
     [ -n "$line" ] || continue
     idx=$((idx + 1))
-    read -r name size type model tran rm <<<"$line"
+    name="$(printf '%s\n' "$line" | awk '{print $1}')"
+    size="$(printf '%s\n' "$line" | awk '{print $2}')"
+    tran="$(printf '%s\n' "$line" | awk '{print $(NF-1)}')"
+    rm="$(printf '%s\n' "$line" | awk '{print $NF}')"
+    model="$(printf '%s\n' "$line" | awk '{for (i=4; i<=NF-2; i++) printf("%s%s", $i, (i < NF-2 ? OFS : ""))}')"
+    [ -n "$model" ] || model="sem-modelo"
     disks_cache="${disks_cache}${idx}|${name}"$'\n'
-    printf '  %d) %s  %s  %s' "$idx" "$name" "$size" "${model:-sem-modelo}"
+    printf '  %d) %s  %s  %s' "$idx" "$name" "$size" "$model"
     if [ "${tran:-}" = "usb" ] || [ "${rm:-0}" = "1" ]; then
       printf ' [removivel]'
     else
@@ -539,6 +547,28 @@ partition_disk() {
   local disk="$1"
   local swap_gib="$2"
   local root_start_mib
+  local expected_root_part
+
+  wait_for_partition_nodes() {
+    local expected=("$@")
+    local deadline=20
+    local found=0
+
+    while [ "$deadline" -gt 0 ]; do
+      found=1
+      for node in "${expected[@]}"; do
+        [ -b "$node" ] || found=0
+      done
+      if [ "$found" -eq 1 ]; then
+        return 0
+      fi
+      sleep 1
+      deadline=$((deadline - 1))
+      run_cmd udevadm settle || true
+    done
+
+    return 1
+  }
 
   cleanup_mounts
 
@@ -556,10 +586,12 @@ partition_disk() {
       run_cmd parted -s "$disk" mkpart primary ext4 "${root_start_mib}MiB" 100%
       SWAP_PART="$(partition_path "$disk" 2)"
       ROOT_PART="$(partition_path "$disk" 3)"
+      expected_root_part="$ROOT_PART"
     else
       run_cmd parted -s "$disk" mkpart primary ext4 1025MiB 100%
       ROOT_PART="$(partition_path "$disk" 2)"
       SWAP_PART=""
+      expected_root_part="$ROOT_PART"
     fi
   else
     log "Particionando $disk em MBR/Legacy"
@@ -571,16 +603,32 @@ partition_disk() {
       run_cmd parted -s "$disk" mkpart primary ext4 "${root_start_mib}MiB" 100%
       SWAP_PART="$(partition_path "$disk" 1)"
       ROOT_PART="$(partition_path "$disk" 2)"
+      expected_root_part="$ROOT_PART"
     else
       run_cmd parted -s "$disk" mkpart primary ext4 1MiB 100%
       ROOT_PART="$(partition_path "$disk" 1)"
       SWAP_PART=""
+      expected_root_part="$ROOT_PART"
     fi
     BOOT_PART=""
   fi
 
-  run_cmd partprobe "$disk"
+  run_cmd sync
+  if ! run_cmd partprobe "$disk"; then
+    warn "partprobe falhou em $disk; tentando seguir com udevadm settle"
+  fi
   run_cmd udevadm settle
+
+  if [ -n "$BOOT_PART" ] && [ -n "$SWAP_PART" ]; then
+    wait_for_partition_nodes "$BOOT_PART" "$SWAP_PART" "$ROOT_PART" \
+      || die "Particoes nao apareceram em /dev apos particionamento: $BOOT_PART $SWAP_PART $ROOT_PART"
+  elif [ -n "$BOOT_PART" ]; then
+    wait_for_partition_nodes "$BOOT_PART" "$ROOT_PART" \
+      || die "Particoes nao apareceram em /dev apos particionamento: $BOOT_PART $ROOT_PART"
+  else
+    wait_for_partition_nodes "$ROOT_PART" \
+      || die "Particao root nao apareceu em /dev apos particionamento: $ROOT_PART"
+  fi
 }
 
 format_partitions() {

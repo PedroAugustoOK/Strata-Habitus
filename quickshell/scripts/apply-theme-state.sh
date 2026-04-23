@@ -25,28 +25,65 @@ log() {
 }
 
 ensure_local_papirus() {
-  local theme src dst
+  local theme src dst local_theme
   mkdir -p "$HOME/.local/share/icons"
 
   for theme in Papirus Papirus-Dark; do
     src="/run/current-system/sw/share/icons/$theme"
-    dst="$HOME/.local/share/icons/$theme"
+    local_theme="$theme-Strata"
+    dst="$HOME/.local/share/icons/$local_theme"
 
     [ -d "$src" ] || continue
+
+    if [ -L "$dst" ]; then
+      rm -f "$dst"
+    elif [ -d "$dst" ] && [ ! -w "$dst" ]; then
+      chmod -R u+rwX "$dst" 2>/dev/null || true
+    fi
+
     [ -d "$dst" ] && continue
 
-    cp -r "$src" "$dst" 2>/dev/null || true
+    cp -aL "$src" "$dst" 2>/dev/null || true
+    chmod -R u+rwX "$dst" 2>/dev/null || true
+
+    if [ -f "$dst/index.theme" ]; then
+      sed -i "s/^Name=.*/Name=$local_theme/" "$dst/index.theme" 2>/dev/null || true
+    fi
+  done
+}
+
+recolor_papirus_theme() {
+  local theme_dir="$1"
+  local folder_color="$2"
+  local size prefix file_path file_name symlink_path
+  local sizes=("22x22" "24x24" "32x32" "48x48" "64x64")
+  local prefixes=("folder" "user")
+
+  [ -d "$theme_dir" ] || return 0
+
+  for size in "${sizes[@]}"; do
+    for prefix in "${prefixes[@]}"; do
+      for file_path in "$theme_dir/$size/places/$prefix-$folder_color"{-*,}.svg; do
+        [ -f "$file_path" ] || continue
+        [ -L "$file_path" ] && continue
+
+        file_name="${file_path##*/}"
+        symlink_path="${file_path/-$folder_color/}"
+        ln -sfn "$file_name" "$symlink_path"
+      done
+    done
   done
 }
 
 apply_papirus_folder_color() {
   local folder_color="$1"
+  local light_theme="$HOME/.local/share/icons/Papirus-Strata"
+  local dark_theme="$HOME/.local/share/icons/Papirus-Dark-Strata"
 
-  command -v papirus-folders >/dev/null 2>&1 || return 0
   ensure_local_papirus
 
-  papirus-folders -t Papirus -C "$folder_color" -u >/dev/null 2>&1 || true
-  papirus-folders -t Papirus-Dark -C "$folder_color" -u >/dev/null 2>&1 || true
+  recolor_papirus_theme "$light_theme" "$folder_color"
+  recolor_papirus_theme "$dark_theme" "$folder_color"
 }
 
 reload_kitty_theme() {
@@ -490,17 +527,23 @@ printf '{"BrowserThemeColor":"%s","BrowserColorScheme":"device"}' "$ACCENT" \
 chromium --refresh-platform-policy --no-startup-window >/dev/null 2>&1 || true
 
 if [ "$MODE" = "light" ]; then
+  GTK_THEME_NAME="adwaita"
+  ICON_THEME_NAME="Papirus-Strata"
   $DCONF write /org/gnome/desktop/interface/color-scheme "'prefer-light'" 2>/dev/null || true
-  gsettings set org.gnome.desktop.interface gtk-theme "adwaita" 2>/dev/null || true
+  gsettings set org.gnome.desktop.interface gtk-theme "$GTK_THEME_NAME" 2>/dev/null || true
+  apply_papirus_folder_color "$PAPIRUS_FOLDER_COLOR"
   gsettings set org.gnome.desktop.interface icon-theme "Papirus" 2>/dev/null || true
-  apply_papirus_folder_color "$PAPIRUS_FOLDER_COLOR"
-  echo "QT_STYLE_OVERRIDE=adwaita" > "$HOME/.config/environment.d/qt.conf"
+  gsettings set org.gnome.desktop.interface icon-theme "$ICON_THEME_NAME" 2>/dev/null || true
+  echo "QT_STYLE_OVERRIDE=$GTK_THEME_NAME" > "$HOME/.config/environment.d/qt.conf"
 else
+  GTK_THEME_NAME="adwaita-dark"
+  ICON_THEME_NAME="Papirus-Dark-Strata"
   $DCONF write /org/gnome/desktop/interface/color-scheme "'prefer-dark'" 2>/dev/null || true
-  gsettings set org.gnome.desktop.interface gtk-theme "adwaita-dark" 2>/dev/null || true
-  gsettings set org.gnome.desktop.interface icon-theme "Papirus-Dark" 2>/dev/null || true
+  gsettings set org.gnome.desktop.interface gtk-theme "$GTK_THEME_NAME" 2>/dev/null || true
   apply_papirus_folder_color "$PAPIRUS_FOLDER_COLOR"
-  echo "QT_STYLE_OVERRIDE=adwaita-dark" > "$HOME/.config/environment.d/qt.conf"
+  gsettings set org.gnome.desktop.interface icon-theme "Papirus-Dark" 2>/dev/null || true
+  gsettings set org.gnome.desktop.interface icon-theme "$ICON_THEME_NAME" 2>/dev/null || true
+  echo "QT_STYLE_OVERRIDE=$GTK_THEME_NAME" > "$HOME/.config/environment.d/qt.conf"
 fi
 
 reload_kitty_theme

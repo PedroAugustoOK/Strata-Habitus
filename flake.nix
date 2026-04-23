@@ -9,38 +9,47 @@
   };
   outputs = { self, nixpkgs, home-manager, ... }:
   let
-    username = "ankh";
-    hostname = "nixos";
-    system = "x86_64-linux";
-    hmModule = {
-      home-manager.useGlobalPkgs = true;
-      home-manager.useUserPackages = true;
-      home-manager.backupFileExtension = "backup";
-      home-manager.extraSpecialArgs = { inherit username; };
-      home-manager.users.${username} = import ./home.nix;
-    };
-  in {
-    nixosConfigurations.nixos = nixpkgs.lib.nixosSystem {
-      inherit system;
-      specialArgs = { inherit username hostname; };
-      modules = [
-        ./configuration.nix
-        ./hosts/nixos/hardware.nix
-        home-manager.nixosModules.home-manager
-        hmModule
-      ];
-    };
+    lib = nixpkgs.lib;
+    defaultSystem = "x86_64-linux";
+    hostDirs = lib.filterAttrs (name: type:
+      type == "directory"
+      && builtins.pathExists (./hosts + "/${name}/meta.nix")
+      && builtins.pathExists (./hosts + "/${name}/hardware.nix")
+    ) (builtins.readDir ./hosts);
 
-    nixosConfigurations.desktop = nixpkgs.lib.nixosSystem {
-      inherit system;
-      specialArgs = { inherit username; hostname = "desktop"; };
-      modules = [
-        ./configuration.nix
-        ./hosts/desktop/hardware.nix
-        ./hosts/desktop/config.nix
-        home-manager.nixosModules.home-manager
-        hmModule
-      ];
-    };
+    mkHost = hostname:
+      let
+        hostMeta = import (./hosts + "/${hostname}/meta.nix");
+        system = hostMeta.system or defaultSystem;
+        username = hostMeta.username;
+        hostConfigPath = ./hosts + "/${hostname}/config.nix";
+        hmModule = {
+          home-manager.useGlobalPkgs = true;
+          home-manager.useUserPackages = true;
+          home-manager.backupFileExtension = "backup";
+          home-manager.extraSpecialArgs = {
+            inherit username hostname hostMeta;
+          };
+          home-manager.users.${username} = import ./home.nix;
+        };
+      in
+      lib.nixosSystem {
+        inherit system;
+        specialArgs = {
+          inherit username hostname hostMeta;
+        };
+        modules =
+          [
+            ./configuration.nix
+            (./hosts + "/${hostname}/hardware.nix")
+          ]
+          ++ lib.optional (builtins.pathExists hostConfigPath) hostConfigPath
+          ++ [
+            home-manager.nixosModules.home-manager
+            hmModule
+          ];
+      };
+  in {
+    nixosConfigurations = lib.genAttrs (builtins.attrNames hostDirs) mkHost;
   };
 }

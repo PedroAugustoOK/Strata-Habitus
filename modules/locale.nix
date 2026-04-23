@@ -1,16 +1,20 @@
-{ ... }: {
-  time.timeZone      = "America/Porto_Velho";
-  i18n.defaultLocale = "pt_BR.UTF-8";
+{ hostMeta ? {}, ... }:
+let
+  timeZone = hostMeta.timeZone or "America/Porto_Velho";
+  locale = hostMeta.locale or "pt_BR.UTF-8";
+in {
+  time.timeZone      = timeZone;
+  i18n.defaultLocale = locale;
   i18n.extraLocaleSettings = {
-    LC_ADDRESS        = "pt_BR.UTF-8";
-    LC_IDENTIFICATION = "pt_BR.UTF-8";
-    LC_MEASUREMENT    = "pt_BR.UTF-8";
-    LC_MONETARY       = "pt_BR.UTF-8";
-    LC_NAME           = "pt_BR.UTF-8";
-    LC_NUMERIC        = "pt_BR.UTF-8";
-    LC_PAPER          = "pt_BR.UTF-8";
-    LC_TELEPHONE      = "pt_BR.UTF-8";
-    LC_TIME           = "pt_BR.UTF-8";
+    LC_ADDRESS        = locale;
+    LC_IDENTIFICATION = locale;
+    LC_MEASUREMENT    = locale;
+    LC_MONETARY       = locale;
+    LC_NAME           = locale;
+    LC_NUMERIC        = locale;
+    LC_PAPER          = locale;
+    LC_TELEPHONE      = locale;
+    LC_TIME           = locale;
   };
   services.xserver.xkb = { layout = "br"; variant = ""; };
   console.keyMap = "br-abnt2";

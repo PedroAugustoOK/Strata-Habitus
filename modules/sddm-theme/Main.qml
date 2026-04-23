@@ -5,7 +5,7 @@ Rectangle {
     id: root
 
     property int   currentUser:    userModel.lastIndex
-    property int   currentSession: sessionModel.lastIndex
+    property int   currentSession: findPreferredSessionIndex()
     property color accentColor:    "#8aad91"
     property bool  locked:         true
     property bool  acceptInput:    false
@@ -71,7 +71,10 @@ Rectangle {
     Timer {
         id: startupGuard
         interval: 800; running: true
-        onTriggered: acceptInput = true
+        onTriggered: {
+            currentSession = findPreferredSessionIndex()
+            acceptInput = true
+        }
     }
 
     // ════════════════════════════════════════════════════════
@@ -176,15 +179,6 @@ Rectangle {
                     font { pixelSize: 11; family: "Roboto"; weight: Font.Medium }
                     text: getSessionName(currentSession)
                 }
-
-                MouseArea {
-                    anchors.fill: parent
-                    cursorShape: Qt.PointingHandCursor
-                    onClicked: {
-                        currentSession = (currentSession + 1) % sessionModel.rowCount()
-                        sessionText.text = getSessionName(currentSession)
-                    }
-                }
             }
 
             Item { width: 1; height: 30 }
@@ -273,6 +267,21 @@ Rectangle {
         return raw || "Sessão"
     }
 
+    function isRejectedSessionName(name) {
+        return name.toLowerCase().indexOf("uwsm") !== -1
+    }
+
+    function findPreferredSessionIndex() {
+        var fallback = -1
+        for (var i = 0; i < sessionModel.rowCount(); i++) {
+            var name = getSessionName(i)
+            if (isRejectedSessionName(name)) continue
+            if (fallback === -1) fallback = i
+            if (name.toLowerCase() === "hyprland") return i
+        }
+        return fallback >= 0 ? fallback : 0
+    }
+
     function unlock() {
         locked = false
         passwordField.forceActiveFocus()
@@ -280,6 +289,7 @@ Rectangle {
 
     function doLogin() {
         var username = userModel.data(userModel.index(currentUser, 0), Qt.UserRole + 1)
+        currentSession = findPreferredSessionIndex()
         sddm.login(username, passwordField.text, currentSession)
     }
 
@@ -301,7 +311,10 @@ Rectangle {
         }
     }
 
-    Component.onCompleted: root.forceActiveFocus()
+    Component.onCompleted: {
+        currentSession = findPreferredSessionIndex()
+        root.forceActiveFocus()
+    }
 
     component IconBtn: Rectangle {
         property string icon

@@ -1,4 +1,9 @@
-{ pkgs, hostname ? "nixos", ... }: {
+{ pkgs, lib, hostname ? "nixos", hostMeta ? {}, ... }:
+let
+  graphics = hostMeta.graphics or "generic";
+  useIntelMedia = builtins.elem graphics [ "intel" "hybrid-intel-nvidia" ];
+  useCuda = builtins.elem graphics [ "nvidia" "hybrid-intel-nvidia" "hybrid-amd-nvidia" ];
+in {
   nixpkgs.config.allowUnfree = true;
 
   environment.systemPackages = with pkgs; [
@@ -40,9 +45,11 @@
   ];
 
   hardware.graphics.enable        = true;
-  hardware.graphics.extraPackages = with pkgs; [
-    intel-media-driver intel-vaapi-driver
-  ];
+  hardware.graphics.extraPackages = with pkgs;
+    lib.optionals useIntelMedia [
+      intel-media-driver
+      intel-vaapi-driver
+    ];
 
   nix.settings.experimental-features  = [ "nix-command" "flakes" ];
   nix.settings.keep-outputs            = true;
@@ -57,7 +64,7 @@
 
   services.ollama = {
     enable = true;
-    package = if hostname == "desktop" then pkgs.ollama-cuda else pkgs.ollama;
+    package = if useCuda then pkgs.ollama-cuda else pkgs.ollama;
   };
 
 }

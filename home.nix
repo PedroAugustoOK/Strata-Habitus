@@ -10,6 +10,32 @@ in {
   home.stateVersion  = "25.11";
   programs.home-manager.enable = true;
 
+  home.activation.strataBootstrap = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+    DOTFILES="${config.home.homeDirectory}/dotfiles"
+    STATE_DIR="$DOTFILES/state"
+    GENERATED_DIR="$DOTFILES/generated"
+
+    mkdir -p "$STATE_DIR" "$GENERATED_DIR"
+
+    if [ ! -f "$STATE_DIR/current-theme.json" ]; then
+      cp "$DOTFILES/quickshell/themes/current.json" "$STATE_DIR/current-theme.json"
+    fi
+
+    if [ ! -f "$STATE_DIR/current-wallpaper" ]; then
+      printf '%s\n' "$DOTFILES/wallpaper.jpg" > "$STATE_DIR/current-wallpaper"
+    fi
+
+    if [ ! -f "$STATE_DIR/wallpaper-index" ]; then
+      printf '0\n' > "$STATE_DIR/wallpaper-index"
+    fi
+
+    if [ ! -f "$GENERATED_DIR/kitty/colors.conf" ] \
+      || [ ! -f "$GENERATED_DIR/hypr/hyprlock.conf" ] \
+      || [ ! -f "$GENERATED_DIR/starship/starship.toml" ]; then
+      ${pkgs.bash}/bin/bash "$DOTFILES/quickshell/scripts/apply-theme-state.sh" >/dev/null 2>&1 || true
+    fi
+  '';
+
   # Tema GTK + ícones (propaga via gsettings pro qt.platformTheme=gnome)
   gtk = {
     enable = true;

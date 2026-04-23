@@ -1,9 +1,10 @@
-{ pkgs, lib, username ? "ankh", ... }: {
+{ config, pkgs, lib, username ? "ankh", ... }: {
   programs.nix-ld.enable  = true;
-  programs.fish.enable    = true;
   programs.ssh.startAgent = true;
   programs.hyprland.enable          = true;
   programs.hyprland.xwayland.enable = true;
+  programs.hyprland.withUWSM        = false;
+  programs.uwsm.enable              = lib.mkForce false;
   programs.dconf.enable             = true;
 
   xdg.portal.enable       = true;
@@ -15,6 +16,8 @@
     theme          = "strata";
     settings.Theme.ThemeDir    = "/var/lib";
     settings.Theme.CursorTheme = "Bibata-Modern-Classic";
+    settings.Users.RememberLastSession = false;
+    settings.Users.RememberLastUser    = false;
     package = pkgs.kdePackages.sddm.override {
       sddm-unwrapped = pkgs.kdePackages.sddm.unwrapped.overrideAttrs (old: {
         postInstall = old.postInstall + ''
@@ -24,6 +27,8 @@
     };
     extraPackages = with pkgs.kdePackages; [ qtdeclarative qtsvg ];
   };
+  services.displayManager.defaultSession = "hyprland";
+  services.displayManager.sessionPackages = lib.mkForce [ config.programs.hyprland.package ];
 
   services.gvfs.enable                 = true;
   services.power-profiles-daemon.enable = true;
@@ -50,6 +55,7 @@
   system.activationScripts.strataDir = ''
     mkdir -p /var/lib/strata
     chmod 755 /var/lib/strata
+    rm -f /var/lib/sddm/state.conf
     cp /run/current-system/sw/share/sddm/themes/strata/Main.qml \
        /var/lib/strata/Main.qml 2>/dev/null || true
     cp -n /run/current-system/sw/share/sddm/themes/strata/metadata.desktop \

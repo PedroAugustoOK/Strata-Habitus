@@ -25,7 +25,7 @@ abbr -a gs  'git status'
 abbr -a gc  'git commit'
 abbr -a gp  'git push'
 abbr -a dotfiles 'cd ~/dotfiles'
-abbr -a rebuild 'sudo nixos-rebuild switch --flake ~/dotfiles#'(hostname)
+abbr -a rebuild 'sudo nixos-rebuild switch --flake path:$HOME/dotfiles#'(hostname)
 
 # Sem saudação do Fish
 set fish_greeting ""

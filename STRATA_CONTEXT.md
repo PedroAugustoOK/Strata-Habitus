@@ -687,3 +687,29 @@
   - observar o notebook sob carga real com `watch -n 2 sensors`
   - verificar se a CPU estabiliza em faixa aceitavel sem encostar repetidamente em `95-100 C`
   - so depois decidir se ainda vale limitar turbo/performance ou mexer em politica adicional.
+
+## Atualizacao de 2026-04-23T17:21:28-04:00
+- Durante a preparacao para continuar em outra maquina, apareceu uma regressao visual no host `strata` junto de uma mensagem de erro do Hyprland relacionada a monitor/configuracao.
+- Investigacao do runtime:
+  - `~/.config/hypr/monitors.conf` estava apontando corretamente para `hosts/strata/hyprland-monitors.conf`
+  - o arquivo estava legivel e acessivel no filesystem
+  - o log do Hyprland mostrou:
+    - `eDP-1` conectado
+    - `HDMI-A-1` desconectado
+    - `DP-1`, `DP-2`, `DP-3` desconectados
+- Causa mais provavel da regressao:
+  - o host `strata` tinha sido versionado com um `hyprland-monitors.conf` inadequado para o estado real do notebook;
+  - primeiro havia um fallback generico;
+  - depois foi testada uma versao com `eDP-1` + `HDMI-A-1`;
+  - como o HDMI estava desconectado, a configuracao mais segura para o estado atual passou a ser somente a tela interna.
+- Correcao aplicada no repo:
+  - `hosts/strata/hyprland-monitors.conf` agora ficou em modo seguro:
+    - `monitor = eDP-1, 1920x1080@60, 0x0, 1`
+- Detalhe operacional importante:
+  - o `nixos-rebuild switch` sozinho nao atualizou o visual da sessao do Hyprland ja aberta;
+  - a correcao so se refletiu apos:
+    - `hyprctl reload`
+- Estado final confirmado:
+  - apos `hyprctl reload`, a regressao visual desapareceu e a sessao voltou ao normal.
+- Regra de retomada a partir daqui:
+  - se um ajuste de monitor/visual no Hyprland parecer "nao surtir efeito" logo apos rebuild, testar `hyprctl reload` antes de concluir que o repo ainda esta quebrado.

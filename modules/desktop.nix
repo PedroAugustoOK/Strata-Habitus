@@ -1,4 +1,9 @@
-{ config, pkgs, lib, username ? "ankh", ... }: {
+{ config, pkgs, lib, username ? "ankh", hostMeta ? {}, ... }:
+let
+  desktopMeta = hostMeta.desktop or {};
+  loginManagerMeta = desktopMeta.loginManager or {};
+  loginManagerEnabled = loginManagerMeta.enable or true;
+in {
   programs.nix-ld.enable  = true;
   programs.ssh.startAgent = true;
   programs.hyprland.enable          = true;
@@ -11,7 +16,7 @@
   xdg.portal.extraPortals = [ pkgs.xdg-desktop-portal-hyprland ];
 
   services.displayManager.sddm = {
-    enable         = true;
+    enable         = loginManagerEnabled;
     wayland.enable = true;
     theme          = "strata";
     settings.Theme.ThemeDir    = "/var/lib";
@@ -27,8 +32,8 @@
     };
     extraPackages = with pkgs.kdePackages; [ qtdeclarative qtsvg ];
   };
-  services.displayManager.defaultSession = "hyprland";
-  services.displayManager.sessionPackages = lib.mkForce [ config.programs.hyprland.package ];
+  services.displayManager.defaultSession = lib.mkIf loginManagerEnabled "hyprland";
+  services.displayManager.sessionPackages = lib.mkIf loginManagerEnabled (lib.mkForce [ config.programs.hyprland.package ]);
 
   services.gvfs.enable                 = true;
   services.power-profiles-daemon.enable = true;
@@ -52,7 +57,7 @@
   };
 
   # Cria /var/lib/strata e copia arquivos do tema SDDM
-  system.activationScripts.strataDir = ''
+  system.activationScripts.strataDir = lib.mkIf loginManagerEnabled ''
     mkdir -p /var/lib/strata
     chmod 755 /var/lib/strata
     rm -f /var/lib/sddm/state.conf

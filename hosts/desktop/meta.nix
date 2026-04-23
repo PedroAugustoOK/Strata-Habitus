@@ -11,5 +11,8 @@
   };
   desktop = {
     enable = true;
+    loginManager = {
+      enable = true;
+    };
   };
 }

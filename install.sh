@@ -25,6 +25,7 @@ BOOT_MODE=""
 BOOT_LOADER=""
 INSTALL_MODE=""
 DESKTOP_ENABLE="true"
+LOGIN_MANAGER_ENABLE="true"
 FORMAT_ROOT="yes"
 FORMAT_BOOT="yes"
 FORMAT_SWAP="yes"
@@ -439,6 +440,7 @@ print_preflight() {
   printf '  perfil da maquina: %s\n' "$MACHINE_PROFILE"
   printf '  perfil grafico sugerido: %s\n' "$GRAPHICS_PROFILE"
   printf '  primeiro boot grafico: %s\n' "$DESKTOP_ENABLE"
+  printf '  login manager inicial: %s\n' "$LOGIN_MANAGER_ENABLE"
   printf '  memoria total: %s GiB\n' "$(awk '/MemTotal/ { printf "%d", ($2 / 1024 / 1024) + 0.5 }' /proc/meminfo)"
   printf '  log: %s\n' "$LOG_FILE"
 }
@@ -457,8 +459,14 @@ choose_first_boot_mode() {
   answer="$(prompt_with_default "Escolha" "$default_choice")"
 
   case "$answer" in
-    1) DESKTOP_ENABLE="true" ;;
-    2) DESKTOP_ENABLE="false" ;;
+    1)
+      DESKTOP_ENABLE="true"
+      LOGIN_MANAGER_ENABLE="true"
+      ;;
+    2)
+      DESKTOP_ENABLE="true"
+      LOGIN_MANAGER_ENABLE="false"
+      ;;
     *) die "Modo de primeiro boot invalido: $answer" ;;
   esac
 }
@@ -725,6 +733,9 @@ write_host_meta() {
   };
   desktop = {
     enable = $DESKTOP_ENABLE;
+    loginManager = {
+      enable = $LOGIN_MANAGER_ENABLE;
+    };
   };
 }
 EOF
@@ -953,6 +964,7 @@ main() {
   printf '  perfil da maquina: %s\n' "$MACHINE_PROFILE"
   printf '  perfil grafico: %s\n' "$GRAPHICS_PROFILE"
   printf '  boot grafico inicial: %s\n' "$DESKTOP_ENABLE"
+  printf '  login manager inicial: %s\n' "$LOGIN_MANAGER_ENABLE"
   printf '  disco: %s\n' "${TARGET_DISK:-<nao definido>}"
   printf '  root: %s\n' "${ROOT_PART:-<a definir>}"
   printf '  boot: %s\n' "${BOOT_PART:-<sem particao separada>}"

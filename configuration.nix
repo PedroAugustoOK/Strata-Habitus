@@ -2,6 +2,8 @@
 let
   desktopMeta = hostMeta.desktop or {};
   desktopEnabled = desktopMeta.enable or true;
+  loginManagerMeta = desktopMeta.loginManager or {};
+  loginManagerEnabled = loginManagerMeta.enable or desktopEnabled;
 in
 {
   imports =
@@ -22,7 +24,11 @@ in
   programs.fish.enable = true;
 
   networking.hostName = hostname;
-  systemd.defaultUnit = lib.mkDefault (if desktopEnabled then "graphical.target" else "multi-user.target");
+  systemd.defaultUnit =
+    if loginManagerEnabled then
+      lib.mkDefault "graphical.target"
+    else
+      lib.mkForce "multi-user.target";
 
   users.users.${username} = {
     isNormalUser = true;

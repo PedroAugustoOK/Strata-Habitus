@@ -10,6 +10,9 @@
     loader = "systemd-boot";
   };
   desktop = {
-    enable = false;
+    enable = true;
+    loginManager = {
+      enable = false;
+    };
   };
 }

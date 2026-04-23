@@ -9,6 +9,7 @@ USERNAME_VALUE=""
 TIMEZONE_VALUE=""
 GRAPHICS_PROFILE=""
 DESKTOP_ENABLE="false"
+LOGIN_MANAGER_ENABLE="false"
 
 log() {
   printf '\n==> %s\n' "$*"
@@ -122,8 +123,14 @@ choose_first_boot_mode() {
   answer="$(prompt_with_default "Escolha" "$default_choice")"
 
   case "$answer" in
-    1) DESKTOP_ENABLE="true" ;;
-    2) DESKTOP_ENABLE="false" ;;
+    1)
+      DESKTOP_ENABLE="true"
+      LOGIN_MANAGER_ENABLE="true"
+      ;;
+    2)
+      DESKTOP_ENABLE="true"
+      LOGIN_MANAGER_ENABLE="false"
+      ;;
     *) die "Modo de boot invalido: $answer" ;;
   esac
 }
@@ -143,6 +150,9 @@ write_host_meta() {
   };
   desktop = {
     enable = $DESKTOP_ENABLE;
+    loginManager = {
+      enable = $LOGIN_MANAGER_ENABLE;
+    };
   };
 }
 EOF

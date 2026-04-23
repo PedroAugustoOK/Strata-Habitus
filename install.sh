@@ -64,6 +64,13 @@ need_cmd() {
   command -v "$1" >/dev/null 2>&1 || die "Comando obrigatorio ausente: $1"
 }
 
+run_cmd() {
+  printf '  ->'
+  printf ' %q' "$@"
+  printf '\n'
+  "$@"
+}
+
 is_installer_environment() {
   [ -r /etc/os-release ] || return 1
   grep -q '^VARIANT_ID=installer$' /etc/os-release
@@ -112,7 +119,7 @@ prompt_with_default() {
 }
 
 list_disks() {
-  lsblk -dpno NAME,SIZE,TYPE,MODEL,TRAN | awk '$3 == "disk" { $3=""; sub(/^  */, ""); print }'
+  lsblk -dpnr -o NAME,SIZE,TYPE,MODEL,TRAN,RM | awk '$3 == "disk" { print }'
 }
 
 list_partitions() {
@@ -208,20 +215,131 @@ detect_graphics_profile() {
   fi
 }
 
+detect_recommended_disk() {
+  local disks
+  local first_internal=""
+  local first_any=""
+  local line
+  local name size type model tran rm
+
+  disks="$(list_disks)"
+  [ -n "$disks" ] || return 1
+
+  while IFS= read -r line; do
+    [ -n "$line" ] || continue
+    read -r name size type model tran rm <<<"$line"
+
+    if [ -z "$first_any" ]; then
+      first_any="$name"
+    fi
+
+    if [ "${tran:-}" != "usb" ] && [ "${rm:-0}" = "0" ]; then
+      first_internal="$name"
+      break
+    fi
+  done <<EOF
+$disks
+EOF
+
+  printf '%s\n' "${first_internal:-$first_any}"
+}
+
 choose_disk() {
   local disks
-  local default_disk
+  local default_disk=""
   local answer
+  local line
+  local idx=0
+  local name size type model tran rm
+  local disks_cache=""
 
   disks="$(list_disks)"
   [ -n "$disks" ] || die "Nenhum disco detectado."
 
-  printf '\nDiscos detectados:\n%s\n' "$disks"
-  default_disk="$(printf '%s\n' "$disks" | awk 'NR == 1 { print $1 }')"
+  default_disk="$(detect_recommended_disk || true)"
+  printf '\nDiscos detectados:\n'
+  while IFS= read -r line; do
+    [ -n "$line" ] || continue
+    idx=$((idx + 1))
+    read -r name size type model tran rm <<<"$line"
+    disks_cache="${disks_cache}${idx}|${name}"$'\n'
+    printf '  %d) %s  %s  %s' "$idx" "$name" "$size" "${model:-sem-modelo}"
+    if [ "${tran:-}" = "usb" ] || [ "${rm:-0}" = "1" ]; then
+      printf ' [removivel]'
+    else
+      printf ' [interno]'
+    fi
+    if [ "$name" = "$default_disk" ]; then
+      printf ' [recomendado]'
+      default_disk="$idx"
+    fi
+    printf '\n'
+  done <<EOF
+$disks
+EOF
+
+  [ -n "$default_disk" ] || default_disk="1"
   answer="$(prompt_with_default "Disco alvo" "$default_disk")"
+
+  if printf '%s\n' "$answer" | grep -Eq '^[0-9]+$'; then
+    answer="$(printf '%s' "$disks_cache" | awk -F'|' -v n="$answer" '$1 == n { print $2; exit }')"
+  fi
 
   [ -b "$answer" ] || die "Disco invalido: $answer"
   printf '%s\n' "$answer"
+}
+
+choose_timezone() {
+  local detected
+  local answer
+  local manual
+
+  detected="$(detect_timezone)"
+
+  printf '\nTimezone:\n'
+  printf '  1) %s [detectado]\n' "$detected"
+  printf '  2) UTC\n'
+  printf '  3) Digitar manualmente\n'
+  answer="$(prompt_with_default "Escolha" "1")"
+
+  case "$answer" in
+    1) TIMEZONE="$detected" ;;
+    2) TIMEZONE="UTC" ;;
+    3)
+      manual="$(prompt_with_default "Timezone" "$detected")"
+      TIMEZONE="$manual"
+      ;;
+    *)
+      die "Opcao de timezone invalida: $answer"
+      ;;
+  esac
+
+  [ -e "/usr/share/zoneinfo/$TIMEZONE" ] || die "Timezone invalida: $TIMEZONE"
+}
+
+choose_graphics_profile() {
+  local answer
+
+  printf '\nPerfil grafico:\n'
+  printf '  1) %s [detectado]\n' "$GRAPHICS_PROFILE"
+  printf '  2) intel\n'
+  printf '  3) amd\n'
+  printf '  4) nvidia\n'
+  printf '  5) hybrid-intel-nvidia\n'
+  printf '  6) hybrid-amd-nvidia\n'
+  printf '  7) generic\n'
+  answer="$(prompt_with_default "Escolha" "1")"
+
+  case "$answer" in
+    1) ;;
+    2) GRAPHICS_PROFILE="intel" ;;
+    3) GRAPHICS_PROFILE="amd" ;;
+    4) GRAPHICS_PROFILE="nvidia" ;;
+    5) GRAPHICS_PROFILE="hybrid-intel-nvidia" ;;
+    6) GRAPHICS_PROFILE="hybrid-amd-nvidia" ;;
+    7) GRAPHICS_PROFILE="generic" ;;
+    *) die "Perfil grafico invalido: $answer" ;;
+  esac
 }
 
 choose_partition() {
@@ -419,81 +537,81 @@ partition_disk() {
 
   if [ "$BOOT_MODE" = "uefi" ]; then
     log "Particionando $disk em GPT/UEFI"
-    wipefs -af "$disk"
-    parted -s "$disk" mklabel gpt
-    parted -s "$disk" mkpart ESP fat32 1MiB 1025MiB
-    parted -s "$disk" set 1 esp on
+    run_cmd wipefs -af "$disk"
+    run_cmd parted -s "$disk" mklabel gpt
+    run_cmd parted -s "$disk" mkpart ESP fat32 1MiB 1025MiB
+    run_cmd parted -s "$disk" set 1 esp on
     BOOT_PART="$(partition_path "$disk" 1)"
 
     if [ "$swap_gib" -gt 0 ]; then
       root_start_mib=$((1025 + swap_gib * 1024))
-      parted -s "$disk" mkpart primary linux-swap 1025MiB "${root_start_mib}MiB"
-      parted -s "$disk" mkpart primary ext4 "${root_start_mib}MiB" 100%
+      run_cmd parted -s "$disk" mkpart primary linux-swap 1025MiB "${root_start_mib}MiB"
+      run_cmd parted -s "$disk" mkpart primary ext4 "${root_start_mib}MiB" 100%
       SWAP_PART="$(partition_path "$disk" 2)"
       ROOT_PART="$(partition_path "$disk" 3)"
     else
-      parted -s "$disk" mkpart primary ext4 1025MiB 100%
+      run_cmd parted -s "$disk" mkpart primary ext4 1025MiB 100%
       ROOT_PART="$(partition_path "$disk" 2)"
       SWAP_PART=""
     fi
   else
     log "Particionando $disk em MBR/Legacy"
-    wipefs -af "$disk"
-    parted -s "$disk" mklabel msdos
+    run_cmd wipefs -af "$disk"
+    run_cmd parted -s "$disk" mklabel msdos
     if [ "$swap_gib" -gt 0 ]; then
       root_start_mib=$((1 + swap_gib * 1024))
-      parted -s "$disk" mkpart primary linux-swap 1MiB "${root_start_mib}MiB"
-      parted -s "$disk" mkpart primary ext4 "${root_start_mib}MiB" 100%
+      run_cmd parted -s "$disk" mkpart primary linux-swap 1MiB "${root_start_mib}MiB"
+      run_cmd parted -s "$disk" mkpart primary ext4 "${root_start_mib}MiB" 100%
       SWAP_PART="$(partition_path "$disk" 1)"
       ROOT_PART="$(partition_path "$disk" 2)"
     else
-      parted -s "$disk" mkpart primary ext4 1MiB 100%
+      run_cmd parted -s "$disk" mkpart primary ext4 1MiB 100%
       ROOT_PART="$(partition_path "$disk" 1)"
       SWAP_PART=""
     fi
     BOOT_PART=""
   fi
 
-  partprobe "$disk"
-  udevadm settle
+  run_cmd partprobe "$disk"
+  run_cmd udevadm settle
 }
 
 format_partitions() {
   if [ "$FORMAT_ROOT" = "yes" ]; then
     log "Formatando root em $ROOT_PART"
-    mkfs.ext4 -F -L nixos "$ROOT_PART"
+    run_cmd mkfs.ext4 -F -L nixos "$ROOT_PART"
   fi
 
   if [ -n "$BOOT_PART" ] && [ "$FORMAT_BOOT" = "yes" ]; then
     log "Formatando boot em $BOOT_PART"
-    mkfs.fat -F 32 -n boot "$BOOT_PART"
+    run_cmd mkfs.fat -F 32 -n boot "$BOOT_PART"
   fi
 
   if [ -n "$SWAP_PART" ] && [ "$FORMAT_SWAP" = "yes" ]; then
     log "Criando swap em $SWAP_PART"
-    mkswap -L swap "$SWAP_PART"
+    run_cmd mkswap -L swap "$SWAP_PART"
   fi
 }
 
 mount_target() {
   log "Montando sistema em $TARGET_ROOT"
   mkdir -p "$TARGET_ROOT"
-  mount "$ROOT_PART" "$TARGET_ROOT"
+  run_cmd mount "$ROOT_PART" "$TARGET_ROOT"
   MOUNTED_ROOT=1
 
   if [ "$BOOT_MODE" = "uefi" ]; then
     [ -n "$BOOT_PART" ] || die "UEFI exige particao EFI montada em /boot."
     mkdir -p "$TARGET_ROOT/boot"
-    mount -o umask=077 "$BOOT_PART" "$TARGET_ROOT/boot"
+    run_cmd mount -o umask=077 "$BOOT_PART" "$TARGET_ROOT/boot"
     MOUNTED_BOOT=1
   elif [ -n "$BOOT_PART" ]; then
     mkdir -p "$TARGET_ROOT/boot"
-    mount "$BOOT_PART" "$TARGET_ROOT/boot"
+    run_cmd mount "$BOOT_PART" "$TARGET_ROOT/boot"
     MOUNTED_BOOT=1
   fi
 
   if [ -n "$SWAP_PART" ]; then
-    swapon "$SWAP_PART"
+    run_cmd swapon "$SWAP_PART"
     SWAP_ENABLED=1
   fi
 }
@@ -751,6 +869,8 @@ main() {
 
   choose_install_mode
   choose_boot_loader
+  choose_timezone
+  choose_graphics_profile
   choose_first_boot_mode
   print_preflight
 
@@ -759,9 +879,6 @@ main() {
 
   USERNAME="$(prompt_with_default "Usuario principal" "ankh")"
   validate_username "$USERNAME" || die "Usuario invalido. Prefira minusculas, numeros, '_' e '-'."
-
-  TIMEZONE="$(prompt_with_default "Timezone" "$(detect_timezone)")"
-  GRAPHICS_PROFILE="$(prompt_with_default "Perfil grafico a usar" "$GRAPHICS_PROFILE")"
 
   if [ "$DRY_RUN" -eq 0 ]; then
     read_password_twice

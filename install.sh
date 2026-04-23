@@ -29,6 +29,7 @@ FORMAT_ROOT="yes"
 FORMAT_BOOT="yes"
 FORMAT_SWAP="yes"
 DRY_RUN=0
+ALLOW_NON_INSTALLER=0
 MOUNTED_ROOT=0
 MOUNTED_BOOT=0
 SWAP_ENABLED=0
@@ -61,6 +62,21 @@ trap on_error ERR
 
 need_cmd() {
   command -v "$1" >/dev/null 2>&1 || die "Comando obrigatorio ausente: $1"
+}
+
+is_installer_environment() {
+  [ -r /etc/os-release ] || return 1
+  grep -q '^VARIANT_ID=installer$' /etc/os-release
+}
+
+require_installer_environment() {
+  [ "$ALLOW_NON_INSTALLER" -eq 1 ] && return
+
+  if is_installer_environment; then
+    return
+  fi
+
+  die "Este script deve ser executado a partir do live ISO do NixOS. Em um sistema ja instalado, use git clone + nixos-rebuild switch --flake path:/home/<usuario>/dotfiles#<host>."
 }
 
 confirm() {
@@ -694,6 +710,9 @@ parse_args() {
       --dry-run)
         DRY_RUN=1
         ;;
+      --allow-non-installer)
+        ALLOW_NON_INSTALLER=1
+        ;;
       *)
         die "Argumento invalido: $1"
         ;;
@@ -706,6 +725,7 @@ main() {
   parse_args "$@"
 
   [ "$(id -u)" -eq 0 ] || die "Execute este instalador como root."
+  require_installer_environment
 
   need_cmd lsblk
   need_cmd parted

@@ -35,6 +35,7 @@ in {
     hplipWithPlugin glib vesktop
     ollama codex
     qgis fzf
+    lm_sensors
     eza bat zoxide
     direnv nix-direnv
   ];

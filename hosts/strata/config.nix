@@ -7,7 +7,5 @@
   # Intel laptop: thermald complements the kernel thermal zones and RAPL limits.
   services.thermald.enable = true;
 
-  # Galaxy Book2 / Intel Xe: PSR tem forte indicio de causar freeze/black screen
-  # antes mesmo do Strata entrar. Sobrescreve o mkForce do modulo comum.
   boot.kernelParams = lib.mkForce [ "i915.enable_psr=0" ];
 }

@@ -478,7 +478,6 @@
   - `nixosConfigurations.desktop.config.systemd.defaultUnit` resolve para `"graphical.target"`.
 - Pendencia residual conhecida:
   - ainda existe referencia absoluta a `/home/ankh` em `hyprlock.conf`; isso nao bloqueia a reinstalacao em `tty` seguro, mas deve ser saneado antes de reativar o fluxo grafico completo em usuario diferente.
-
 ## Atualizacao de 2026-04-23T06:20:00-04:00
 - Esta sessao finalmente fechou a recuperacao do notebook Intel em estado operacional.
 - O problema real foi refinado assim:
@@ -628,3 +627,63 @@
   - autostart no `tty`;
   - ou um login manager mais simples/robusto que `SDDM`.
 - Nao reintroduzir `SDDM` no notebook por reflexo antes de validar uma estrategia melhor.
+
+## Atualizacao de 2026-04-23T16:59:24-04:00
+- Foi iniciada a investigacao pratica de ACPI/aquecimento no notebook operacional atual, confirmado como host `strata`.
+- Identificacao da maquina em runtime:
+  - `hostname = strata`
+  - `product_name = 550XED`
+  - `product_version = P11RGK`
+  - CPU `12th Gen Intel(R) Core(TM) i5-1235U`
+  - BIOS `P11RGK.050.250403.SX` de `2025-04-03`
+- O kernel atual subiu com:
+  - `i915.enable_psr=0`
+- O runtime mostrou que a pilha termica base esta funcional:
+  - zonas termicas expostas em `/sys/class/thermal/thermal_zone*`
+  - `intel_pstate` ativo
+  - `platform_profile` disponivel
+  - `processor_thermal_*`, `intel_rapl_*` e `samsung_galaxybook` carregados
+  - `cooling_device12` identificado como `Fan`
+- Estado termico observado apos habilitar instrumentacao:
+  - `thermald.service` ativo e rodando normalmente
+  - `platform_profile = quiet`
+  - `intel_pstate` com governor `powersave`
+  - `energy_performance_preference = power`
+  - limites RAPL observados:
+    - `long_term = 20W`
+    - `short_term = 44W`
+  - leituras de temperatura em idle/uso leve:
+    - package CPU em torno de `44 C`
+    - zonas ACPI em torno de `45 C`
+    - Wi-Fi em torno de `42 C`
+    - NVMe em torno de `30.9 C`
+- O sensor `acpi_fan` continuou aparecendo como `N/A`, mas isso deixou de apontar para "fan inexistente":
+  - o kernel expoe uma cooling device do tipo `Fan`
+  - a leitura de RPM/status via interface ACPI continua falhando
+  - a interpretacao atual e "telemetria ACPI parcial/bugada", nao ausencia total de controle termico
+- Logs relevantes desta investigacao apontaram mais para firmware/ACPI fragil do notebook do que para configuracao termica agressiva no Linux:
+  - `ACPI BIOS Error ... AE_AML_PACKAGE_LIMIT` em metodos `_PLD` do XHCI/USB-C
+  - `acpi SAM0429:00: failed to execute CSFI; device responded with failure code 0xff`
+  - `ucsi_acpi ... PPM init failed`
+- Conclusao provisoria desta sessao:
+  - nao apareceu evidencia de superaquecimento em idle;
+  - o Linux nao esta operando em modo agressivo neste host;
+  - o problema remanescente parece ser mais de firmware/ACPI e telemetria parcial do que ausencia de cooling policy.
+- Ajustes aplicados no repo para melhorar observabilidade e controle termico:
+  - `modules/packages.nix`
+    - adicionado `lm_sensors`
+  - `hosts/nixos/config.nix`
+    - adicionado `services.thermald.enable = true;`
+  - `hosts/strata/config.nix`
+    - adicionado `services.thermald.enable = true;`
+- Houve um detalhe operacional importante:
+  - `hosts/strata/` estava com ownership `nobody:nogroup`
+  - foi necessario corrigir o ownership para `ankh-intel:users` antes de editar o host real
+- O usuario aplicou o rebuild e confirmou em runtime:
+  - `thermald` ativo
+  - `sensors` funcional
+  - `platform_profile` ainda em `quiet`
+- Proximo passo recomendado a partir daqui:
+  - observar o notebook sob carga real com `watch -n 2 sensors`
+  - verificar se a CPU estabiliza em faixa aceitavel sem encostar repetidamente em `95-100 C`
+  - so depois decidir se ainda vale limitar turbo/performance ou mexer em politica adicional.

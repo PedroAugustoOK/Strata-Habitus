@@ -175,6 +175,13 @@ detect_timezone() {
   fi
 }
 
+timezone_exists() {
+  local tz="$1"
+  [ -e "/etc/zoneinfo/$tz" ] \
+    || [ -e "/run/current-system/sw/share/zoneinfo/$tz" ] \
+    || [ -e "/usr/share/zoneinfo/$tz" ]
+}
+
 detect_machine_profile() {
   if ls /sys/class/power_supply/BAT* >/dev/null 2>&1; then
     printf 'laptop\n'
@@ -314,7 +321,7 @@ choose_timezone() {
       ;;
   esac
 
-  [ -e "/usr/share/zoneinfo/$TIMEZONE" ] || die "Timezone invalida: $TIMEZONE"
+  timezone_exists "$TIMEZONE" || die "Timezone invalida: $TIMEZONE"
 }
 
 choose_graphics_profile() {

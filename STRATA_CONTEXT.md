@@ -478,3 +478,153 @@
   - `nixosConfigurations.desktop.config.systemd.defaultUnit` resolve para `"graphical.target"`.
 - Pendencia residual conhecida:
   - ainda existe referencia absoluta a `/home/ankh` em `hyprlock.conf`; isso nao bloqueia a reinstalacao em `tty` seguro, mas deve ser saneado antes de reativar o fluxo grafico completo em usuario diferente.
+
+## Atualizacao de 2026-04-23T06:20:00-04:00
+- Esta sessao finalmente fechou a recuperacao do notebook Intel em estado operacional.
+- O problema real foi refinado assim:
+  - havia dois blocos misturados: instabilidade do notebook Intel no boot/base e fragilidade da camada grafica (`SDDM`/tema/sessao);
+  - o `SDDM` nao era a causa unica, mas agravava e escondia o problema principal;
+  - o caminho que se provou confiavel foi separar boot seguro e sessao grafica manual.
+
+### Estado final confirmado no notebook
+- Usuario funcional e usado no notebook atual: `ankh-intel`
+- Hostname atual no notebook apos o bootstrap: `strata`
+- Kernel visto no notebook limpo/recuperado: `Linux 6.19.6`
+- O notebook voltou a:
+  - bootar normalmente;
+  - aceitar login em `tty`;
+  - permanecer em `multi-user.target`;
+  - iniciar `Hyprland` manualmente com sucesso a partir do `tty`.
+- O `readlink -f /etc/systemd/system/default.target` no notebook resolveu para um caminho terminado em `multi-user.target`.
+- O login manual em `Hyprland` foi confirmado como funcional e o usuario reportou que estava "tudo funcionando aparentemente".
+
+### Decisao arquitetural que resolveu
+- O modelo do repo deixou de tratar "desktop enable" e "login manager enable" como a mesma coisa.
+- A partir desta sessao:
+  - um host pode ter stack grafico presente (`Hyprland`, portais, etc.);
+  - e ao mesmo tempo manter `SDDM` desligado;
+  - e continuar bootando em `multi-user.target`.
+- Isso foi implementado com:
+  - `hostMeta.desktop.enable`
+  - `hostMeta.desktop.loginManager.enable`
+- Combinacao final desejada para o notebook (`hosts/nixos/meta.nix`):
+  - `desktop.enable = true;`
+  - `desktop.loginManager.enable = false;`
+- Efeito pratico:
+  - `Hyprland` fica instalado;
+  - `SDDM` fica desligado;
+  - o boot continua em `tty`;
+  - a sessao grafica pode ser iniciada manualmente, evitando reabrir o problema de login manager.
+
+### Validacao declarativa final do repo
+- O flake local em `path:/home/ankh/dotfiles` foi validado com o seguinte resultado para o host `nixos`:
+  - `programs.hyprland.enable = true`
+  - `services.displayManager.sddm.enable = false`
+  - `systemd.defaultUnit = "multi-user.target"`
+- Para o host `desktop`, o resultado permaneceu:
+  - `programs.hyprland.enable = true`
+  - `services.displayManager.sddm.enable = true`
+  - `systemd.defaultUnit = "graphical.target"`
+
+### Fluxo suportado a partir de agora
+- O instalador antigo que particiona disco (`install.sh`) nao e mais o fluxo recomendado para esta maquina.
+- O fluxo suportado e mais confiavel para NixOS ja instalado passou a ser:
+  - instalar NixOS limpo pelo instalador oficial;
+  - entrar no `tty`;
+  - clonar o repo;
+  - rodar `sudo ./bootstrap.sh`;
+  - escolher `tty seguro`;
+  - reboot;
+  - iniciar `Hyprland` manualmente a partir do `tty`.
+- `bootstrap.sh` foi criado exatamente para isso:
+  - gera `hardware.nix` da maquina atual via `nixos-generate-config --show-hardware-config`;
+  - pergunta `hostname`, `usuario`, `timezone`, perfil grafico e modo de boot inicial;
+  - habilita `nix-command flakes` por conta propria no momento da execucao;
+  - aplica o host com `nixos-rebuild switch`.
+- `install.sh` continua existindo para o live ISO, mas foi endurecido e tambem passou a:
+  - abortar fora do ambiente instalador;
+  - detectar melhor disco/timezone/perfil grafico;
+  - oferecer `tty seguro` como default em laptop Intel.
+- Mesmo assim, para esta maquina e para retomada pratica, o fluxo a priorizar e o `bootstrap.sh`.
+
+### Commits importantes publicados nesta sessao
+- `86014dc` — `Refine installer and stabilize notebook boot`
+- `4f0bd60` — `Guard installer against non-ISO usage`
+- `7780a30` — `Improve installer auto-detection and prompts`
+- `cd7bd57` — `Fix timezone validation on NixOS live ISO`
+- `1997ea3` — `Harden disk detection and partition probing`
+- `7ae6157` — `Add post-install bootstrap workflow`
+- `2cf4282` — `Relax bootstrap dependency on lspci`
+- `cfa7f52` — `Enable nix-command automatically in bootstrap`
+- `a6efa5a` — `Allow Hyprland without a login manager`
+
+### O que falhou e nao deve ser repetido
+- Nao rodar `install.sh` em um sistema ja instalado; isso foi uma das fontes de caos da sessao.
+- Nao insistir em reativar `SDDM` no notebook antes de estabilizar a base e a sessao manual.
+- Nao misturar "corrigir boot/base" com "corrigir login grafico".
+- Nao presumir que o usuario do notebook e `ankh`; nesta maquina operacional o usuario criado e `ankh-intel`.
+- Nao usar `~/dotfiles` como atalho mental sem confirmar o usuario atual; no notebook atual o repo funcional ficou em `/home/ankh-intel/dotfiles`.
+
+### Problemas encontrados durante a recuperacao
+- O notebook Intel mostrou sensibilidade real a `i915`/PSR. A mitigacao mantida no host e:
+  - `boot.kernelParams = [ "i915.enable_psr=0" ];`
+- `SDDM` e a sessao residual `uwsm` se mostraram particularmente frageis no notebook.
+- Houve falhas repetidas de:
+  - tela preta;
+  - loop de login grafico;
+  - `initrd.target`;
+  - emergencia apos reboot forcado.
+- Tambem foram observados erros repetidos de ACPI/ventoinha no NixOS limpo:
+  - `ACPI Error: Needed [Integer/String/Buffer], found [Reference]`
+  - `ACPI Error: AE_AML_OPERAND_TYPE, While resolving operands for [Add]`
+  - `ACPI Error: Aborting method \_SB.PC00.LPCB.FAN0._FST`
+  - `acpi-fan PNP0C0B:00: Error retrieving current fan status: -5`
+- Esses erros ainda nao foram investigados a fundo nesta sessao. O usuario relatou que o notebook esquenta bastante as vezes.
+- Hipotese atual sobre ACPI/aquecimento:
+  - bug/limite de firmware/BIOS/ACPI do notebook;
+  - nao ha evidencia nesta sessao de que isso seja causado pelo Strata;
+  - agora que o sistema esta operacional, esse deve ser um dos proximos focos de investigacao.
+
+### Estado atual dos arquivos-chave do repo
+- `configuration.nix`
+  - importa `modules/desktop.nix` condicionalmente;
+  - mantem `programs.fish.enable = true` na base;
+  - forca `multi-user.target` quando `loginManager.enable = false`.
+- `modules/desktop.nix`
+  - continua habilitando `Hyprland`;
+  - passa a respeitar `hostMeta.desktop.loginManager.enable` para ligar ou nao o `SDDM`;
+  - mantem `withUWSM = false` e `programs.uwsm.enable = false`.
+- `hosts/nixos/meta.nix`
+  - versionado no repo com:
+    - `username = "ankh";`
+    - `desktop.enable = true;`
+    - `desktop.loginManager.enable = false;`
+  - observacao importante:
+    - no notebook recuperado em runtime, o host real foi regenerado pelo `bootstrap.sh` com `usuario = ankh-intel` e `hostname = strata`.
+    - ou seja, o repo versionado e um baseline; o host real da maquina pode divergir conforme o bootstrap executado localmente.
+- `hosts/nixos/config.nix`
+  - mantem a mitigacao Intel `i915.enable_psr=0`.
+- `bootstrap.sh`
+  - passou a ser a ferramenta principal para aplicar Strata por cima de NixOS limpo.
+
+### Regras praticas de retomada no notebook
+- Se o notebook continuar funcional:
+  - nao mexer em `SDDM` imediatamente;
+  - usar `tty` + `Hyprland` manual;
+  - investigar aquecimento/ACPI antes de qualquer refinamento cosmetico.
+- Se for necessario reaplicar o repo no notebook:
+  - usar o usuario real da maquina, hoje `ankh-intel`;
+  - clonar/usar `/home/ankh-intel/dotfiles`;
+  - rodar `sudo ./bootstrap.sh`;
+  - escolher `tty seguro`.
+- Se houver duvida sobre o estado de boot:
+  - checar `readlink -f /etc/systemd/system/default.target`;
+  - o esperado no notebook atual e `multi-user.target`.
+
+### Proximos passos recomendados
+- Investigar o erro de ACPI/fan e o aquecimento do notebook agora que o sistema esta estavel.
+- Limpar referencias absolutas restantes a `/home/ankh` em arquivos como `hyprlock.conf`.
+- Decidir depois, com calma, como entrar no `Hyprland` sem comando manual:
+  - autostart no `tty`;
+  - ou um login manager mais simples/robusto que `SDDM`.
+- Nao reintroduzir `SDDM` no notebook por reflexo antes de validar uma estrategia melhor.

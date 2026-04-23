@@ -55,6 +55,11 @@ detect_graphics_profile() {
   local has_amd=0
   local has_nvidia=0
 
+  if ! command -v lspci >/dev/null 2>&1; then
+    printf 'generic\n'
+    return
+  fi
+
   pci="$(lspci -nn | grep -E 'VGA|3D|Display' || true)"
 
   printf '%s\n' "$pci" | grep -qi 'intel' && has_intel=1 || true
@@ -251,7 +256,6 @@ main() {
 
   need_cmd nixos-generate-config
   need_cmd nixos-rebuild
-  need_cmd lspci
   need_cmd nix
 
   [ -f "$REPO_DIR/flake.nix" ] || die "Repo nao encontrado em $REPO_DIR"

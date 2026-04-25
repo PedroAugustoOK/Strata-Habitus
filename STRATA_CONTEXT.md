@@ -14,9 +14,9 @@
 
 ## Ponto atual
 - O Strata esta ativo neste repo, nao existe um app separado com esse nome no workspace atual.
-- O trabalho recente esta concentrado em tema, wallpaper, Quickshell e ajustes de ambiente.
-- O repo esta em `main`; o desktop ja empurrou os commits recentes para `origin/main`.
-- Existem mudancas locais nao commitadas; assumir arvore dirty antes de qualquer alteracao.
+- O trabalho recente esta concentrado em tema, wallpaper, Quickshell, fluxo de release por canal e estabilidade do boot grafico.
+- O repo esta em `main`; `origin/main` e `origin/stable` existem e hoje apontam para o commit `f372c93`.
+- A arvore local esta limpa neste momento.
 - Backup manual criado antes da refatoracao do motor de temas em `/home/ankh/dotfiles_backup/strata_pre_theme_refactor_20260421_211304`.
 - O novo motor de temas foi aplicado e validado em runtime em boa parte do fluxo, mas ainda restam arestas no Kitty e no theming GTK/Papirus.
 - O estado ativo do tema/wallpaper agora vive em `state/`, e os arquivos derivados sao gerados em `generated/`.
@@ -101,6 +101,8 @@
 - A validacao inicial com `nix eval /home/ankh/dotfiles#...` falhou porque os novos arquivos ainda nao estavam rastreados pelo Git; como o flake estava sendo lido pelo snapshot do repo, o `nix` nao via `modules/graphics-debug.nix` nem `hosts/nixos/config.nix`. A contornacao validada foi usar `path:/home/ankh/dotfiles#...` durante a fase dirty/untracked.
 
 ## Pendencias registradas
+- No notebook, corrigir o boot grafico para que o SDDM apareca e o login em Hyprland funcione sem cair no TTY.
+- Validar no notebook se o mismatch entre sessao `hyprland` e `uwsm-managed` tambem ocorre la, em vez de assumir que o problema e identico ao desktop.
 - Aplicar os `switch` nos dois hosts e observar o comportamento apos reboot com a nova camada comum de debug grafico.
 - No `desktop`, confirmar depois do rebuild se `Ctrl+Alt+F1` mostra o SDDM quando o usuario achar que "voltou para o TTY", para separar problema de VT errado de problema real de stack grafico.
 - No `desktop`, continuar investigando como deixar a AMD inequivocamente como controladora da sessao grafica, mantendo a NVIDIA apenas para CUDA/apps.
@@ -112,6 +114,25 @@
 - Revisar no notebook as pequenas regressões apos a sincronizacao; o usuario vai exportar este contexto para la e instalar/abrir o Codex naquela maquina para continuar o reparo diretamente.
 
 ## Ultimo contexto recuperado
+- Foram publicados os commits:
+  - `0eab9be` `Add release channel workflow`
+  - `f372c93` `Add fish shortcuts for release workflow`
+- O repo agora tem fluxo de "distro caseira" com canais Git:
+  - `main` para desenvolvimento/teste
+  - `stable` para o notebook
+- Foram adicionados:
+  - `RELEASES.md`
+  - `strata-promote-release.sh`
+  - `strata-apply-channel.sh`
+- `hosts/desktop/meta.nix` segue `channel = "main"`.
+- `hosts/nixos/meta.nix` e `hosts/strata/meta.nix` seguem `channel = "stable"`.
+- `modules/update.nix` passou a respeitar `hostMeta.updates` com `enable`, `auto` e `channel`.
+- Os timers automaticos de update continuam desligados em todos os hosts (`auto = false`).
+- `fish/config.fish` agora tem os atalhos:
+  - `release`
+  - `release-stable`
+  - `update-channel`
+  - `update-stable`
 - O historico recente do git mostra trocas de tema como `gruvbox` e `nord`.
 - A decisao atual e nao usar `stylix`; a direcao e manter temas autorais e separar `state/` de `generated/`.
 - A sessao atual confirmou que o foco recente nao era um produto separado, e sim o proprio setup Strata neste repo.
@@ -137,18 +158,17 @@
 - A sessao terminou com os comandos ainda nao aplicados pelo usuario; a orientacao foi sair do Codex e rodar os rebuilds manualmente nos dois hosts.
 
 ## Proximo passo recomendado
-- No `desktop`, aplicar:
-  - `sudo nixos-rebuild switch --flake ~/dotfiles#desktop`
-- No `nixos`, aplicar:
-  - `sudo nixos-rebuild switch --flake ~/dotfiles#nixos`
-- Depois de cada reboot, verificar:
-  - se o greeter aparece direto;
-  - se `Ctrl+Alt+F1` mostra o SDDM quando parecer que o sistema "voltou no TTY";
-  - em qual TTY a sessao do usuario caiu;
-  - se ainda ha necessidade de iniciar `Hyprland` manualmente.
-- Se o `desktop` continuar falhando visualmente apos o `switch`, retomar a investigacao da priorizacao de GPU com base nos logs de `display-manager`, `journalctl -b` e `loginctl`.
-- Se o `nixos` repetir o problema, coletar primeiro a topologia grafica real do notebook antes de mexer em `videoDrivers`; nao duplicar o override do `desktop` por reflexo.
-- Quando os dois hosts estiverem minimamente estaveis no boot grafico, voltar para as pendencias de tema: Kitty `rosepine`, Papirus e coerencia GTK/Nautilus.
+- No notebook `nixos`, testar primeiro o canal novo com:
+  - `cd ~/dotfiles`
+  - `./strata-apply-channel.sh`
+- Depois do rebuild e reboot no notebook, observar:
+  - se o SDDM sobe automaticamente;
+  - se a autenticacao grafica entra em `Hyprland` sem voltar ao TTY;
+  - qual sessao esta selecionada no SDDM (`Hyprland` vs variante com UWSM, se aparecer);
+  - se `Ctrl+Alt+F1` mostra o greeter;
+  - o conteudo de `~/.local/share/sddm/wayland-session.log` apos uma tentativa de login.
+- Se o notebook repetir o padrao do desktop, priorizar a correção de sessao/defaultSession/UWSM antes de mexer em GPU.
+- So depois retomar a investigacao de priorizacao de GPU no `desktop` e as pendencias de tema.
 
 ## Regras de retomada
 - Ler este arquivo primeiro.

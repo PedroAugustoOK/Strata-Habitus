@@ -33,3 +33,19 @@ Gerar o arquivo de hardware na máquina desktop com:
 sudo nixos-generate-config --show-hardware-config > ~/dotfiles/hosts/desktop/hardware.nix
 ```
 O arquivo placeholder está em `hosts/desktop/hardware.nix`.
+
+### App Center + Launcher
+Pendencia operacional aberta no Strata:
+- fechar o fluxo de instalacao Nix pelo App Center ate refletir no sistema ativo;
+- alvo de teste principal: `steam`;
+- criterio de pronto:
+  - app entra em `state/apps.nix`;
+  - rebuild aplica sem erro;
+  - `.desktop` aparece em `/run/current-system/sw/share/applications`;
+  - launcher encontra o app depois do reindex.
+
+Observacoes atuais:
+- o launcher ja foi ajustado para reindexar sempre ao abrir;
+- o launcher usa apenas `.desktop` reais, nao o catalogo do App Center;
+- `Zen Browser` (Flatpak) ja aparece na busca do launcher;
+- `Steam` nao estava na geracao ativa no fim da sessao, apesar de ter passado pelo estado declarativo em momentos anteriores.

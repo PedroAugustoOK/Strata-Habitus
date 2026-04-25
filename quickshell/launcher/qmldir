@@ -1,2 +1,7 @@
 module launcher
 Launcher 1.0 Launcher.qml
+LauncherStore 1.0 LauncherStore.qml
+LauncherListItem 1.0 LauncherListItem.qml
+LauncherActionItem 1.0 LauncherActionItem.qml
+LauncherEmptyState 1.0 LauncherEmptyState.qml
+LauncherFooter 1.0 LauncherFooter.qml

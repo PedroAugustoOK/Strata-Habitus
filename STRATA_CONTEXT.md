@@ -219,6 +219,64 @@
   - reboot
   - testar login grafico escolhendo explicitamente `Hyprland` se o seletor de sessao aparecer.
 
+## Atualizacao de 2026-04-24T13:55:00-04:00
+- O foco desta sessao mudou para Quickshell, App Center, launcher e instalacao de apps.
+- O clipboard do Quickshell foi concluido:
+  - persistencia funcionando em Wayland;
+  - preview de imagem funcionando;
+  - a causa principal do bug era layout/geometria em `Clipboard.qml`, nao backend.
+- O App Center foi profundamente redesenhado e compactado:
+  - fluxo em 3 colunas;
+  - fila/lista de compras para apps Nix;
+  - Flatpak continua imediato;
+  - visual mais minimalista, com progresso no topo.
+- Scripts centrais do App Center alterados:
+  - `quickshell/scripts/appcenter-index.js`
+  - `quickshell/scripts/appcenter-apply.js`
+  - `quickshell/scripts/appcenter-queue-apply.js`
+  - `quickshell/scripts/appcenter-rebuild.js`
+  - `quickshell/appcenter/AppCenter.qml`
+  - `quickshell/appcenter/AppCenterStore.qml`
+- O `appcenter-rebuild.js` agora:
+  - abre terminal kitty com classe `strata-rebuild`;
+  - usa regra de janela flutuante menor em `hyprland.conf`;
+  - reindexa App Center e launcher apos rebuild bem-sucedido;
+  - faz o App Center fechar quando o rebuild abre com sucesso.
+- Flatpak foi estabilizado:
+  - `desktop.nix` ganhou um oneshot para configurar `flathub`;
+  - `flathub` foi adicionado no escopo do usuario para funcionar imediatamente;
+  - o indexador consulta `flatpak remote-ls --user flathub` e `--system flathub`;
+  - o indexador usa cache como fallback se a consulta falhar;
+  - instalacao Flatpak agora usa `flatpak install --user -y flathub <appId>`.
+- O App Center passou a separar estado Nix:
+  - `Gerenciado` = ja ativo no sistema;
+  - `Pendente de rebuild` = no estado declarativo, mas ainda nao presente na geracao ativa.
+- O launcher foi ajustado para:
+  - chamar scripts JS via `node` explicito;
+  - reindexar sempre ao abrir, em vez de confiar indefinidamente no cache.
+- Foi confirmado que o launcher usa apenas `.desktop` reais do sistema/Flatpak:
+  - ele nao mostra um app so porque o App Center conhece o pacote;
+  - ele mostra apenas apps com `.desktop` ativo no indice do launcher.
+- Foi validado que um Flatpak real como `Zen Browser` entra na busca do launcher.
+- Houve erro de `gio launch` para Steam porque o launcher ainda tinha cache antigo apontando para `/run/current-system/sw/share/applications/steam.desktop`; depois do reindex, essa entrada velha sumiu.
+- No fim da sessao, a Steam NAO estava na geracao ativa atual:
+  - `/run/current-system/sw/share/applications` nao continha `steam.desktop`;
+  - o `catalog.json` do App Center mostrava `steam` com `installed: false`, `managed: false`, `action: install`.
+- Portanto, o ponto pendente real nao e mais o launcher: e fechar de vez o fluxo do App Center para que um app Nix adicionado (teste alvo: Steam) chegue ate a geracao ativa do sistema e gere `.desktop` real.
+
+## Proximo passo recomendado
+- Retomar pela Steam.
+- Verificar o fluxo completo do App Center para Nix:
+  - adicionar `steam` a fila;
+  - confirmar a fila;
+  - deixar `nixos-rebuild switch` terminar sem erro;
+  - confirmar depois que `steam.desktop` existe em `/run/current-system/sw/share/applications`;
+  - so entao validar launcher e estado `Gerenciado`.
+- Se a Steam continuar ausente da geracao ativa apos rebuild aparentemente bem-sucedido, investigar:
+  - se o rebuild esta de fato aplicando o `state/apps.nix`;
+  - se `pkgs.steam` esta entrando na geracao final;
+  - se ha algum detalhe de `allowUnfree`, host, ou aplicacao parcial da geracao.
+
 ## Atualizacao de 2026-04-22T10:35:00-04:00
 - O usuario informou que caiu repetidamente na sessao errada e quer remover a sessao extra, deixando apenas `Hyprland`.
 - Correcao adicional aplicada no repo para endurecer isso no lado declarativo do sistema:
@@ -713,3 +771,282 @@
   - apos `hyprctl reload`, a regressao visual desapareceu e a sessao voltou ao normal.
 - Regra de retomada a partir daqui:
   - se um ajuste de monitor/visual no Hyprland parecer "nao surtir efeito" logo apos rebuild, testar `hyprctl reload` antes de concluir que o repo ainda esta quebrado.
+
+## Atualizacao de 2026-04-24T01:20:00-04:00
+- O trabalho passou a ser continuado no desktop, nao no notebook `strata`.
+- Nesta sessao houve tres frentes principais de desenvolvimento no ambiente Quickshell:
+  - launcher de apps
+  - App Center / instalador de apps do sistema
+  - gerenciador de clipboard em `Super+Y`
+
+### Launcher
+- O launcher deixou de ser um overlay simples com busca ad hoc e passou por uma refatoracao estrutural.
+- Backend novo introduzido:
+  - `quickshell/scripts/launcher-index.js`
+  - `quickshell/scripts/launcher-search.js`
+  - `quickshell/scripts/launcher-launch.js`
+  - `quickshell/scripts/launcher-state.js`
+- Camada QML nova ou refatorada:
+  - `quickshell/launcher/Launcher.qml`
+  - `quickshell/launcher/LauncherStore.qml`
+  - `quickshell/launcher/LauncherListItem.qml`
+  - `quickshell/launcher/LauncherEmptyState.qml`
+  - `quickshell/launcher/LauncherFooter.qml`
+  - `quickshell/launcher/LauncherActionItem.qml`
+- O launcher agora ficou com:
+  - indice local
+  - busca ranqueada
+  - pins e historico
+  - painel de acoes secundarias via `Tab`
+  - navegacao mais seria
+  - animacao de abertura/fechamento
+  - fechamento correto apos abrir app
+- Foi criada tambem a especificacao:
+  - `quickshell/launcher/LAUNCHER_SERIO_SPEC.md`
+
+### App Center / instalador de apps
+- Ficou registrado que "instalador" aqui se refere ao instalador de apps do sistema, nao ao instalador do NixOS.
+- A modelagem foi refeita para parar de editar `modules/packages.nix` com `sed`.
+- Nova fonte declarativa de apps gerenciados:
+  - `state/apps.nix`
+- `modules/packages.nix` agora importa esse estado e concatena:
+  - pacotes base
+  - pacotes extras gerenciados pelo App Center
+- Backend introduzido:
+  - `quickshell/scripts/appcenter-index.js`
+  - `quickshell/scripts/appcenter-apply.js`
+  - `quickshell/scripts/appcenter-rebuild.js`
+- UI nova:
+  - `quickshell/appcenter/AppCenter.qml`
+  - `quickshell/appcenter/AppCenterStore.qml`
+- O App Center terminou a sessao num estado funcional:
+  - overlay do Quickshell
+  - atalho global em `Super+I`
+  - catalogo Nix/Flatpak com cache em `~/.cache/strata/appcenter/`
+  - filtros visuais como `Destaques`, `Instalados`, `Gerenciados`, `Base`, `Disponiveis`
+  - painel lateral com melhor legibilidade
+  - marcacao clara de quando uma acao Nix ainda exige rebuild
+  - fluxo de rebuild via `kitty` para `sudo nixos-rebuild switch --flake path:$HOME/dotfiles#$(hostname)`
+- Problemas de UX corrigidos durante a sessao:
+  - lentidao/travamento ao digitar
+  - lista nao acompanhando a selecao
+  - textos quebrados/sobrepostos no topo e no painel direito
+- Estado final confirmado pelo usuario:
+  - App Center ficou bom e funcional no desktop atual.
+
+### Clipboard manager (`Super+Y`)
+- O gerenciador de clipboard foi praticamente refeito do zero.
+- Arquivos novos ou refatorados:
+  - `quickshell/clipboard/Clipboard.qml`
+  - `quickshell/scripts/clipboard-list.js`
+  - `quickshell/scripts/clipboard-action.js`
+  - `quickshell/scripts/clipboard-preview.js`
+  - `quickshell/scripts/clipboard-store.sh`
+  - `quickshell/scripts/clipboard-daemon.sh`
+- Melhorias de UI/comportamento:
+  - overlay novo em Quickshell
+  - busca e navegacao por teclado
+  - `Enter` copia o item selecionado
+  - duplo clique tambem copia
+  - `Ctrl+Delete` apaga do historico
+  - painel lateral com detalhe do item
+  - preview de imagem quando o item e imagem
+  - fechamento automatico do menu apos copiar com sucesso
+- Nova estrategia de persistencia:
+  - observar mudancas no clipboard
+  - armazenar no `cliphist`
+  - espelhar o conteudo atual em cache local
+  - reassumir a posse do clipboard com `wl-copy --foreground`
+- Mudanca estrutural importante:
+  - os watchers antigos em `hyprland.conf` foram removidos
+  - a Quickshell agora tenta iniciar o daemon de clipboard no startup
+  - abrir o menu de clipboard tambem tenta iniciar o daemon como fallback
+- Ponto ainda pendente ao fim desta sessao:
+  - a persistencia automatica do clipboard ainda nao foi validada com sucesso na sessao Wayland real do usuario
+  - do sandbox nao foi possivel manter os watchers vivos, entao a confirmacao depende de reiniciar o `quickshell` no ambiente grafico real e testar novamente
+
+### Proximo passo recomendado a partir daqui
+- Reiniciar o `quickshell` na sessao grafica real do desktop atual.
+- Testar primeiro o fluxo do clipboard:
+  - copiar texto ou imagem num app
+  - fechar o app de origem
+  - tentar colar em outro lugar
+  - abrir `Super+Y`
+  - confirmar:
+    - persistencia real do clipboard
+    - fechamento do menu apos copiar
+    - preview visivel para imagens
+- Se a persistencia ainda falhar depois disso:
+  - depurar `clipboard-daemon.sh` e `clipboard-store.sh` diretamente no ambiente Wayland real.
+
+## Atualizacao de 2026-04-24T16:00:00-04:00
+
+### Refinamento visual geral
+- A sessao passou a focar em polimento visual e consistencia entre Quickshell, Hyprland e Mako.
+- O scrim/filtro de fundo dos overlays foi removido dos componentes principais:
+  - launcher
+  - clipboard
+  - theme picker
+  - wallpaper picker
+  - app center
+- Resultado desejado e implementado:
+  - overlays abrem diretamente sobre a sessao, sem escurecer/clariar a tela.
+
+### Theme Picker
+- O seletor de temas foi redesenhado do zero varias vezes na mesma sessao.
+- Direcao final adotada:
+  - `Theme Strip`
+- Caracteristicas finais:
+  - navegacao horizontal
+  - tema selecionado sempre centralizado
+  - cards com preview simplificado
+  - `← →` navegam
+  - `Enter` aplica
+  - hover/click recentram o tema
+  - o overlay ganhou borda propria para nao se confundir com o tema ativo
+- Ajuste final importante:
+  - a barra superior dos cards passou a acompanhar o arredondamento do topo.
+
+### Wallpaper Picker
+- O seletor de wallpapers foi refeito para a linha:
+  - `Wallpaper Stage`
+- Caracteristicas finais:
+  - imagem principal grande no centro
+  - slivers laterais do wallpaper anterior/proximo
+  - sem nome de arquivo
+  - contador discreto
+  - clique no palco central ou `Enter` aplica
+  - clique nas laterais navega
+- Depois do primeiro redesign, o tamanho em tela foi reduzido para respirar melhor.
+
+### Mako
+- O Mako foi redesenhado e depois compactado para uma linguagem mais tecnica.
+- Estado final da UX:
+  - timeout padrao em `6000` ms
+  - clique esquerdo fecha
+  - clique direito nao faz nada
+  - animacao de notificacoes no Hyprland funcionando com:
+    - `layerrule = animation slide, match:namespace notifications`
+
+### Spotify notifications
+- Foi criada a integracao:
+  - `quickshell/scripts/spotify-notify.sh`
+- Estado final confirmado:
+  - notifica apenas em troca real de faixa
+  - mostra capa do album corretamente
+  - usa texto editorial por locale (`Tocando agora` em PT)
+- Mudanca tecnica importante:
+  - o watcher passou de `playerctl -F` para polling por `trackid`, por confiabilidade no ambiente real.
+
+### Animacoes
+- O `hyprland.conf` recebeu nova assinatura de animacoes:
+  - sem `bounce`
+  - `windows` com `popin` sutil
+  - `workspaces` com `slidefade` mais contido
+  - `layers` mais refinadas
+- Os overlays principais do Quickshell tambem foram padronizados para uma cadencia unica:
+  - entrada curta, sem overshoot
+  - saida seca e rapida
+
+### App Center
+- O App Center ficou mais robusto no fluxo de rebuild:
+  - status em arquivo
+  - log em cache
+  - correcao do travamento em `94%`
+  - observacao correta do arquivo de status
+- O design tambem foi refinado:
+  - agora respeita claro/escuro
+  - card externo com arredondamento correto
+
+### Steam
+- Diagnostico importante consolidado:
+  - a Steam Flatpak nao era problema do launcher; ela cai no `steamwebhelper` com `segfault`
+  - testes com X11/Xwayland, cache limpo, software rendering e `-vgui` nao resolveram
+- Direcao final tomada:
+  - parar de insistir na Steam Flatpak
+  - habilitar Steam nativa via:
+    - `programs.steam.enable = true;`
+- Estado ao fim da sessao:
+  - Steam nativa ainda nao abre
+  - investigacao fica pendente para outra rodada
+
+### Cafeina / hypridle
+- Foi identificado um problema estrutural:
+  - usar `pkill -STOP hypridle` / `pkill -CONT hypridle` podia levar a suspensao imediata ao desligar a cafeina
+- Correcao aplicada:
+  - ligar cafeina mata o `hypridle`
+  - desligar cafeina mata instancias antigas e sobe um `hypridle` novo
+- Isso precisa ser validado na sessao grafica real.
+
+### File manager
+- Problema identificado:
+  - o atalho global usava `nautilus` puro e acabava nao abrindo nova janela como esperado
+- Correcao aplicada:
+  - `hyprland.conf` agora usa:
+    - `nautilus --new-window`
+
+### Pendencias abertas
+- Validar em uso real:
+  - cafeina sem suspensao imediata
+  - `nautilus --new-window` realmente abrindo multiplas janelas
+- Pendencia importante ainda aberta:
+  - depurar por que a Steam nativa continua sem abrir.
+
+## Atualizacao de 2026-04-24T18:55:00-04:00
+
+### Vesktop / screen share
+- O usuario relatou um problema novo e bem delimitado:
+  - nao conseguia mais transmitir tela no `Vesktop`;
+  - `OBS` continuava gravando a tela normalmente.
+- O repo e o contexto do host confirmavam:
+  - sessao em `Hyprland + Wayland`;
+  - portal ativo por `xdg.portal.enable = true;` com `xdg-desktop-portal-hyprland`.
+- A investigacao mostrou que:
+  - o `xdg-desktop-portal-hyprland` criava a sessao de screencast;
+  - a selecao de tela/janela acontecia;
+  - depois o stream morria no caminho Chromium/Electron do Vesktop.
+- Ao rodar o Vesktop com flags Wayland/WebRTC, apareceu erro objetivo:
+  - `Error creating EGLImage - EGL_BAD_MATCH`
+  - renegociacao de DMA-BUF
+  - `Video was requested, but no video stream was provided`
+- Conclusao consolidada:
+  - o problema nao era do portal de forma geral nem do PipeWire;
+  - era especifico do `Vesktop` nativo naquele stack atual.
+- Teste de isolamento feito pelo usuario:
+  - `Discord web` compartilha normalmente;
+  - `Google Meet` tambem funciona.
+- Isso fechou a hipotese:
+  - o problema ficou isolado ao `Vesktop` nativo, nao ao compartilhamento de tela do sistema.
+
+### Vesktop Flatpak
+- O usuario instalou o `Vesktop` via Flatpak.
+- Resultado confirmado:
+  - compartilhamento de tela voltou a funcionar.
+- Direcao tomada:
+  - manter `Vesktop Flatpak` como cliente funcional;
+  - remover `vesktop` da base Nix para evitar instalacao duplicada e voltar ao estado coerente.
+
+### App Center
+- Durante a tentativa de remover o `vesktop` Nix pelo App Center, apareceram 2 problemas de UX:
+  - `Enter` parecia nao fazer nada;
+  - o badge/estado de pacote instalado estava discreto demais.
+- Diagnostico importante:
+  - o `vesktop` ainda estava declarado diretamente na base do sistema em `modules/packages.nix`;
+  - portanto ele nao era um item realmente removivel pela fila do App Center.
+- Correcoes aplicadas:
+  - `quickshell/appcenter/AppCenterStore.qml` agora mostra aviso explicito quando o usuario tenta agir sobre um app que pertence a base do sistema;
+  - a mensagem orienta remover o app de `modules/packages.nix`, em vez de deixar o `Enter` parecer quebrado;
+  - `quickshell/appcenter/AppCenter.qml` recebeu ajuste para preservar melhor o fluxo de teclado apos clique;
+  - os badges de estado ficaram mais visiveis:
+    - `Instalado` em verde
+    - `Gerenciado` em accent
+    - `Pendente de rebuild` em amarelo
+
+### Remocao do Vesktop Nix
+- Foi removido `vesktop` da base Nix em:
+  - `modules/packages.nix`
+- Estado real no fim da sessao:
+  - o repo ja nao declara mais `vesktop` na base;
+  - a sessao ainda precisa de rebuild para retirar a instalacao Nix da geracao ativa.
+- Comando de retomada recomendado:
+  - `sudo nixos-rebuild switch --flake path:/home/ankh/dotfiles#desktop`

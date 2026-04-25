@@ -2,6 +2,7 @@ import Quickshell
 import Quickshell.Wayland
 import Quickshell.Io
 import QtQuick
+import QtQuick.Layouts
 import ".."
 
 PanelWindow {
@@ -14,13 +15,24 @@ PanelWindow {
   WlrLayershell.keyboardFocus: WlrKeyboardFocus.OnDemand
 
   property string currentTheme: "gruvbox"
-  property int    selectedIdx:  0
-  readonly property int columns: 4
-  readonly property int cardW: 196
-  readonly property int cardH: 180
+  property int selectedIdx: 0
+  property real cardYOffset: 18
+
+  readonly property var selectedTheme: themes[Math.max(0, Math.min(selectedIdx, themes.length - 1))]
+
+  function alphaColor(hex, alpha) {
+    const value = String(hex || "#000000")
+    if (value.length < 7 || value[0] !== "#") return Qt.rgba(0, 0, 0, alpha)
+    return Qt.rgba(
+      parseInt(value.slice(1, 3), 16) / 255,
+      parseInt(value.slice(3, 5), 16) / 255,
+      parseInt(value.slice(5, 7), 16) / 255,
+      alpha
+    )
+  }
 
   readonly property var themes: [
-    { name: "gruvbox",  label: "Gruvbox",   mode: "Escuro",
+    { name: "gruvbox",  label: "Gruvbox", mode: "Escuro",
       bg0: "#0d0d0f", bg1: "#111113", bg2: "#1a1a1c", bg3: "#252527", mid: "#504945",
       text0: "#f5f5f5", text1: "#e0e0e0", text2: "#cecece", text3: "#888888",
       accent: "#d79921", accentDim: "#2a2000" },
@@ -28,7 +40,7 @@ PanelWindow {
       bg0: "#f0ece4", bg1: "#e8e4dc", bg2: "#dedad2", bg3: "#d5d0c8", mid: "#9893a5",
       text0: "#2a2a2e", text1: "#2a2a2a", text2: "#3a3a3e", text3: "#6e6a78",
       accent: "#b4637a", accentDim: "#f1d4dc" },
-    { name: "nord",     label: "Nord",      mode: "Escuro",
+    { name: "nord", label: "Nord", mode: "Escuro",
       bg0: "#0d0d0f", bg1: "#111113", bg2: "#161618", bg3: "#2a3140", mid: "#4c566a",
       text0: "#eceff4", text1: "#e5e9f0", text2: "#d8dee9", text3: "#7b88a1",
       accent: "#88c0d0", accentDim: "#1a2a30" },
@@ -58,42 +70,66 @@ PanelWindow {
       accent: "#78a9ff", accentDim: "#1d2633" }
   ]
 
-  function applyThemeSelection(theme) {
-    Colors.applyTheme(theme)
-    currentTheme = theme.name
-    themeProc.command = ["bash", Paths.scripts + "/set-theme.sh", theme.name]
-    themeProc.running = true
-    root.close()
-  }
-
   function toggle() {
     if (visible) {
       closeAnim.start()
-    } else {
-      selectedIdx = 0
-      for (var i = 0; i < themes.length; i++) {
-        if (themes[i].name === currentTheme) { selectedIdx = i; break }
-      }
-      visible = true
-      picker.scale   = 0.88
-      picker.opacity = 0
-      openAnim.start()
+      return
     }
+
+    selectedIdx = 0
+    for (let i = 0; i < themes.length; i += 1) {
+      if (themes[i].name === currentTheme) {
+        selectedIdx = i
+        break
+      }
+    }
+
+    visible = true
+    card.opacity = 0
+    card.scale = 0.985
+    cardYOffset = 16
+    openAnim.start()
   }
 
-  function close() { closeAnim.start() }
+  function close() {
+    closeAnim.start()
+  }
+
+  function moveSelection(delta) {
+    selectedIdx = Math.max(0, Math.min(themes.length - 1, selectedIdx + delta))
+    themeStrip.positionViewAtIndex(selectedIdx, ListView.Center)
+  }
+
+  onSelectedIdxChanged: {
+    if (visible && themeStrip) themeStrip.positionViewAtIndex(selectedIdx, ListView.Center)
+  }
+
+  function applyThemeSelection(theme) {
+    if (!theme) return
+    Colors.applyTheme(theme)
+    currentTheme = theme.name
+    themeProc.command = ["/run/current-system/sw/bin/bash", Paths.scripts + "/set-theme.sh", theme.name]
+    themeProc.running = true
+    closeAnim.start()
+  }
 
   SequentialAnimation {
     id: openAnim
-    NumberAnimation { target: picker; property: "opacity"; to: 1; duration: 60 }
-    NumberAnimation { target: picker; property: "scale"; to: 1.02; duration: 180; easing.type: Easing.OutCubic }
-    NumberAnimation { target: picker; property: "scale"; to: 1.0; duration: 60; easing.type: Easing.InOutQuad }
+    ParallelAnimation {
+      NumberAnimation { target: root; property: "cardYOffset"; from: 16; to: 0; duration: 190; easing.type: Easing.OutCubic }
+      NumberAnimation { target: card; property: "opacity"; from: 0; to: 1; duration: 140; easing.type: Easing.OutQuad }
+      NumberAnimation { target: card; property: "scale"; from: 0.985; to: 1; duration: 190; easing.type: Easing.OutCubic }
+    }
+    ScriptAction { script: keyGrabber.forceActiveFocus() }
   }
 
   SequentialAnimation {
     id: closeAnim
-    NumberAnimation { target: picker; property: "scale"; to: 0.88; duration: 140; easing.type: Easing.InCubic }
-    NumberAnimation { target: picker; property: "opacity"; to: 0; duration: 50 }
+    ParallelAnimation {
+      NumberAnimation { target: root; property: "cardYOffset"; to: 10; duration: 120; easing.type: Easing.InCubic }
+      NumberAnimation { target: card; property: "scale"; to: 0.992; duration: 120; easing.type: Easing.InCubic }
+      NumberAnimation { target: card; property: "opacity"; to: 0; duration: 95; easing.type: Easing.InQuad }
+    }
     ScriptAction { script: root.visible = false }
   }
 
@@ -103,143 +139,358 @@ PanelWindow {
   }
 
   Rectangle {
-    id: picker
+    id: card
     anchors.centerIn: parent
-    width:   columns * cardW + (columns - 1) * 12 + 36
-    height:  Math.ceil(themes.length / columns) * cardH + (Math.ceil(themes.length / columns) - 1) * 12 + 40
-    radius:  16
-    color:   Colors.bg1
-    border.color: Qt.rgba(Colors.accent.r, Colors.accent.g, Colors.accent.b, 0.12)
+    anchors.verticalCenterOffset: cardYOffset
+    width: 1240
+    height: 470
+    radius: 28
+    antialiasing: true
+    color: Colors.bg1
     border.width: 1
-    scale:   0.88
+    border.color: Qt.rgba(Colors.text1.r, Colors.text1.g, Colors.text1.b, Colors.darkMode ? 0.18 : 0.22)
+    clip: true
     opacity: 0
-    transformOrigin: Item.Center
 
-    MouseArea { anchors.fill: parent }
+    Rectangle {
+      anchors.fill: parent
+      radius: parent.radius
+      antialiasing: true
+      gradient: Gradient {
+        GradientStop { position: 0.0; color: Qt.rgba(Colors.bg2.r, Colors.bg2.g, Colors.bg2.b, Colors.darkMode ? 0.95 : 0.92) }
+        GradientStop { position: 1.0; color: Qt.rgba(Colors.bg1.r, Colors.bg1.g, Colors.bg1.b, 0.98) }
+      }
+    }
+
+    Rectangle {
+      anchors.fill: parent
+      anchors.margins: 1
+      radius: parent.radius - 1
+      color: "transparent"
+      border.width: 1
+      border.color: Qt.rgba(Colors.accent.r, Colors.accent.g, Colors.accent.b, 0.10)
+    }
 
     Item {
-      id: keyItem
+      id: keyGrabber
       anchors.fill: parent
       focus: true
       Keys.onPressed: function(e) {
         if (e.key === Qt.Key_Escape) {
           root.close()
+          e.accepted = true
         } else if (e.key === Qt.Key_Left) {
-          root.selectedIdx = Math.max(0, root.selectedIdx - 1)
+          root.moveSelection(-1)
+          e.accepted = true
         } else if (e.key === Qt.Key_Right) {
-          root.selectedIdx = Math.min(root.themes.length - 1, root.selectedIdx + 1)
-        } else if (e.key === Qt.Key_Return) {
-          var t = root.themes[root.selectedIdx]
-          root.applyThemeSelection(t)
+          root.moveSelection(1)
+          e.accepted = true
+        } else if (e.key === Qt.Key_Return || e.key === Qt.Key_Enter) {
+          root.applyThemeSelection(root.selectedTheme)
+          e.accepted = true
         }
       }
     }
 
-    Grid {
-      anchors.centerIn: parent
-      columns: root.columns
-      columnSpacing: 12
-      rowSpacing: 12
+    ColumnLayout {
+      anchors.fill: parent
+      anchors.margins: 24
+      spacing: 20
 
-      Repeater {
+      RowLayout {
+        Layout.fillWidth: true
+        spacing: 14
+
+        ColumnLayout {
+          spacing: 4
+          Text {
+            text: "Theme Strip"
+            color: Colors.text1
+            font { pixelSize: 28; family: "Inter"; weight: Font.DemiBold }
+          }
+          Text {
+            text: "Uma faixa curada de atmosferas visuais."
+            color: Colors.text3
+            font { pixelSize: 11; family: "JetBrains Mono" }
+          }
+        }
+
+        Item { Layout.fillWidth: true }
+
+        Rectangle {
+          radius: 12
+          antialiasing: true
+          color: root.alphaColor(root.selectedTheme.accent, 0.14)
+          border.width: 1
+          border.color: root.alphaColor(root.selectedTheme.accent, 0.24)
+          implicitWidth: themeCount.implicitWidth + 18
+          implicitHeight: 28
+
+          Text {
+            id: themeCount
+            anchors.centerIn: parent
+            text: (root.selectedIdx + 1) + " / " + root.themes.length
+            color: root.selectedTheme.accent
+            font { pixelSize: 10; family: "JetBrains Mono" }
+          }
+        }
+      }
+
+      ListView {
+        id: themeStrip
+        Layout.fillWidth: true
+        Layout.fillHeight: true
+        orientation: ListView.Horizontal
+        leftMargin: Math.max(0, width / 2 - 160)
+        rightMargin: Math.max(0, width / 2 - 160)
+        spacing: 18
         model: root.themes
+        clip: false
+        snapMode: ListView.SnapToItem
+        highlightRangeMode: ListView.StrictlyEnforceRange
+        preferredHighlightBegin: width / 2 - 160
+        preferredHighlightEnd: width / 2 + 160
+        cacheBuffer: 2400
+
+        Component.onCompleted: positionViewAtIndex(root.selectedIdx, ListView.Center)
+
         delegate: Item {
           required property var modelData
           required property int index
 
-          readonly property bool selected: root.selectedIdx === index
+          width: 320
+          height: themeStrip.height
 
-          width:  root.cardW
-          height: root.cardH
+          readonly property bool active: root.selectedIdx === index
 
-          // card com clip
+          scale: active ? 1.0 : 0.92
+          opacity: active ? 1.0 : 0.72
+
+          Behavior on scale { NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
+          Behavior on opacity { NumberAnimation { duration: 140; easing.type: Easing.OutQuad } }
+
           Rectangle {
-            id: card
-            anchors.fill: parent
-            radius: 12
-            color:  modelData.bg1
-            clip:   true
+            anchors.horizontalCenter: parent.horizontalCenter
+            anchors.verticalCenter: parent.verticalCenter
+            width: 296
+            height: active ? 314 : 286
+            radius: 24
+            antialiasing: true
+            color: modelData.bg0
+            border.width: 1
+            border.color: active
+              ? root.alphaColor(modelData.accent, 0.42)
+              : root.alphaColor(modelData.text1, modelData.mode === "Claro" ? 0.10 : 0.14)
+            clip: true
 
-            Column {
-              anchors { top: parent.top; left: parent.left; right: parent.right }
-              spacing: 0
-              Rectangle { width: parent.width; height: 29; color: modelData.bg0 }
-              Rectangle { width: parent.width; height: 29; color: modelData.bg2 }
-              Rectangle { width: parent.width; height: 29; color: modelData.bg3 }
-              Rectangle { width: parent.width; height: 16; color: modelData.mid }
-              Rectangle { width: parent.width; height: 13; color: modelData.accent }
+            Behavior on height { NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
+
+            Rectangle {
+              anchors.fill: parent
+              radius: parent.radius
+              antialiasing: true
+              gradient: Gradient {
+                GradientStop { position: 0.0; color: modelData.bg1 }
+                GradientStop { position: 1.0; color: modelData.bg0 }
+              }
             }
 
             Rectangle {
-              anchors { bottom: parent.bottom; left: parent.left; right: parent.right }
-              height: 64
-              color:  modelData.bg1
-
-              Rectangle {
-                anchors { top: parent.top; left: parent.left; right: parent.right }
-                height: 1
-                color:  Qt.rgba(1,1,1,0.06)
-              }
-
-              Text {
-                anchors { left: parent.left; leftMargin: 12; top: parent.top; topMargin: 12 }
-                text:  modelData.label
-                color: selected ? modelData.accent : (modelData.mode === "Claro" ? "#555" : "#ccc")
-                font { pixelSize: 13; family: "Roboto"; weight: Font.DemiBold }
-                Behavior on color { ColorAnimation { duration: 150 } }
-              }
-
-              Text {
-                anchors { left: parent.left; leftMargin: 12; bottom: parent.bottom; bottomMargin: 12 }
-                text:  modelData.mode.toUpperCase()
-                color: "#666"
-                font { pixelSize: 9; family: "JetBrainsMono Nerd Font" }
-              }
+              anchors.left: parent.left
+              anchors.right: parent.right
+              anchors.top: parent.top
+              height: 44
+              color: modelData.bg1
+              radius: parent.radius
 
               Row {
-                anchors { right: parent.right; rightMargin: 12; verticalCenter: parent.verticalCenter }
-                spacing: 5
+                anchors.left: parent.left
+                anchors.leftMargin: 16
+                anchors.verticalCenter: parent.verticalCenter
+                spacing: 8
                 Repeater {
-                  model: [modelData.bg0, modelData.mid, modelData.accent]
+                  model: [modelData.accent, modelData.mid, modelData.bg3]
                   delegate: Rectangle {
                     required property var modelData
-                    width: 10; height: 10; radius: 5
+                    width: 9
+                    height: 9
+                    radius: 4.5
+                    antialiasing: true
                     color: modelData
-                    border.color: Qt.rgba(1,1,1,0.1)
-                    border.width: 1
                   }
                 }
               }
             }
-          }
 
-          // borda FORA do clip, filho direto do Item delegate
-          Rectangle {
-            anchors.fill: card
-            radius: 0
-            color:  "transparent"
-            border.color: selected ? modelData.accent : Qt.rgba(1,1,1,0.05)
-            border.width: selected ? 2 : 1
-            z: 10
-            Behavior on border.color { ColorAnimation { duration: 150 } }
-          }
+            Column {
+              anchors.fill: parent
+              anchors.topMargin: 66
+              anchors.leftMargin: 18
+              anchors.rightMargin: 18
+              anchors.bottomMargin: 18
+              spacing: 14
 
-          MouseArea {
-            id: ma
-            anchors.fill: parent
-            hoverEnabled: true
-            cursorShape:  Qt.PointingHandCursor
-            z: 20
-            onEntered: root.selectedIdx = index
-            onClicked: root.applyThemeSelection(modelData)
+              Text {
+                text: modelData.label
+                color: modelData.text1
+                font { pixelSize: 24; family: "Inter"; weight: Font.DemiBold }
+              }
+
+              Text {
+                text: modelData.mode === "Claro" ? "Open daylight" : "Quiet low-light"
+                color: modelData.text3
+                font { pixelSize: 10; family: "JetBrains Mono" }
+              }
+
+              Row {
+                spacing: 10
+
+                Rectangle {
+                  width: 116
+                  height: 42
+                  radius: 14
+                  antialiasing: true
+                  color: modelData.bg2
+                  border.width: 1
+                  border.color: root.alphaColor(modelData.text1, 0.10)
+
+                  Column {
+                    anchors.fill: parent
+                    anchors.margins: 10
+                    spacing: 2
+                    Text {
+                      text: "Mode"
+                      color: modelData.text3
+                      font { pixelSize: 9; family: "JetBrains Mono" }
+                    }
+                    Text {
+                      text: modelData.mode
+                      color: modelData.text1
+                      font { pixelSize: 12; family: "Inter"; weight: Font.Medium }
+                    }
+                  }
+                }
+
+                Rectangle {
+                  width: 134
+                  height: 42
+                  radius: 14
+                  antialiasing: true
+                  color: root.alphaColor(modelData.accent, 0.18)
+                  border.width: 1
+                  border.color: root.alphaColor(modelData.accent, 0.24)
+
+                  Column {
+                    anchors.fill: parent
+                    anchors.margins: 10
+                    spacing: 2
+                    Text {
+                      text: "Accent"
+                      color: modelData.text3
+                      font { pixelSize: 9; family: "JetBrains Mono" }
+                    }
+                    Text {
+                      text: modelData.accent.toUpperCase()
+                      color: modelData.accent
+                      font { pixelSize: 11; family: "JetBrains Mono"; weight: Font.Medium }
+                    }
+                  }
+                }
+              }
+
+              Rectangle {
+                width: parent.width
+                height: 70
+                radius: 18
+                antialiasing: true
+                color: modelData.bg2
+                border.width: 1
+                border.color: root.alphaColor(modelData.text1, 0.10)
+
+                Column {
+                  anchors.fill: parent
+                  anchors.margins: 14
+                  spacing: 8
+
+                  Text {
+                    text: "Interface tone"
+                    color: modelData.text3
+                    font { pixelSize: 9; family: "JetBrains Mono" }
+                  }
+
+                  Row {
+                    spacing: 8
+                    Repeater {
+                      model: [modelData.bg0, modelData.bg1, modelData.bg2, modelData.bg3, modelData.text1, modelData.accent]
+                      delegate: Rectangle {
+                        required property var modelData
+                        width: 28
+                        height: 28
+                        radius: 14
+                        antialiasing: true
+                        color: modelData
+                        border.width: 1
+                        border.color: Qt.rgba(0, 0, 0, 0.10)
+                      }
+                    }
+                  }
+                }
+              }
+
+              Rectangle {
+                width: 132
+                height: 34
+                radius: 17
+                antialiasing: true
+                color: modelData.accent
+                visible: active
+
+                Text {
+                  anchors.centerIn: parent
+                  text: "Press Enter"
+                  color: modelData.bg0
+                  font { pixelSize: 10; family: "JetBrains Mono"; weight: Font.Medium }
+                }
+              }
+            }
+
+            MouseArea {
+              anchors.fill: parent
+              hoverEnabled: true
+              onEntered: {
+                root.selectedIdx = index
+                themeStrip.positionViewAtIndex(index, ListView.Center)
+              }
+              onClicked: {
+                if (root.selectedIdx === index) root.applyThemeSelection(modelData)
+                else {
+                  root.selectedIdx = index
+                  themeStrip.positionViewAtIndex(index, ListView.Center)
+                }
+              }
+            }
           }
         }
       }
-    }
-  }
 
-  onVisibleChanged: {
-    if (visible) keyItem.forceActiveFocus()
+      RowLayout {
+        Layout.fillWidth: true
+
+        Text {
+          text: root.selectedTheme.label + "  •  " + root.selectedTheme.mode
+          color: Colors.text1
+          font { pixelSize: 13; family: "Inter"; weight: Font.Medium }
+        }
+
+        Item { Layout.fillWidth: true }
+
+        Text {
+          text: "← → navegar  •  Enter aplicar  •  Esc fechar"
+          color: Colors.text3
+          font { pixelSize: 10; family: "JetBrains Mono" }
+        }
+      }
+    }
   }
 
   FileView {
@@ -248,11 +499,14 @@ PanelWindow {
     onFileChanged: reload()
     onLoaded: {
       try {
-        var t = JSON.parse(text())
+        const t = JSON.parse(text())
         root.currentTheme = t.name || "gruvbox"
-      } catch(e) {}
+      } catch (e) {}
     }
   }
 
-  Process { id: themeProc; command: [] }
+  Process {
+    id: themeProc
+    command: []
+  }
 }

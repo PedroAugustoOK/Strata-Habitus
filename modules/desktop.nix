@@ -6,6 +6,7 @@ let
 in {
   programs.nix-ld.enable  = true;
   programs.ssh.startAgent = true;
+  programs.steam.enable   = true;
   programs.hyprland.enable          = true;
   programs.hyprland.xwayland.enable = true;
   programs.hyprland.withUWSM        = false;
@@ -38,9 +39,23 @@ in {
   services.gvfs.enable                 = true;
   services.power-profiles-daemon.enable = true;
   services.flatpak.enable               = true;
+  systemd.services.flatpak-flathub = {
+    description = "Configure Flathub remote";
+    wantedBy = [ "multi-user.target" ];
+    wants = [ "network-online.target" ];
+    after = [ "network-online.target" ];
+    path = [ pkgs.flatpak ];
+    serviceConfig.Type = "oneshot";
+    script = ''
+      flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+    '';
+  };
   services.printing.enable              = true;
   services.printing.drivers             = [ pkgs.hplipWithPlugin ];
-  services.udev.packages                = [ pkgs.hplipWithPlugin ];
+  services.udev.packages                = [
+    pkgs.hplipWithPlugin
+    pkgs.steam-devices-udev-rules
+  ];
 
   environment.sessionVariables = {
     QT_WAYLAND_DISABLE_WINDOWDECORATION = "1";

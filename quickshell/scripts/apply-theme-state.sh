@@ -277,29 +277,48 @@ cat > "$GENERATED_DIR/mako/config" <<EOF
 sort=-time
 layer=overlay
 anchor=top-right
-margin=12,16
-padding=14,16
-width=320
-border-size=0
-border-radius=16
+on-button-left=dismiss
+on-button-right=none
+outer-margin=6,10,0,0
+margin=10,14
+padding=10,12
+width=332
+border-size=1
+border-radius=14
 background-color=$BG1
+border-color=$ACCENT
 text-color=$TEXT1
-font=Roboto 11
-default-timeout=5000
-max-icon-size=40
+font=JetBrains Mono 9
+default-timeout=6000
+max-icon-size=32
+icon-location=left
+icon-border-radius=8
+text-alignment=left
+markup=1
+actions=1
+history=1
+progress-color=over $ACCENT
 icons=1
 icon-path=/run/current-system/sw/share/icons/Papirus-Dark:/run/current-system/sw/share/icons/Papirus:/run/current-system/sw/share/icons/hicolor
 
-format=<span size="small" color="$ACCENT">%a</span>\n<b>%s</b>\n<span size="small" color="$TEXT3">%b</span>
+format=<span size="x-small" color="$ACCENT">%a</span>\n<b>%s</b>\n<span size="x-small" color="$TEXT3">%b</span>
 
 [urgency=low]
+border-color=$TEXT3
 text-color=$TEXT3
 default-timeout=3000
 
+[urgency=normal]
+border-color=$ACCENT
+
 [urgency=high]
-border-size=1
+border-size=2
 border-color=#f28779
+text-color=$TEXT0
 default-timeout=0
+
+[grouped]
+format=<span size="x-small" color="$ACCENT">%a</span>\n<b>%s</b> <span size="x-small" color="$TEXT3">(%g)</span>\n<span size="x-small" color="$TEXT3">%b</span>
 EOF
 
 cat > "$GENERATED_DIR/starship/starship.toml" <<EOF

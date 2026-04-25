@@ -12,6 +12,7 @@ import "controlcenter"
 import "powermenu"
 import "clipboard"
 import "wallpickr"
+import "appcenter"
 
 ShellRoot {
   Bar {}
@@ -24,6 +25,17 @@ ShellRoot {
   ThemePicker { id: themePicker }
   WallPickr { id: wallPickr }
   Clipboard { id: clipboard }
+  AppCenter { id: appCenter }
+
+  readonly property string clipboardDaemonScript: Qt.resolvedUrl("./scripts/clipboard-daemon.sh").toString().replace("file://", "")
+  readonly property string spotifyNotifyScript: Qt.resolvedUrl("./scripts/spotify-notify.sh").toString().replace("file://", "")
+
+  Component.onCompleted: {
+    clipboardDaemon.command = ["/run/current-system/sw/bin/bash", clipboardDaemonScript, "start"]
+    clipboardDaemon.running = true
+    spotifyNotify.command = ["/run/current-system/sw/bin/bash", spotifyNotifyScript, "start"]
+    spotifyNotify.running = true
+  }
 
   readonly property int barH: 34
   readonly property int brd: 10
@@ -44,6 +56,11 @@ ShellRoot {
       anchors.fill: parent
       onClicked: powerMenu.close()
     }
+  }
+
+  Process {
+    id: spotifyNotify
+    command: []
   }
 
   // Borda esquerda — começa abaixo da bar
@@ -227,5 +244,14 @@ ShellRoot {
   IpcHandler {
     target: "themepicker"
     function toggle(): void { themePicker.toggle() }
+  }
+  IpcHandler {
+    target: "appcenter"
+    function toggle(): void { appCenter.toggle() }
+  }
+
+  Process {
+    id: clipboardDaemon
+    command: []
   }
 }

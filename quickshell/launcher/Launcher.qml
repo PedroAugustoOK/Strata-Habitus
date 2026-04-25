@@ -1,111 +1,142 @@
 import Quickshell
 import Quickshell.Wayland
-import Quickshell.Io
 import QtQuick
 import QtQuick.Layouts
-import QtQuick.Shapes
 import ".."
 
 PanelWindow {
   id: launcher
   anchors { top: true; left: true; right: true; bottom: true }
-  implicitHeight: 0
   color: "transparent"
   exclusionMode: ExclusionMode.Ignore
   focusable: true
   visible: false
 
-  readonly property int pillW: 480
-  readonly property int pillH: 48
-  readonly property int itemH: 44
-  readonly property int maxResults: 7
+  readonly property int cardW: 720
+  readonly property int cardHeaderH: 62
+  readonly property int cardFooterH: 36
+  readonly property int itemH: 62
+  readonly property int actionItemH: 42
+  readonly property int maxVisibleItems: 8
+  readonly property int visibleRows: Math.max(1, Math.min(maxVisibleItems, store.results.length > 0 ? store.results.length : 4))
+  readonly property int listH: visibleRows * itemH + 8
+  readonly property var selectedItem: store.results.length > 0 ? store.results[selected] : null
+  readonly property var currentActions: selectedItem && selectedItem.actions ? selectedItem.actions : []
+  readonly property int actionRows: Math.max(1, Math.min(4, currentActions.length > 0 ? currentActions.length : 1))
+  readonly property int actionsH: actionMode ? actionRows * actionItemH + 46 : 0
 
-  property var allApps: []
-  property var filtered: []
   property int selected: 0
+  property bool actionMode: false
+  property int actionSelected: 0
+  property real cardYOffset: 18
+  property bool closingForLaunch: false
 
   function toggle() {
     if (visible) {
       closeAnim.start()
-    } else {
-      visible = true
-      searchInput.text = ""
-      selected = 0
-      filtered = []
-      if (allApps.length === 0) indexProc.running = true
-      else { filtered = filterApps(searchInput.text) }
-      pill.width = pillH
-      pill.opacity = 0
-      openAnim.start()
+      return
     }
-  }
 
-  function filterApps(q) {
+    visible = true
     selected = 0
-    if (q.length === 0) { filtered = []; return }
-    const terms = q.toLowerCase().trim().split(/\s+/).filter(Boolean)
-    const ranked = []
-
-    for (const app of allApps) {
-      const name = (app.name || "").toLowerCase()
-      const generic = (app.genericName || "").toLowerCase()
-      const keywords = (app.keywords || "").toLowerCase()
-      const desktop = (app.desktopFile || "").toLowerCase()
-      const haystack = `${name} ${generic} ${keywords} ${desktop}`
-
-      if (!terms.every(term => haystack.indexOf(term) !== -1)) continue
-
-      let score = 0
-      for (const term of terms) {
-        if (name.startsWith(term)) score += 120
-        else if (name.indexOf(term) !== -1) score += 70
-
-        if (generic.startsWith(term)) score += 45
-        else if (generic.indexOf(term) !== -1) score += 25
-
-        if (keywords.indexOf(term) !== -1) score += 18
-        if (desktop.indexOf(term) !== -1) score += 10
-      }
-
-      ranked.push({ app, score })
-    }
-
-    ranked.sort((a, b) => {
-      if (b.score !== a.score) return b.score - a.score
-      return a.app.name.localeCompare(b.app.name)
-    })
-
-    filtered = ranked.slice(0, maxResults).map(entry => entry.app)
-  }
-
-  function launch() {
-    if (filtered.length === 0) return
-    runProc.command = ["/run/current-system/sw/bin/gio", "launch", filtered[selected].desktopFile]
-    runProc.running = true
-    closeAnim.start()
+    actionSelected = 0
+    actionMode = false
+    searchInput.text = ""
+    store.launchError = ""
+    card.opacity = 0
+    card.scale = 0.985
+    cardYOffset = 16
+    closingForLaunch = false
+    store.ensureIndex()
+    openAnim.start()
   }
 
   function close() {
+    if (actionMode) {
+      actionMode = false
+      actionSelected = 0
+      return
+    }
     closeAnim.start()
+  }
+
+  function moveSelection(delta) {
+    if (store.results.length === 0) return
+    selected = Math.max(0, Math.min(store.results.length - 1, selected + delta))
+    actionSelected = 0
+    actionMode = false
+    resultList.positionViewAtIndex(selected, ListView.Contain)
+  }
+
+  function jumpSelection(target) {
+    if (store.results.length === 0) return
+    selected = Math.max(0, Math.min(store.results.length - 1, target))
+    actionSelected = 0
+    actionMode = false
+    resultList.positionViewAtIndex(selected, ListView.Contain)
+  }
+
+  function launchSelected() {
+    if (store.results.length === 0) return
+    if (actionMode) {
+      launchSelectedAction()
+      return
+    }
+    if (store.launchItem(store.results[selected])) {
+      closingForLaunch = true
+      closeAnim.start()
+    }
+  }
+
+  function toggleActionMode() {
+    if (currentActions.length === 0) return
+    actionMode = !actionMode
+    if (!actionMode) actionSelected = 0
+  }
+
+  function moveActionSelection(delta) {
+    if (currentActions.length === 0) return
+    actionSelected = Math.max(0, Math.min(currentActions.length - 1, actionSelected + delta))
+    actionList.positionViewAtIndex(actionSelected, ListView.Contain)
+  }
+
+  function launchSelectedAction() {
+    if (currentActions.length === 0) return
+    if (store.launchAction(selectedItem, currentActions[actionSelected])) {
+      closingForLaunch = true
+      closeAnim.start()
+    }
+  }
+
+  function togglePinSelected() {
+    if (store.results.length === 0) return
+    store.togglePin(store.results[selected])
   }
 
   SequentialAnimation {
     id: openAnim
-    NumberAnimation { target: pill; property: "opacity"; from: 0; to: 1; duration: 20 }
-    NumberAnimation { target: pill; property: "width"; from: pillH; to: pillW * 1.04; duration: 260; easing.type: Easing.OutCubic }
-    NumberAnimation { target: pill; property: "width"; to: pillW; duration: 80; easing.type: Easing.InOutQuad }
+    ParallelAnimation {
+      NumberAnimation { target: launcher; property: "cardYOffset"; from: 16; to: 0; duration: 190; easing.type: Easing.OutCubic }
+      NumberAnimation { target: card; property: "opacity"; from: 0; to: 1; duration: 140; easing.type: Easing.OutQuad }
+      NumberAnimation { target: card; property: "scale"; from: 0.985; to: 1; duration: 190; easing.type: Easing.OutCubic }
+    }
     ScriptAction { script: searchInput.forceActiveFocus() }
   }
 
   SequentialAnimation {
     id: closeAnim
-    NumberAnimation { target: pill; property: "width"; to: pillH; duration: 140; easing.type: Easing.InCubic }
-    NumberAnimation { target: pill; property: "opacity"; to: 0; duration: 60 }
+    ParallelAnimation {
+      NumberAnimation { target: launcher; property: "cardYOffset"; to: 10; duration: 120; easing.type: Easing.InCubic }
+      NumberAnimation { target: card; property: "scale"; to: 0.992; duration: 120; easing.type: Easing.InCubic }
+      NumberAnimation { target: card; property: "opacity"; to: 0; duration: 95; easing.type: Easing.InQuad }
+    }
     ScriptAction { script: {
       launcher.visible = false
-      searchInput.text = ""
       launcher.selected = 0
-      launcher.filtered = []
+      launcher.actionSelected = 0
+      launcher.actionMode = false
+      launcher.closingForLaunch = false
+      searchInput.text = ""
     }}
   }
 
@@ -114,164 +145,319 @@ PanelWindow {
     onClicked: launcher.close()
   }
 
+  LauncherStore {
+    id: store
+    resultLimit: launcher.maxVisibleItems
+    onLaunched: function(ok) {
+      if (ok) return
+
+      if (launcher.closingForLaunch) {
+        closeAnim.stop()
+        launcher.visible = true
+        card.opacity = 1
+        card.scale = 1
+        launcher.cardYOffset = 0
+      }
+
+      launcher.closingForLaunch = false
+    }
+  }
+
   Rectangle {
-    id: pill
+    id: card
+    anchors.horizontalCenter: parent.horizontalCenter
     anchors.verticalCenter: parent.verticalCenter
-    x: (parent.width - pillW) / 2 + (pillW - width) / 2
-    width: pillH
-    height: pillH + (filtered.length > 0 ? filtered.length * itemH + 14 : 0)
-    radius: 14
+    anchors.verticalCenterOffset: cardYOffset
+    width: cardW
+    height: cardHeaderH + listH + actionsH + cardFooterH + (store.launchError !== "" ? 26 : 0)
+    radius: 18
     color: Colors.bg1
-    border.color: filtered.length > 0
-      ? Qt.rgba(Colors.accent.r, Colors.accent.g, Colors.accent.b, 0.12)
-      : Qt.rgba(1,1,1,0.06)
     border.width: 1
-    clip: true
+    border.color: Qt.rgba(Colors.accent.r, Colors.accent.g, Colors.accent.b, 0.16)
     opacity: 0
-
-    Behavior on height {
-      NumberAnimation { duration: 160; easing.type: Easing.OutCubic }
-    }
-
-    MouseArea { anchors.fill: parent }
-
-    RowLayout {
-      anchors {
-        top: parent.top
-        left: parent.left; leftMargin: 18
-        right: parent.right; rightMargin: 18
-      }
-      height: pillH
-      spacing: 12
-
-      Text {
-        text: "󰍉"
-        color: filtered.length > 0 ? Colors.accent : Colors.text3
-        font { pixelSize: 16; family: "JetBrainsMono Nerd Font" }
-        verticalAlignment: Text.AlignVCenter
-        Behavior on color { ColorAnimation { duration: 150 } }
-      }
-
-      TextInput {
-        id: searchInput
-        Layout.fillWidth: true
-        color: Colors.text1
-        font { pixelSize: 14; family: "JetBrainsMono Nerd Font" }
-        cursorVisible: true
-        verticalAlignment: TextInput.AlignVCenter
-        selectionColor: Qt.rgba(Colors.accent.r, Colors.accent.g, Colors.accent.b, 0.4)
-        selectedTextColor: Colors.text0
-
-        Text {
-          anchors.fill: parent
-          text: "Buscar aplicativo..."
-          color: Colors.text3
-          font { pixelSize: 14; family: "JetBrainsMono Nerd Font" }
-          verticalAlignment: Text.AlignVCenter
-          visible: searchInput.text.length === 0
-        }
-
-        Keys.onReturnPressed: launcher.launch()
-        Keys.onEscapePressed: launcher.close()
-        Keys.onUpPressed:     launcher.selected = Math.max(0, launcher.selected - 1)
-        Keys.onDownPressed:   launcher.selected = Math.min(launcher.filtered.length - 1, launcher.selected + 1)
-        onTextChanged:        launcher.filterApps(text)
-      }
-    }
+    scale: 1
+    clip: true
 
     Rectangle {
-      anchors {
-        top: parent.top; topMargin: pillH
-        left: parent.left; leftMargin: 12
-        right: parent.right; rightMargin: 12
-      }
-      height: 1
-      color: Qt.rgba(Colors.accent.r, Colors.accent.g, Colors.accent.b, 0.25)
-      opacity: filtered.length > 0 ? 1 : 0
-      Behavior on opacity { NumberAnimation { duration: 120 } }
+      anchors.fill: parent
+      radius: parent.radius
+      color: "transparent"
+      border.width: 1
+      border.color: Qt.rgba(1, 1, 1, 0.035)
     }
 
-    Column {
-      anchors {
-        top: parent.top; topMargin: pillH + 4
-        left: parent.left; leftMargin: 6
-        right: parent.right; rightMargin: 6
-        bottom: parent.bottom; bottomMargin: 6
-      }
-      spacing: 2
+    Behavior on height {
+      NumberAnimation { duration: 130; easing.type: Easing.OutCubic }
+    }
 
-      Repeater {
-        model: launcher.filtered
-        delegate: Rectangle {
-          required property var modelData
-          required property int index
-          width: parent.width
-          height: itemH
-          radius: 10
-          color: launcher.selected === index
-            ? Qt.rgba(Colors.accent.r, Colors.accent.g, Colors.accent.b, 0.12)
-            : "transparent"
-          Behavior on color { ColorAnimation { duration: 80 } }
+    ColumnLayout {
+      anchors.fill: parent
+      spacing: 0
 
-          RowLayout {
-            anchors { fill: parent; leftMargin: 12; rightMargin: 14 }
-            spacing: 12
-            Image {
-              source: modelData.icon || ""
-              Layout.preferredWidth: 22
-              Layout.preferredHeight: 22
-              fillMode: Image.PreserveAspectFit
-              smooth: true
-              visible: source !== ""
-            }
+      Rectangle {
+        Layout.fillWidth: true
+        Layout.preferredHeight: cardHeaderH
+        color: "transparent"
+
+        RowLayout {
+          anchors { fill: parent; leftMargin: 18; rightMargin: 18 }
+          spacing: 12
+
+          Rectangle {
+            Layout.preferredWidth: 28
+            Layout.preferredHeight: 28
+            radius: 10
+            color: Qt.rgba(Colors.accent.r, Colors.accent.g, Colors.accent.b, 0.14)
+
             Text {
-              text: modelData.name
-              color: launcher.selected === index ? Colors.text0 : Colors.text2
-              font { pixelSize: 13; family: "JetBrainsMono Nerd Font" }
-              Layout.fillWidth: true
-              Behavior on color { ColorAnimation { duration: 80 } }
-            }
-            Text {
-              text: "↵"
+              anchors.centerIn: parent
+              text: "󰍉"
               color: Colors.accent
-              font { pixelSize: 11; family: "JetBrainsMono Nerd Font" }
-              opacity: launcher.selected === index ? 1 : 0
-              Behavior on opacity { NumberAnimation { duration: 80 } }
+              font { pixelSize: 14; family: "JetBrainsMono Nerd Font" }
             }
           }
 
-          MouseArea {
-            anchors.fill: parent
-            hoverEnabled: true
-            onEntered: launcher.selected = index
-            onClicked: { launcher.selected = index; launcher.launch() }
+          TextInput {
+            id: searchInput
+            Layout.fillWidth: true
+            color: Colors.text1
+            font { pixelSize: 15; family: "JetBrainsMono Nerd Font" }
+            cursorVisible: true
+            verticalAlignment: TextInput.AlignVCenter
+            selectionColor: Qt.rgba(Colors.accent.r, Colors.accent.g, Colors.accent.b, 0.35)
+            selectedTextColor: Colors.text0
+            onTextChanged: {
+              launcher.selected = 0
+              launcher.actionSelected = 0
+              launcher.actionMode = false
+              store.requestSearch(text)
+            }
+
+            Keys.onReturnPressed: launcher.launchSelected()
+            Keys.onEscapePressed: launcher.close()
+            Keys.onUpPressed: actionMode ? launcher.moveActionSelection(-1) : launcher.moveSelection(-1)
+            Keys.onDownPressed: actionMode ? launcher.moveActionSelection(1) : launcher.moveSelection(1)
+            Keys.onPressed: function(event) {
+              if (event.key === Qt.Key_Tab) {
+                launcher.toggleActionMode()
+                event.accepted = true
+                return
+              }
+
+              if (event.key === Qt.Key_PageDown) {
+                actionMode ? launcher.moveActionSelection(4) : launcher.moveSelection(4)
+                event.accepted = true
+                return
+              }
+
+              if (event.key === Qt.Key_PageUp) {
+                actionMode ? launcher.moveActionSelection(-4) : launcher.moveSelection(-4)
+                event.accepted = true
+                return
+              }
+
+              if (event.key === Qt.Key_Home) {
+                launcher.jumpSelection(0)
+                event.accepted = true
+                return
+              }
+
+              if (event.key === Qt.Key_End) {
+                launcher.jumpSelection(store.results.length - 1)
+                event.accepted = true
+                return
+              }
+
+              if (event.modifiers & Qt.ControlModifier) {
+                if (event.key === Qt.Key_K) {
+                  launcher.togglePinSelected()
+                  event.accepted = true
+                } else if (event.key === Qt.Key_R) {
+                  store.rebuildIndex(true)
+                  event.accepted = true
+                }
+              }
+            }
+
+            Text {
+              anchors.fill: parent
+              text: "Buscar apps, categorias e palavras-chave..."
+              color: Colors.text3
+              font { pixelSize: 15; family: "JetBrainsMono Nerd Font" }
+              verticalAlignment: Text.AlignVCenter
+              visible: searchInput.text.length === 0
+            }
+          }
+
+          ColumnLayout {
+            spacing: 1
+
+            Text {
+              text: store.isIndexing ? "indexando" : store.isSearching ? "buscando" : "apps"
+              color: Colors.text3
+              font { pixelSize: 10; family: "JetBrainsMono Nerd Font" }
+            }
+
+            Text {
+              text: String(store.results.length)
+              color: Colors.text2
+              font { pixelSize: 12; family: "JetBrainsMono Nerd Font" }
+            }
           }
         }
       }
-    }
-  }
 
-  Process {
-    id: indexProc
-    command: [Qt.resolvedUrl("../scripts/index-apps.sh").toString().replace("file://", "")]
-    stdout: SplitParser {
-      onRead: data => {
-        if (data.trim() === "") return
-        const parts = data.trim().split("\t")
-        if (parts.length < 2) return
-        launcher.allApps = [...launcher.allApps, {
-          name: parts[0],
-          desktopFile: parts[1],
-          icon: parts[2] || "",
-          genericName: parts[3] || "",
-          keywords: parts[4] || ""
-        }]
+      Rectangle {
+        Layout.fillWidth: true
+        Layout.preferredHeight: 1
+        color: Qt.rgba(Colors.accent.r, Colors.accent.g, Colors.accent.b, 0.18)
+      }
+
+      Item {
+        Layout.fillWidth: true
+        Layout.preferredHeight: listH
+
+        ListView {
+          id: resultList
+          anchors { fill: parent; margins: 8 }
+          clip: true
+          spacing: 4
+          model: store.results.length
+          currentIndex: launcher.selected
+          boundsBehavior: Flickable.StopAtBounds
+          interactive: store.results.length > 0
+
+          delegate: LauncherListItem {
+            width: resultList.width
+            height: itemH
+            item: store.results[index] || ({})
+            itemIndex: index
+            selected: launcher.selected === index
+            onHovered: idx => launcher.selected = idx
+            onTriggered: idx => {
+              launcher.selected = idx
+              launcher.launchSelected()
+            }
+          }
+
+          visible: store.results.length > 0
+        }
+
+        LauncherEmptyState {
+          anchors.fill: parent
+          visible: store.results.length === 0
+          isIndexing: store.isIndexing
+          ready: store.ready
+          hasQuery: searchInput.text.trim().length > 0
+          indexError: store.indexError
+        }
+      }
+
+      Item {
+        Layout.fillWidth: true
+        Layout.preferredHeight: actionsH
+        visible: actionMode
+
+        Rectangle {
+          anchors { fill: parent; leftMargin: 8; rightMargin: 8; topMargin: 4; bottomMargin: 4 }
+          radius: 14
+          color: Qt.rgba(1, 1, 1, 0.03)
+          border.width: 1
+          border.color: Qt.rgba(Colors.accent.r, Colors.accent.g, Colors.accent.b, 0.10)
+
+          ColumnLayout {
+            anchors.fill: parent
+            spacing: 0
+
+            Rectangle {
+              Layout.fillWidth: true
+              Layout.preferredHeight: 38
+              color: "transparent"
+
+              RowLayout {
+                anchors { fill: parent; leftMargin: 14; rightMargin: 14 }
+
+                Text {
+                  text: "Acoes de " + (selectedItem ? selectedItem.name : "")
+                  color: Colors.text2
+                  font { pixelSize: 11; family: "JetBrainsMono Nerd Font" }
+                }
+
+                Item { Layout.fillWidth: true }
+
+                Text {
+                  text: String(currentActions.length)
+                  color: Colors.text3
+                  font { pixelSize: 10; family: "JetBrainsMono Nerd Font" }
+                }
+              }
+            }
+
+            Rectangle {
+              Layout.fillWidth: true
+              Layout.preferredHeight: 1
+              color: Qt.rgba(1, 1, 1, 0.05)
+            }
+
+            ListView {
+              id: actionList
+              Layout.fillWidth: true
+              Layout.fillHeight: true
+              Layout.leftMargin: 6
+              Layout.rightMargin: 6
+              Layout.topMargin: 6
+              Layout.bottomMargin: 6
+              clip: true
+              spacing: 4
+              model: currentActions.length
+              interactive: currentActions.length > 0
+
+              delegate: LauncherActionItem {
+                width: actionList.width
+                height: actionItemH
+                action: currentActions[index] || ({})
+                actionIndex: index
+                selected: launcher.actionSelected === index
+                onHovered: idx => launcher.actionSelected = idx
+                onTriggered: idx => {
+                  launcher.actionSelected = idx
+                  launcher.launchSelectedAction()
+                }
+              }
+            }
+          }
+        }
+      }
+
+      Rectangle {
+        Layout.fillWidth: true
+        Layout.preferredHeight: store.launchError !== "" ? 26 : 0
+        color: "transparent"
+        clip: true
+
+        Text {
+          anchors { left: parent.left; right: parent.right; verticalCenter: parent.verticalCenter; leftMargin: 18; rightMargin: 18 }
+          text: store.launchError
+          color: "#ff8e8e"
+          font { pixelSize: 10; family: "JetBrainsMono Nerd Font" }
+          elide: Text.ElideRight
+          visible: text !== ""
+        }
+      }
+
+      Rectangle {
+        Layout.fillWidth: true
+        Layout.preferredHeight: 1
+        color: Qt.rgba(1, 1, 1, 0.04)
+      }
+
+      LauncherFooter {
+        Layout.fillWidth: true
+        Layout.preferredHeight: cardFooterH
+        Layout.leftMargin: 18
+        Layout.rightMargin: 18
+        selectedItem: launcher.selectedItem
       }
     }
-    onRunningChanged: {
-      if (running) launcher.allApps = []
-    }
   }
-
-  Process { id: runProc; command: [] }
 }

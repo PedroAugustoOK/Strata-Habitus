@@ -521,8 +521,8 @@ PanelWindow {
             onClicked: {
               SystemState.caffeine = !SystemState.caffeine
               caffeineProc.command = SystemState.caffeine
-                ? ["sh", "-c", "pkill -STOP hypridle"]
-                : ["sh", "-c", "pkill -CONT hypridle"]
+                ? ["sh", "-c", "pkill hypridle || true"]
+                : ["sh", "-c", "pkill hypridle || true; hypridle >/dev/null 2>&1 & disown"]
               caffeineProc.running = true
             }
           }

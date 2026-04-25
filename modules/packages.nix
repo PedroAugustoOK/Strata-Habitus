@@ -3,10 +3,11 @@ let
   graphics = hostMeta.graphics or "generic";
   useIntelMedia = builtins.elem graphics [ "intel" "hybrid-intel-nvidia" ];
   useCuda = builtins.elem graphics [ "nvidia" "hybrid-intel-nvidia" "hybrid-amd-nvidia" ];
+  strataUserApps = import ../state/apps.nix { inherit pkgs; };
 in {
   nixpkgs.config.allowUnfree = true;
 
-  environment.systemPackages = with pkgs; [
+  environment.systemPackages = (with pkgs; [
     (stdenv.mkDerivation {
       pname = "sddm-theme-strata";
       version = "1.0";
@@ -32,13 +33,13 @@ in {
     obs-studio bibata-cursors fastfetch btop vscode gcc
     spotify fish starship loupe zathura libreoffice
     standardnotes mpv gsettings-desktop-schemas
-    hplipWithPlugin glib vesktop
+    hplipWithPlugin glib
     ollama codex
     qgis fzf
     lm_sensors
     eza bat zoxide
     direnv nix-direnv
-  ];
+  ]) ++ strataUserApps;
 
   fonts.packages = with pkgs; [
     nerd-fonts.jetbrains-mono

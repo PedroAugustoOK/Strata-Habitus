@@ -30,6 +30,8 @@ No desktop, a partir do repo limpo:
 ```bash
 cd ~/dotfiles
 ./strata-promote-release.sh
+# ou, no fish:
+release
 ```
 
 Por padrao isso faz push do `HEAD` atual para `origin/stable`.
@@ -48,6 +50,8 @@ No notebook:
 ```bash
 cd ~/dotfiles
 ./strata-apply-channel.sh
+# ou, no fish:
+update-channel
 ```
 
 Por padrao ele:
@@ -64,6 +68,13 @@ Tambem e possivel forcar canal e host:
 ```bash
 ./strata-apply-channel.sh stable nixos
 ./strata-apply-channel.sh main desktop
+```
+
+Atalhos extras no `fish`:
+
+```bash
+release-stable
+update-stable
 ```
 
 ## Update automatico

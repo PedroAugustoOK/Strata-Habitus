@@ -26,6 +26,10 @@ abbr -a gc  'git commit'
 abbr -a gp  'git push'
 abbr -a dotfiles 'cd ~/dotfiles'
 abbr -a rebuild 'sudo nixos-rebuild switch --flake path:$HOME/dotfiles#'(hostname)
+abbr -a release '~/dotfiles/strata-promote-release.sh'
+abbr -a release-stable '~/dotfiles/strata-promote-release.sh stable'
+abbr -a update-channel '~/dotfiles/strata-apply-channel.sh'
+abbr -a update-stable '~/dotfiles/strata-apply-channel.sh stable'
 
 # Sem saudação do Fish
 set fish_greeting ""

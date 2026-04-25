@@ -1073,3 +1073,129 @@
   - a sintaxe do comando no `hyprland.conf` ficou corrigida com `--listen-on=...`;
   - a causa raiz do popup foi removida do fluxo de troca de tema;
   - nenhuma nova refatoracao do pipeline de temas foi mantida nesta rodada alem dessa correcao pontual.
+
+## Atualizacao de 2026-04-25T15:21:59-04:00
+
+### Temas / pipeline do Strata
+- Houve uma regressao no pipeline de troca de tema:
+  - `set-theme.sh` chamava `apply-theme-state.sh --apply-wallpaper`;
+  - depois da otimizacao de wallpaper, esse caminho passou a sair cedo demais;
+  - o resultado foi que trocar de tema aplicava basicamente so o wallpaper.
+- Sintomas observados:
+  - borda ativa do Hyprland sumiu e ficou transparente;
+  - Nautilus e outros apps GTK demoravam ou nem atualizavam direito;
+  - o file picker/portal ficava inconsistente.
+- Correcao consolidada:
+  - `apply-theme-state.sh` agora usa `--wallpaper-only` apenas para troca isolada de wallpaper;
+  - `--apply-wallpaper` voltou a significar "aplicar tema completo e, no fim, aplicar wallpaper";
+  - `wallpaper.sh` e `wallpaper-switch.sh` foram atualizados para usar `--wallpaper-only`;
+  - `init-border.sh` ficou mais robusto ao ler `accent` e reaplicar `col.active_border`.
+
+### GTK / Nautilus / portal de arquivos
+- O atraso visual do Nautilus foi tratado em duas camadas:
+  - theme nudge por `gsettings` (`gtk-theme`, `icon-theme`, `color-scheme`);
+  - `nautilus -q` quando houver troca de tema.
+- O dialogo de abrir/salvar arquivo foi identificado como o file picker do portal:
+  - `xdg-desktop-portal-gtk`
+- Problemas vistos:
+  - atualizacao lenta de tema;
+  - contraste ruim por CSS agressivo demais;
+  - em certo ponto ele sempre aparecia claro.
+- Correcoes aplicadas:
+  - o `gtk.css` gerado foi reduzido para seletores menos invasivos e focados no file chooser;
+  - `apply-theme-state.sh` passou a reiniciar `xdg-desktop-portal-gtk` e `xdg-desktop-portal` no fim da troca de tema;
+  - o repo passou a gerar `generated/gtk/gtk-3.0/settings.ini` e `generated/gtk/gtk-4.0/settings.ini`;
+  - `home.nix` agora linka os `settings.ini` do GTK para esses arquivos gerados;
+  - `modules/packages.nix` ganhou `gnome-themes-extra`;
+  - o tema passou a usar os nomes corretos `Adwaita` / `Adwaita-dark`;
+  - `GTK_THEME` passou a ser propagado para a sessao via `environment.d`, `systemctl --user import-environment` e `dbus-update-activation-environment`.
+- Estado final reportado pelo usuario:
+  - o file picker finalmente troca para o tema correto durante a troca de tema, sem ficar preso no branco.
+
+### Tray / apps em segundo plano
+- Foi implementado menu de contexto proprio para a pill de tray:
+  - novos componentes `bar/TrayMenu.qml` e `bar/TrayMenuState.qml`;
+  - overlay instanciado em `shell.qml`;
+  - clique direito nos itens da tray abre o menu.
+- Acoes do menu:
+  - tentativa de abrir `Menu nativo`;
+  - `Encerrar app`.
+- O `Menu nativo` nao se mostrou confiavel nos apps testados, mas o overlay do Strata ficou funcional.
+- `tray-kill.sh` foi criado para encerrar apps da tray:
+  - inclui tratamento especifico para `Vesktop Flatpak` via `flatpak ps` + `flatpak kill`;
+  - fallback para apps nativos com escalonamento `TERM -> KILL`.
+- O menu tambem passou a fechar com `Esc`.
+
+### Launcher
+- O launcher mostrava resultados irrelevantes demais e escondia apps corretos como `Garrafas/Bottles`.
+- Diagnostico:
+  - o ranking permitia itens sem match textual real;
+  - historico e pins conseguiam empurrar apps irrelevantes para quase qualquer busca.
+- Correcoes:
+  - `launcher-search.js` agora exige match textual real antes de considerar historico/pins;
+  - mais peso para `name`, `genericName`, `id`, basename do `.desktop` e basename do `Exec`;
+  - aliases PT/EN adicionados;
+  - `keywords/categories` ficaram mais restritos;
+  - `LauncherStore.qml` reexecuta a busca quando o meta do indice muda;
+  - `Launcher.qml` passou de 8 para 10 resultados visiveis.
+- Validacao local feita durante a sessao:
+  - `files` -> `Arquivos`
+  - `bottles` -> `Garrafas`
+  - `spot` -> `Spotify`
+
+### Screenshot / satty
+- O sistema de screenshot deixou de chamar `grimblast` cru no `hyprland.conf`.
+- Foi criado:
+  - `quickshell/scripts/screenshot.sh`
+- Fluxo novo:
+  - `Print`: area, copia + salva
+  - `Shift+Print`: tela inteira, copia + salva
+  - `Ctrl+Print`: janela ativa, copia + salva
+  - `Super+Ctrl+S`: area e abre no `satty`
+  - `Super+Ctrl+D`: tela inteira e abre no `satty`
+- O wrapper:
+  - salva em `~/Imagens/Screenshots/`
+  - aplica `SLURP_ARGS` tematizado
+  - mostra notificacao com acoes (`Abrir`, `Editar`, `Pasta`, `Copiar caminho`)
+- Integracao de anotacao:
+  - `modules/packages.nix` ganhou `satty`
+  - `apply-theme-state.sh` passou a gerar `generated/satty/config.toml`
+  - `home.nix` passou a linkar essa config
+
+### Bar / estatisticas
+- `bar/SysStats.qml` foi corrigido para mostrar CPU de forma mais proxima do uso real:
+  - duas leituras de `/proc/stat` separadas por `0.35s`;
+  - refresh de CPU e RAM a cada `1s`;
+  - evitacao de sobreposicao de `Process` enquanto uma coleta ainda estiver rodando.
+
+### Calendario na pill do relogio
+- Foi criado um overlay proprio para a pill de data/hora:
+  - `bar/CalendarMenu.qml`
+  - `bar/CalendarMenuState.qml`
+- O calendario:
+  - abre ao clicar na pill do relogio;
+  - fecha com clique fora ou `Esc`;
+  - suporta navegacao por teclado (`←`, `→`, `Home`, `T`);
+  - ganhou animacao curta de entrada;
+  - destaca o dia atual;
+  - possui botao `Voltar para hoje`.
+- Houve uma rodada de refinamento visual depois de uma tentativa ruim com coluna de semanas:
+  - a coluna lateral foi removida;
+  - o layout final voltou para uma grade limpa de 7 colunas com celulas uniformes;
+  - o usuario confirmou que a versao final ficou correta.
+
+### Wallpapers
+- O repo terminou esta rodada ainda com alteracoes em wallpapers:
+  - `wallpapers/nord/Nord1.png`
+  - `wallpapers/nord/Nord3.png` removido
+  - `wallpapers/nord/Nord3.jpg` novo
+  - `wallpapers/rosepine/Rosepine1.png`
+  - `wallpapers/rosepine/Rosepine3.jpg`
+
+### Estado ao fim desta sessao
+- Tema GTK/portal corrigido e reagindo durante troca de tema.
+- Borda ativa do Hyprland corrigida.
+- Tray menu funcional.
+- Screenshot subsystem modernizado com `satty`.
+- Launcher com ranking bem melhor.
+- Calendario na pill do relogio implementado e refinado.

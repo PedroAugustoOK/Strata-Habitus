@@ -46,10 +46,14 @@ Rectangle {
           cursorShape:  Qt.PointingHandCursor
           acceptedButtons: Qt.LeftButton | Qt.RightButton
           onClicked: function(m) {
-            if (m.button === Qt.LeftButton)
+            if (m.button === Qt.LeftButton) {
+              TrayMenuState.close()
               modelData.activate()
-            else
-              modelData.secondaryActivate()
+            } else {
+              const point = trayPill.mapToItem(null, trayRow.x + parent.x + width / 2, trayPill.height + 8)
+              const label = modelData.tooltipTitle || modelData.title || modelData.id || "App"
+              TrayMenuState.open(modelData, label, point.x, point.y)
+            }
           }
         }
       }

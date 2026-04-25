@@ -71,25 +71,71 @@ function defaultResults(entries, historyMap, pinSet, limit) {
 function scoreEntry(entry, historyEntry, isPinned, query) {
   const name = normalize(entry.name);
   const generic = normalize(entry.genericName);
-  const keywords = entry.keywords.map(normalize).join(" ");
-  const categories = entry.categories.map(normalize).join(" ");
+  const keywordList = entry.keywords.map(normalize).filter(Boolean);
+  const categoryList = entry.categories.map(normalize).filter(Boolean);
   const id = normalize(entry.id);
+  const desktopBase = normalize(path.basename(entry.desktopFile || "", ".desktop"));
+  const execBase = normalize(execBasename(entry.exec || ""));
+  const queryTerms = query.split(/\s+/).filter(Boolean);
+  const expandedTerms = expandTerms(queryTerms);
 
   let score = 0;
+  let matched = false;
 
-  if (name === query) score += 180;
-  if (name.startsWith(query)) score += 140;
-  else if (name.includes(query)) score += 90;
+  if (name === query) {
+    score += 220;
+    matched = true;
+  }
+  if (name.startsWith(query)) {
+    score += 180;
+    matched = true;
+  } else if (name.includes(query)) {
+    score += 95;
+    matched = true;
+  }
 
   const fuzzy = fuzzyScore(name, query);
-  if (fuzzy > 0) score += fuzzy;
+  if (fuzzy > 0) {
+    score += fuzzy;
+    matched = true;
+  }
 
-  if (generic.startsWith(query)) score += 50;
-  else if (generic.includes(query)) score += 35;
+  if (generic.startsWith(query)) {
+    score += 70;
+    matched = true;
+  } else if (generic.includes(query)) {
+    score += 40;
+    matched = true;
+  }
 
-  if (keywords.includes(query)) score += 25;
-  if (categories.includes(query)) score += 12;
-  if (id.includes(query)) score += 8;
+  if (id.includes(query)) {
+    score += 35;
+    matched = true;
+  }
+
+  if (desktopBase && desktopBase.includes(query)) {
+    score += 32;
+    matched = true;
+  }
+
+  if (execBase && execBase.includes(query)) {
+    score += 28;
+    matched = true;
+  }
+
+  const keywordHits = expandedTerms.filter(term => keywordList.some(keyword => tokenMatches(keyword, term)));
+  if (keywordHits.length > 0) {
+    score += keywordHits.length * 18;
+    matched = true;
+  }
+
+  const categoryHits = expandedTerms.filter(term => categoryList.some(category => category === term));
+  if (categoryHits.length > 0) {
+    score += categoryHits.length * 6;
+    matched = true;
+  }
+
+  if (!matched) return 0;
 
   if (isPinned) score += 60;
   score += historyBoost(historyEntry);
@@ -184,6 +230,49 @@ function normalize(value) {
     .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase()
     .trim();
+}
+
+function execBasename(exec) {
+  const token = `${exec || ""}`
+    .replace(/%.?/g, " ")
+    .trim()
+    .split(/\s+/)[0] || "";
+
+  return path.basename(token);
+}
+
+function expandTerms(queryTerms) {
+  const aliases = {
+    files: ["arquivo", "arquivos", "nautilus", "file", "files"],
+    file: ["arquivo", "arquivos", "nautilus", "file", "files"],
+    settings: ["config", "configuracoes", "configuracao", "settings", "preferences"],
+    setting: ["config", "configuracoes", "configuracao", "settings", "preferences"],
+    browser: ["navegador", "browser", "web"],
+    music: ["musica", "music", "player", "spotify"],
+    video: ["video", "player", "mpv"],
+    notes: ["notas", "notes", "standard", "obsidian"],
+    terminal: ["terminal", "shell", "kitty", "ghostty"],
+    store: ["loja", "store", "appcenter", "software"],
+    bottles: ["bottles", "garrafas", "wine"],
+    garrafas: ["bottles", "garrafas", "wine"],
+    steam: ["steam", "jogos", "games"],
+    games: ["jogos", "games", "steam"],
+    discord: ["discord", "vesktop", "chat"],
+    chat: ["chat", "discord", "telegram", "vesktop"]
+  };
+
+  const expanded = new Set(queryTerms);
+  for (const term of queryTerms) {
+    const mapped = aliases[term];
+    if (!mapped) continue;
+    for (const alias of mapped) expanded.add(alias);
+  }
+  return [...expanded];
+}
+
+function tokenMatches(token, query) {
+  if (!token || !query) return false;
+  return token === query || token.startsWith(query);
 }
 
 function readJson(file, fallback) {

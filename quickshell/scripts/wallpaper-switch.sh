@@ -20,4 +20,4 @@ WALLPAPER="${WALLPAPERS[$INDEX]}"
 printf '%s\n' "$INDEX" > "$STATE_FILE"
 printf '%s\n' "$WALLPAPER" > "$STATE_DIR/current-wallpaper"
 
-exec bash "$DOTFILES/quickshell/scripts/apply-theme-state.sh" --apply-wallpaper
+exec bash "$DOTFILES/quickshell/scripts/apply-theme-state.sh" --wallpaper-only

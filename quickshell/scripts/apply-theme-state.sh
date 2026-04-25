@@ -10,11 +10,12 @@ DCONF="/run/current-system/sw/bin/dconf"
 AWWW="/run/current-system/sw/bin/awww"
 AWWW_DAEMON="/run/current-system/sw/bin/awww-daemon"
 LOG_FILE="$HOME/.cache/strata-theme.log"
-APPLY_WALLPAPER="${1:-}"
+APPLY_MODE="${1:-}"
 
 mkdir -p "$HOME/.cache" "$STATE_DIR" \
   "$GENERATED_DIR/kitty" "$GENERATED_DIR/mako" "$GENERATED_DIR/starship" \
-  "$GENERATED_DIR/fish" "$GENERATED_DIR/nvim" "$GENERATED_DIR/hypr"
+  "$GENERATED_DIR/fish" "$GENERATED_DIR/nvim" "$GENERATED_DIR/hypr" \
+  "$GENERATED_DIR/satty" "$GENERATED_DIR/gtk/gtk-3.0" "$GENERATED_DIR/gtk/gtk-4.0"
 
 get_val() {
   grep -o "\"$1\"[[:space:]]*:[[:space:]]*\"[^\"]*\"" "$2" | grep -o '"[^"]*"$' | tr -d '"'
@@ -22,6 +23,58 @@ get_val() {
 
 log() {
   printf '%s %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$*" >> "$LOG_FILE"
+}
+
+set_gsettings_string() {
+  local schema="$1"
+  local key="$2"
+  local value="$3"
+  gsettings set "$schema" "$key" "$value" 2>/dev/null || true
+}
+
+force_gtk_runtime_reload() {
+  local gtk_theme="$1"
+  local icon_theme="$2"
+  local color_scheme="$3"
+  local temp_theme temp_color temp_icon
+
+  if [ "$gtk_theme" = "Adwaita" ]; then
+    temp_theme="Adwaita-dark"
+    temp_color="prefer-dark"
+    temp_icon="Papirus-Dark"
+  else
+    temp_theme="Adwaita"
+    temp_color="prefer-light"
+    temp_icon="Papirus"
+  fi
+
+  set_gsettings_string org.gnome.desktop.interface gtk-theme "$temp_theme"
+  set_gsettings_string org.gnome.desktop.interface color-scheme "$temp_color"
+  set_gsettings_string org.gnome.desktop.interface icon-theme "$temp_icon"
+
+  sleep 0.05
+
+  set_gsettings_string org.gnome.desktop.interface gtk-theme "$gtk_theme"
+  set_gsettings_string org.gnome.desktop.interface color-scheme "$color_scheme"
+  set_gsettings_string org.gnome.desktop.interface icon-theme "$icon_theme"
+}
+
+restart_nautilus_for_theme() {
+  if pgrep -x nautilus >/dev/null 2>&1; then
+    nautilus -q >/dev/null 2>&1 || true
+  fi
+}
+
+restart_portal_services_for_theme() {
+  local -a units=(
+    xdg-desktop-portal-gtk.service
+    xdg-desktop-portal.service
+  )
+  local unit
+
+  for unit in "${units[@]}"; do
+    systemctl --user restart "$unit" >/dev/null 2>&1 || true
+  done
 }
 
 ensure_local_papirus() {
@@ -87,11 +140,20 @@ apply_papirus_folder_color() {
 }
 
 reload_kitty_theme() {
-  local socket="unix:/tmp/kitty-socket"
+  local socket_path socket
+  local -a sockets=()
 
-  [ -S /tmp/kitty-socket ] || return 0
+  for socket_path in /tmp/kitty-socket /tmp/kitty-socket-*; do
+    [ -S "$socket_path" ] || continue
+    sockets+=("$socket_path")
+  done
 
-  kitty @ --to "$socket" set-colors -a -c "$GENERATED_DIR/kitty/colors.conf" >/dev/null 2>&1 || true
+  [ "${#sockets[@]}" -gt 0 ] || return 0
+
+  for socket_path in "${sockets[@]}"; do
+    socket="unix:$socket_path"
+    kitty @ --to "$socket" set-colors -a -c "$GENERATED_DIR/kitty/colors.conf" >/dev/null 2>&1 || true
+  done
 }
 
 ensure_wayland_env() {
@@ -109,6 +171,11 @@ ensure_wayland_env() {
 
 apply_wallpaper() {
   local wallpaper="$1"
+  local transition_type="center"
+  local transition_duration="0.42"
+  local transition_fps="144"
+  local transition_step="28"
+  local transition_bezier="0.16,1,0.30,1"
 
   ensure_wayland_env
   log "apply-theme-state wallpaper=$wallpaper xdg_runtime_dir=${XDG_RUNTIME_DIR:-<unset>} wayland_display=${WAYLAND_DISPLAY:-<unset>}"
@@ -119,12 +186,40 @@ apply_wallpaper() {
   fi
 
   "$AWWW" img "$wallpaper" \
-    --transition-type wave \
-    --transition-duration 0.8 \
-    --transition-wave 80,80 >> "$LOG_FILE" 2>&1
+    --transition-type "$transition_type" \
+    --transition-duration "$transition_duration" \
+    --transition-fps "$transition_fps" \
+    --transition-step "$transition_step" \
+    --transition-bezier "$transition_bezier" >> "$LOG_FILE" 2>&1
+}
+
+update_wallpaper_targets() {
+  local wallpaper="$1"
+  local hyprlock_conf="$GENERATED_DIR/hypr/hyprlock.conf"
+
+  mkdir -p "$GENERATED_DIR/hypr"
+
+  if [ -f "$hyprlock_conf" ]; then
+    sed -i "s|^[[:space:]]*path[[:space:]]*=.*$|  path    = $wallpaper|" "$hyprlock_conf" 2>/dev/null || true
+  fi
+
+  (
+    if [ -n "$wallpaper" ] && [ -f "$wallpaper" ]; then
+      magick "$wallpaper" -scale 10% -scale 1920x1080! /tmp/strata-bg.jpg 2>/dev/null \
+        && sudo -n /run/current-system/sw/bin/cp /tmp/strata-bg.jpg /var/lib/strata/background.jpg 2>/dev/null || true
+    fi
+  ) >/dev/null 2>&1 &
 }
 
 [ -f "$THEME_FILE" ] || exit 1
+
+WALLPAPER="$(cat "$WALLPAPER_FILE" 2>/dev/null || true)"
+
+if [ "$APPLY_MODE" = "--wallpaper-only" ] && [ -n "$WALLPAPER" ] && [ -f "$WALLPAPER" ]; then
+  update_wallpaper_targets "$WALLPAPER"
+  apply_wallpaper "$WALLPAPER"
+  exit 0
+fi
 
 THEME_NAME=$(get_val "name" "$THEME_FILE")
 MODE=$(get_val "mode" "$THEME_FILE")
@@ -135,7 +230,6 @@ BG2=$(get_val "bg2" "$THEME_FILE")
 TEXT0=$(get_val "text0" "$THEME_FILE")
 TEXT1=$(get_val "text1" "$THEME_FILE")
 TEXT3=$(get_val "text3" "$THEME_FILE")
-WALLPAPER="$(cat "$WALLPAPER_FILE" 2>/dev/null || true)"
 
 [ "$MODE" = "light" ] && OPACITY="0.97" || OPACITY="0.92"
 
@@ -361,6 +455,48 @@ cat > "$GENERATED_DIR/nvim/theme.lua" <<EOF
 return "$NVIM_THEME"
 EOF
 
+cat > "$GENERATED_DIR/satty/config.toml" <<EOF
+[general]
+fullscreen = true
+early-exit = false
+corner-roundness = 12
+initial-tool = "arrow"
+copy-command = "wl-copy"
+annotation-size-factor = 1.0
+default-hide-toolbars = false
+focus-toggles-toolbars = false
+primary-highlighter = "block"
+disable-notifications = true
+actions-on-enter = ["save-to-clipboard", "save-to-file", "exit"]
+actions-on-escape = ["exit"]
+no-window-decoration = true
+brush-smooth-history-size = 6
+
+[font]
+family = "Inter"
+style = "Regular"
+
+[color-palette]
+palette = [
+  "$ACCENT",
+  "$TEXT1",
+  "#f28779",
+  "#d9bc8c",
+  "#87c181",
+  "#7bafd4",
+]
+custom = [
+  "$ACCENT",
+  "$TEXT1",
+  "$BG0",
+  "$BG1",
+  "#f28779",
+  "#d9bc8c",
+  "#87c181",
+  "#7bafd4",
+]
+EOF
+
 ACCENT_HEX="$(echo "$ACCENT" | tr -d '#')"
 TEXT1_HEX="$(echo "$TEXT1" | tr -d '#')"
 cat > "$GENERATED_DIR/hypr/hyprlock.conf" <<EOF
@@ -480,35 +616,41 @@ cat > "$HOME/.config/gtk-4.0/gtk.css" <<EOF
 @define-color popover_bg_color $BG2;
 @define-color popover_fg_color $TEXT1;
 
-navigation-sidebar,
-.navigation-sidebar,
-sidebar,
-.sidebar,
-.sidebar-pane,
-placessidebar,
-stacksidebar {
-  background-color: $BG1;
-  color: $TEXT1;
-}
-
-scrolledwindow,
-viewport,
-listview,
-columnview,
-treeview,
-textview,
-.view,
-.content-view {
-  background-color: $BG1;
-  color: $TEXT1;
-}
-
 row:selected,
 .navigation-sidebar row:selected,
 sidebar row:selected {
   background-color: alpha($ACCENT, 0.16);
   color: $TEXT1;
   border-radius: 10px;
+}
+
+filechooser,
+dialog.filechooser,
+window.filechooser,
+.dialog-action-area {
+  color: $TEXT1;
+}
+
+filechooser box,
+filechooser listview,
+filechooser columnview,
+filechooser treeview,
+filechooser viewport,
+filechooser stacksidebar,
+filechooser placessidebar,
+filechooser .sidebar,
+filechooser .navigation-sidebar {
+  background-color: $BG1;
+  color: $TEXT1;
+}
+
+filechooser entry,
+filechooser button,
+filechooser label,
+filechooser dropdown,
+filechooser combobox,
+filechooser popover {
+  color: $TEXT1;
 }
 EOF
 
@@ -530,11 +672,12 @@ cat > "$HOME/.config/gtk-3.0/gtk.css" <<EOF
 @define-color popover_bg_color $BG2;
 @define-color popover_fg_color $TEXT1;
 
-.sidebar,
-.view,
-treeview.view,
-textview,
-viewport {
+GtkFileChooserDialog,
+.filechooser,
+.filechooser .sidebar,
+.filechooser .view,
+.filechooser treeview.view,
+.filechooser viewport {
   background-color: $BG1;
   color: $TEXT1;
 }
@@ -545,24 +688,51 @@ printf '{"BrowserThemeColor":"%s","BrowserColorScheme":"device"}' "$ACCENT" \
 chromium --refresh-platform-policy --no-startup-window >/dev/null 2>&1 || true
 
 if [ "$MODE" = "light" ]; then
-  GTK_THEME_NAME="adwaita"
+  GTK_THEME_NAME="Adwaita"
   ICON_THEME_NAME="Papirus-Strata"
+  GTK_PREFER_DARK="0"
   $DCONF write /org/gnome/desktop/interface/color-scheme "'prefer-light'" 2>/dev/null || true
-  gsettings set org.gnome.desktop.interface gtk-theme "$GTK_THEME_NAME" 2>/dev/null || true
   apply_papirus_folder_color "$PAPIRUS_FOLDER_COLOR"
-  gsettings set org.gnome.desktop.interface icon-theme "Papirus" 2>/dev/null || true
-  gsettings set org.gnome.desktop.interface icon-theme "$ICON_THEME_NAME" 2>/dev/null || true
+  force_gtk_runtime_reload "$GTK_THEME_NAME" "$ICON_THEME_NAME" "prefer-light"
+  restart_nautilus_for_theme
   echo "QT_STYLE_OVERRIDE=$GTK_THEME_NAME" > "$HOME/.config/environment.d/qt.conf"
 else
-  GTK_THEME_NAME="adwaita-dark"
+  GTK_THEME_NAME="Adwaita-dark"
   ICON_THEME_NAME="Papirus-Dark-Strata"
+  GTK_PREFER_DARK="1"
   $DCONF write /org/gnome/desktop/interface/color-scheme "'prefer-dark'" 2>/dev/null || true
-  gsettings set org.gnome.desktop.interface gtk-theme "$GTK_THEME_NAME" 2>/dev/null || true
   apply_papirus_folder_color "$PAPIRUS_FOLDER_COLOR"
-  gsettings set org.gnome.desktop.interface icon-theme "Papirus-Dark" 2>/dev/null || true
-  gsettings set org.gnome.desktop.interface icon-theme "$ICON_THEME_NAME" 2>/dev/null || true
+  force_gtk_runtime_reload "$GTK_THEME_NAME" "$ICON_THEME_NAME" "prefer-dark"
+  restart_nautilus_for_theme
   echo "QT_STYLE_OVERRIDE=$GTK_THEME_NAME" > "$HOME/.config/environment.d/qt.conf"
 fi
+
+export GTK_THEME="$GTK_THEME_NAME"
+echo "GTK_THEME=$GTK_THEME_NAME" > "$HOME/.config/environment.d/gtk-theme.conf"
+systemctl --user import-environment GTK_THEME >/dev/null 2>&1 || true
+if command -v dbus-update-activation-environment >/dev/null 2>&1; then
+  dbus-update-activation-environment --systemd GTK_THEME="$GTK_THEME_NAME" >/dev/null 2>&1 || true
+fi
+
+cat > "$GENERATED_DIR/gtk/gtk-3.0/settings.ini" <<EOF
+[Settings]
+gtk-theme-name=$GTK_THEME_NAME
+gtk-icon-theme-name=$ICON_THEME_NAME
+gtk-cursor-theme-name=Bibata-Modern-Classic
+gtk-cursor-theme-size=24
+gtk-application-prefer-dark-theme=$GTK_PREFER_DARK
+EOF
+
+cat > "$GENERATED_DIR/gtk/gtk-4.0/settings.ini" <<EOF
+[Settings]
+gtk-theme-name=$GTK_THEME_NAME
+gtk-icon-theme-name=$ICON_THEME_NAME
+gtk-cursor-theme-name=Bibata-Modern-Classic
+gtk-cursor-theme-size=24
+gtk-application-prefer-dark-theme=$GTK_PREFER_DARK
+EOF
+
+restart_portal_services_for_theme
 
 reload_kitty_theme
 
@@ -577,7 +747,8 @@ sudo -n /run/current-system/sw/bin/tee /var/lib/strata/theme.conf < /tmp/strata-
 hyprctl keyword "general:col.active_border" "rgba(${ACCENT_HEX}ff)" 2>/dev/null || true
 makoctl reload 2>/dev/null || true
 
-if [ "$APPLY_WALLPAPER" = "--apply-wallpaper" ] && [ -n "$WALLPAPER" ] && [ -f "$WALLPAPER" ]; then
+if [ "$APPLY_MODE" = "--apply-wallpaper" ] && [ -n "$WALLPAPER" ] && [ -f "$WALLPAPER" ]; then
+  update_wallpaper_targets "$WALLPAPER"
   apply_wallpaper "$WALLPAPER"
 fi
 

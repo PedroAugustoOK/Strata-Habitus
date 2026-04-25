@@ -16,6 +16,8 @@ import "appcenter"
 
 ShellRoot {
   Bar {}
+  TrayMenu {}
+  CalendarMenu {}
   Launcher { id: launcher }
   // Notifications {}
   OSD {}

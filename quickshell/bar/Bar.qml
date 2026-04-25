@@ -79,6 +79,14 @@ PanelWindow {
         height: 28; radius: 14
         color:  Colors.bg2
         width:  clk.implicitWidth + 24
+        MouseArea {
+          anchors.fill: parent
+          cursorShape: Qt.PointingHandCursor
+          onClicked: {
+            const point = clockPill.mapToItem(null, clockPill.width / 2, clockPill.height + 8)
+            CalendarMenuState.toggle(point.x, point.y)
+          }
+        }
         Clock {
           id: clk
           anchors.centerIn: parent

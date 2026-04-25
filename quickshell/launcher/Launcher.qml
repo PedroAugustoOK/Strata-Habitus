@@ -17,7 +17,7 @@ PanelWindow {
   readonly property int cardFooterH: 36
   readonly property int itemH: 62
   readonly property int actionItemH: 42
-  readonly property int maxVisibleItems: 8
+  readonly property int maxVisibleItems: 10
   readonly property int visibleRows: Math.max(1, Math.min(maxVisibleItems, store.results.length > 0 ? store.results.length : 4))
   readonly property int listH: visibleRows * itemH + 8
   readonly property var selectedItem: store.results.length > 0 ? store.results[selected] : null

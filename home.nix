@@ -31,7 +31,9 @@ in {
 
     if [ ! -f "$GENERATED_DIR/kitty/colors.conf" ] \
       || [ ! -f "$GENERATED_DIR/hypr/hyprlock.conf" ] \
-      || [ ! -f "$GENERATED_DIR/starship/starship.toml" ]; then
+      || [ ! -f "$GENERATED_DIR/starship/starship.toml" ] \
+      || [ ! -f "$GENERATED_DIR/gtk/gtk-3.0/settings.ini" ] \
+      || [ ! -f "$GENERATED_DIR/gtk/gtk-4.0/settings.ini" ]; then
       ${pkgs.bash}/bin/bash "$DOTFILES/quickshell/scripts/apply-theme-state.sh" >/dev/null 2>&1 || true
     fi
   '';
@@ -39,6 +41,10 @@ in {
   # Tema GTK + ícones (propaga via gsettings pro qt.platformTheme=gnome)
   gtk = {
     enable = true;
+    theme = {
+      name = "Adwaita-dark";
+      package = pkgs.gnome-themes-extra;
+    };
     iconTheme = {
       name    = "Papirus-Dark";
       package = pkgs.papirus-icon-theme;
@@ -133,6 +139,15 @@ in {
   # Desktop UI
   xdg.configFile."quickshell".source = link "quickshell";
   xdg.configFile."mako/config".source = link "generated/mako/config";
+  xdg.configFile."satty/config.toml".source = link "generated/satty/config.toml";
+  xdg.configFile."gtk-3.0/settings.ini" = {
+    source = link "generated/gtk/gtk-3.0/settings.ini";
+    force = true;
+  };
+  xdg.configFile."gtk-4.0/settings.ini" = {
+    source = link "generated/gtk/gtk-4.0/settings.ini";
+    force = true;
+  };
 
   # Editor
   xdg.configFile."nvim".source = link "nvim";

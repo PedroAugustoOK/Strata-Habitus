@@ -6,4 +6,8 @@ ActiveWindow ActiveWindow.qml
 SpotifyPlayer 1.0 SpotifyPlayer.qml
 BatteryRing 1.0 BatteryRing.qml
 Tray 1.0 Tray.qml
+TrayMenu 1.0 TrayMenu.qml
+singleton TrayMenuState 1.0 TrayMenuState.qml
+CalendarMenu 1.0 CalendarMenu.qml
+singleton CalendarMenuState 1.0 CalendarMenuState.qml
 SysStats 1.0 SysStats.qml

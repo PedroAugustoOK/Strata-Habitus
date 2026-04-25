@@ -25,11 +25,11 @@ in {
       p.json p.yaml p.toml p.markdown p.html p.css p.c p.cpp
       p.rust p.go p.fish
     ]))
-    grimblast wl-clipboard cliphist brightnessctl awww matugen
+    grimblast wl-clipboard cliphist brightnessctl awww matugen satty
     nautilus gvfs pavucontrol pwvucontrol
     impala bluetui playerctl hyprlock hypridle
     pipewire wireplumber blueman libnotify mako
-    adwaita-qt adwaita-qt6 papirus-icon-theme papirus-folders
+    adwaita-qt adwaita-qt6 gnome-themes-extra papirus-icon-theme papirus-folders
     obs-studio bibata-cursors fastfetch btop vscode gcc
     spotify fish starship loupe zathura libreoffice
     standardnotes mpv gsettings-desktop-schemas

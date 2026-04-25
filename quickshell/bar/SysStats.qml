@@ -56,7 +56,7 @@ Row {
 
   Process {
     id: cpuProc
-    command: ["sh", "-c", "grep -m1 'cpu ' /proc/stat | awk '{u=$2+$4; t=$2+$3+$4+$5; if(t>0) printf \"%d\", u*100/t}'"]
+    command: ["bash", "-c", "read -r _ user nice system idle iowait irq softirq steal _ < /proc/stat; prev_idle=$((idle + iowait)); prev_nonidle=$((user + nice + system + irq + softirq + steal)); prev_total=$((prev_idle + prev_nonidle)); sleep 0.35; read -r _ user nice system idle iowait irq softirq steal _ < /proc/stat; idle_now=$((idle + iowait)); nonidle_now=$((user + nice + system + irq + softirq + steal)); total_now=$((idle_now + nonidle_now)); total_delta=$((total_now - prev_total)); idle_delta=$((idle_now - prev_idle)); if [ \"$total_delta\" -gt 0 ]; then printf \"%d\" $(((100 * (total_delta - idle_delta)) / total_delta)); else printf \"0\"; fi"]
     stdout: SplitParser {
       onRead: data => {
         if (data.trim() !== "") root.cpu = data.trim() + "%"
@@ -65,10 +65,10 @@ Row {
   }
 
   Timer {
-    interval: 2000; running: true; repeat: true; triggeredOnStart: true
+    interval: 1000; running: true; repeat: true; triggeredOnStart: true
     onTriggered: {
-      statsProc.running = true
-      cpuProc.running = true
+      if (!statsProc.running) statsProc.running = true
+      if (!cpuProc.running) cpuProc.running = true
     }
   }
 }

@@ -122,6 +122,10 @@ Item {
       try {
         store.lastIndexMeta = JSON.parse(text())
         store.ready = !!store.lastIndexMeta.entryCount
+        if (store.ready && !store.isIndexing) {
+          if (store.query.trim().length > 0) store.performSearch()
+          else if (store.results.length === 0) store.performSearch()
+        }
       } catch (e) {
         store.lastIndexMeta = ({})
       }

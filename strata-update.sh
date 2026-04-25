@@ -1,6 +1,14 @@
 #!/bin/sh
-REPO="PedroAugustoOK/Strata-Habitus"
-CACHE="/var/cache/strata-last-commit"
+CONF="/etc/strata-release.conf"
+if [ -r "$CONF" ]; then
+  # shellcheck disable=SC1091
+  . "$CONF"
+fi
+
+REPO="${STRATA_UPDATE_REPO:-PedroAugustoOK/Strata-Habitus}"
+CHANNEL="${STRATA_UPDATE_CHANNEL:-stable}"
+HOST="${STRATA_UPDATE_HOST:-$(hostname)}"
+CACHE="/var/cache/strata-last-commit-${CHANNEL}"
 LOG="/var/log/strata-update.log"
 CURL=/run/current-system/sw/bin/curl
 REBUILD=/run/current-system/sw/bin/nixos-rebuild
@@ -20,7 +28,7 @@ notify_users() {
   done
 }
 
-LATEST=$($CURL -sf "https://api.github.com/repos/$REPO/commits/main" \
+LATEST=$($CURL -sf "https://api.github.com/repos/$REPO/commits/$CHANNEL" \
   | grep -m1 '"sha"' | cut -d'"' -f4)
 
 if [ -z "$LATEST" ]; then
@@ -31,9 +39,9 @@ fi
 CURRENT=$(cat "$CACHE" 2>/dev/null)
 [ "$LATEST" = "$CURRENT" ] && exit 0
 
-log "Novo commit detectado: ${CURRENT:-inicial} → $LATEST"
+log "Novo commit detectado no canal $CHANNEL: ${CURRENT:-inicial} → $LATEST"
 
-if $REBUILD switch --flake "github:$REPO#$(hostname)" >> "$LOG" 2>&1; then
+if $REBUILD switch --flake "github:$REPO/$CHANNEL#$HOST" >> "$LOG" 2>&1; then
   echo "$LATEST" > "$CACHE"
   log "Atualização concluída com sucesso"
   notify_users "normal" "Strata Habitus" "Sistema atualizado com sucesso."

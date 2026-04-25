@@ -15,4 +15,9 @@
       enable = true;
     };
   };
+  updates = {
+    enable = true;
+    auto = false;
+    channel = "main";
+  };
 }

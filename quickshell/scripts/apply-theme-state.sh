@@ -92,7 +92,6 @@ reload_kitty_theme() {
   [ -S /tmp/kitty-socket ] || return 0
 
   kitty @ --to "$socket" set-colors -a -c "$GENERATED_DIR/kitty/colors.conf" >/dev/null 2>&1 || true
-  kitty @ --to "$socket" load-config "$HOME/.config/kitty/kitty.conf" >/dev/null 2>&1 || true
 }
 
 ensure_wayland_env() {

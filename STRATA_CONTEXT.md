@@ -1050,3 +1050,26 @@
   - a sessao ainda precisa de rebuild para retirar a instalacao Nix da geracao ativa.
 - Comando de retomada recomendado:
   - `sudo nixos-rebuild switch --flake path:/home/ankh/dotfiles#desktop`
+
+## Atualizacao de 2026-04-24T21:30:00-04:00
+
+### Kitty / `listen_on`
+- O usuario reportou erro ao abrir o Kitty:
+  - `Invalid listen_on=unix:/tmp/kitty-socket, ignoring`
+- A investigacao confirmou que a causa nao era simplesmente o bind do Hyprland.
+- Diagnostico consolidado:
+  - `kitty/kitty.conf` usa `listen_on unix:/tmp/kitty-socket`;
+  - `hyprland.conf` abre o terminal com `kitty --listen-on=unix:/tmp/kitty-socket`;
+  - isso por si so nao explica o popup;
+  - o problema real estava em `quickshell/scripts/apply-theme-state.sh`, que fazia:
+    - `kitty @ --to unix:/tmp/kitty-socket load-config ~/.config/kitty/kitty.conf`
+  - o Kitty nao suporta reaplicar `listen_on` via reload de config;
+  - ao tentar fazer `load-config` num processo ja ouvindo no socket, o Kitty mostrava o aviso de `Invalid listen_on=...`.
+- Correcao aplicada no repo:
+  - `apply-theme-state.sh` deixou de chamar `load-config` no Kitty;
+  - o reload de tema passou a usar apenas:
+    - `kitty @ ... set-colors -a -c generated/kitty/colors.conf`
+- Estado final:
+  - a sintaxe do comando no `hyprland.conf` ficou corrigida com `--listen-on=...`;
+  - a causa raiz do popup foi removida do fluxo de troca de tema;
+  - nenhuma nova refatoracao do pipeline de temas foi mantida nesta rodada alem dessa correcao pontual.

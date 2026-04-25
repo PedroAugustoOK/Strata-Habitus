@@ -47,7 +47,6 @@ watch() {
   mkdir -p "$ART_DIR"
 
   local last_track=""
-  local status=""
   local track_id=""
   local artist=""
   local title=""
@@ -56,28 +55,28 @@ watch() {
   local image_hint=()
   local label=""
 
-  last_track="$(fetch_metadata | cut -d'|' -f2)"
   label="$(notification_label)"
   while true; do
-    IFS='|' read -r status track_id artist title art_url <<< "$(fetch_metadata)"
-    if [ -n "${track_id:-}" ] && [ "$status" = "Playing" ] && [ "$track_id" != "$last_track" ]; then
-      last_track="$track_id"
+    playerctl -p spotify metadata --follow --format '{{status}}|{{mpris:trackid}}|{{artist}}|{{title}}|{{mpris:artUrl}}' 2>/dev/null | while IFS='|' read -r status track_id artist title art_url; do
+      if [ -n "${track_id:-}" ] && [ "$status" = "Playing" ] && [ "$track_id" != "$last_track" ]; then
+        last_track="$track_id"
 
-      icon="$(resolve_icon "${art_url:-}")"
-      image_hint=()
-      if [ -f "$icon" ]; then
-        image_hint=(-h "string:image-path:$icon")
+        icon="$(resolve_icon "${art_url:-}")"
+        image_hint=()
+        if [ -f "$icon" ]; then
+          image_hint=(-h "string:image-path:$icon")
+        fi
+
+        notify-send \
+          -a "Spotify" \
+          -u low \
+          -i "$icon" \
+          "${image_hint[@]}" \
+          -h string:x-canonical-private-synchronous:spotify-track \
+          "$label" \
+          "$(notification_body "${title:-Spotify}" "${artist:-}")"
       fi
-
-      notify-send \
-        -a "Spotify" \
-        -u low \
-        -i "$icon" \
-        "${image_hint[@]}" \
-        -h string:x-canonical-private-synchronous:spotify-track \
-        "$label" \
-        "$(notification_body "${title:-Spotify}" "${artist:-}")"
-    fi
+    done
     sleep 2
   done
 }

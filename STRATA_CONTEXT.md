@@ -1199,3 +1199,75 @@
 - Screenshot subsystem modernizado com `satty`.
 - Launcher com ranking bem melhor.
 - Calendario na pill do relogio implementado e refinado.
+
+## Atualizacao de 2026-04-25T15:35:17-04:00
+
+### Leveza / desempenho do sistema
+- O usuario pediu uma rodada de revisao para deixar o sistema mais leve e rapido.
+- Medicao objetiva do boot feita com `systemd-analyze`:
+  - `graphical.target` em `4.729s` de userspace;
+  - o maior atraso real no caminho critico era rede, especialmente `dhcpcd.service` com cerca de `2.248s`;
+  - firmware continuava sendo o maior bloco do boot total, fora do alcance direto do repo.
+- Diagnostico consolidado:
+  - o sistema nao estava catastricamente lento;
+  - os maiores ganhos seguros viriam de:
+    - tirar trabalho inutil do boot;
+    - reduzir polling em background;
+    - desligar por padrao servicos opcionais.
+
+### Otimizacoes seguras aplicadas
+- `modules/desktop.nix`
+  - o setup do Flathub saiu de um servico no boot e virou `system.activationScripts.flatpakFlathub`, reduzindo trabalho recorrente no startup.
+- `modules/update.nix`
+  - `strata-update.timer` ficou menos agressivo:
+    - `OnBootSec` de `5min` para `30min`
+    - `OnUnitActiveSec` de `1h` para `12h`
+- `quickshell/scripts/clipboard-daemon.sh`
+  - o supervisor deixou de fazer polling a cada `2s`;
+  - passou a esperar os watchers e rearmar apenas quando necessario.
+- `quickshell/scripts/spotify-notify.sh`
+  - deixou de consultar estado em loop bruto;
+  - passou a usar `playerctl --follow` para reagir a mudancas de faixa.
+
+### IA local removida
+- O usuario pediu remocao de IA local do sistema, mas explicitou que `Codex` deveria permanecer.
+- Alteracoes aplicadas em `modules/packages.nix`:
+  - `ollama` removido de `environment.systemPackages`
+  - `services.ollama` removido
+  - a logica `useCuda` ligada apenas ao `ollama` foi removida
+- Estado validado:
+  - `services.ollama.enable = false`
+- `codex` foi mantido na base, conforme pedido do usuario.
+
+### Bluetooth e impressao por demanda
+- O usuario pediu que Bluetooth e impressao ficassem desligados por padrao, sendo ligados apenas quando necessario.
+- Alteracoes aplicadas:
+  - `modules/audio.nix`
+    - `hardware.bluetooth.powerOnBoot = false`
+    - `services.blueman.enable = false`
+  - `modules/desktop.nix`
+    - `services.printing.enable = false`
+- Foram adicionados helpers no `fish/config.fish`:
+  - `bt-on`
+  - `bt-off`
+  - `print-on`
+  - `print-off`
+- A ideia final ficou:
+  - suporte continua presente no sistema;
+  - os servicos deixam de subir por padrao.
+
+### Rede
+- Em vez de trocar a stack inteira de rede no escuro, foi feito um ajuste conservador em `modules/network.nix`:
+  - `networking.dhcpcd.wait = "background"`
+- Objetivo:
+  - tirar o `dhcpcd` do caminho critico do boot;
+  - aceitar que a rede pode terminar de se estabilizar um pouco depois do login.
+- Estado validado:
+  - `networking.dhcpcd.wait = "background"`
+
+### Estado ao fim desta rodada
+- `ollama` removido do sistema declarativo.
+- Bluetooth desligado por padrao.
+- Impressao desligada por padrao.
+- Rede menos bloqueante no boot.
+- `codex` preservado na base.

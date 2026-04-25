@@ -39,18 +39,12 @@ in {
   services.gvfs.enable                 = true;
   services.power-profiles-daemon.enable = true;
   services.flatpak.enable               = true;
-  systemd.services.flatpak-flathub = {
-    description = "Configure Flathub remote";
-    wantedBy = [ "multi-user.target" ];
-    wants = [ "network-online.target" ];
-    after = [ "network-online.target" ];
-    path = [ pkgs.flatpak ];
-    serviceConfig.Type = "oneshot";
-    script = ''
-      flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
-    '';
-  };
-  services.printing.enable              = true;
+  system.activationScripts.flatpakFlathub = ''
+    if [ -x /run/current-system/sw/bin/flatpak ]; then
+      /run/current-system/sw/bin/flatpak remote-add --system --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo >/dev/null 2>&1 || true
+    fi
+  '';
+  services.printing.enable              = false;
   services.printing.drivers             = [ pkgs.hplipWithPlugin ];
   services.udev.packages                = [
     pkgs.hplipWithPlugin

@@ -1,4 +1,6 @@
 { ... }: {
+  networking.dhcpcd.wait = "background";
+
   networking.wireless.iwd.enable = true;
   networking.wireless.iwd.settings = {
     General.EnableNetworkConfiguration = true;

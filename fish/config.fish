@@ -45,6 +45,26 @@ function codex-safe
     end
 end
 
+function bt-on
+    sudo systemctl start bluetooth.service
+    if not pgrep -x blueman-applet >/dev/null
+        nohup blueman-applet >/dev/null 2>&1 &
+    end
+end
+
+function bt-off
+    pkill -x blueman-applet >/dev/null 2>&1
+    sudo systemctl stop bluetooth.service
+end
+
+function print-on
+    sudo systemctl start cups.service
+end
+
+function print-off
+    sudo systemctl stop cups.service
+end
+
 export PATH="$HOME/.local/bin:$PATH"
 export PATH="$HOME/.local/bin:$PATH"
 export PATH="$HOME/.local/bin:$PATH"

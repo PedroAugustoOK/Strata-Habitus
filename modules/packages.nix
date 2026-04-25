@@ -2,7 +2,6 @@
 let
   graphics = hostMeta.graphics or "generic";
   useIntelMedia = builtins.elem graphics [ "intel" "hybrid-intel-nvidia" ];
-  useCuda = builtins.elem graphics [ "nvidia" "hybrid-intel-nvidia" "hybrid-amd-nvidia" ];
   strataUserApps = import ../state/apps.nix { inherit pkgs; };
 in {
   nixpkgs.config.allowUnfree = true;
@@ -34,7 +33,7 @@ in {
     spotify fish starship loupe zathura libreoffice
     standardnotes mpv gsettings-desktop-schemas
     hplipWithPlugin glib
-    ollama codex
+    codex
     qgis fzf
     lm_sensors
     eza bat zoxide
@@ -62,11 +61,6 @@ in {
     automatic = true;
     dates     = "weekly";
     options   = "--delete-older-than 30d";
-  };
-
-  services.ollama = {
-    enable = true;
-    package = if useCuda then pkgs.ollama-cuda else pkgs.ollama;
   };
 
 }

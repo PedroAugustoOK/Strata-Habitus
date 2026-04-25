@@ -11,8 +11,8 @@
   systemd.timers.strata-update = {
     wantedBy    = [ "timers.target" ];
     timerConfig = {
-      OnBootSec       = "5min";
-      OnUnitActiveSec = "1h";
+      OnBootSec       = "30min";
+      OnUnitActiveSec = "12h";
     };
   };
 

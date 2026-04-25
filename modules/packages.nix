@@ -2,7 +2,12 @@
 let
   graphics = hostMeta.graphics or "generic";
   useIntelMedia = builtins.elem graphics [ "intel" "hybrid-intel-nvidia" ];
-  strataUserApps = import ../state/apps.nix { inherit pkgs; };
+  appsStatePath = ../state/apps.nix;
+  strataUserApps =
+    if builtins.pathExists appsStatePath then
+      import appsStatePath { inherit pkgs; }
+    else
+      [];
 in {
   nixpkgs.config.allowUnfree = true;
 

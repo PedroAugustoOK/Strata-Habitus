@@ -70,9 +70,9 @@ in {
     mkdir -p /var/lib/strata
     chmod 755 /var/lib/strata
     rm -f /var/lib/sddm/state.conf
-    cp /run/current-system/sw/share/sddm/themes/strata/Main.qml \
-       /var/lib/strata/Main.qml 2>/dev/null || true
-    cp -n /run/current-system/sw/share/sddm/themes/strata/metadata.desktop \
-       /var/lib/strata/metadata.desktop 2>/dev/null || true
+    cp -f ${./sddm-theme/Main.qml} /var/lib/strata/Main.qml
+    cp -f ${./sddm-theme/metadata.desktop} /var/lib/strata/metadata.desktop
+    cp -f ${./sddm-theme/theme.conf} /var/lib/strata/theme.conf
+    cp -f ${../wallpaper.jpg} /var/lib/strata/background.jpg
   '';
 }

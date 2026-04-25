@@ -12,7 +12,7 @@
   desktop = {
     enable = true;
     loginManager = {
-      enable = false;
+      enable = true;
     };
   };
   updates = {

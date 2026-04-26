@@ -1,0 +1,4 @@
+module updatecenter
+UpdateCenter 1.0 UpdateCenter.qml
+UpdateCenterStore 1.0 UpdateCenterStore.qml
+UpdateCenterDetails 1.0 UpdateCenterDetails.qml

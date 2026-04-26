@@ -25,6 +25,49 @@ log() {
   printf '%s %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$*" >> "$LOG_FILE"
 }
 
+find_hyprland_signature() {
+  local runtime_dir candidate
+
+  runtime_dir="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
+  [ -d "$runtime_dir/hypr" ] || return 1
+
+  for candidate in "$runtime_dir"/hypr/*; do
+    [ -d "$candidate" ] || continue
+    [ -S "$candidate/.socket.sock" ] || continue
+    basename "$candidate"
+    return 0
+  done
+
+  return 1
+}
+
+ensure_hyprland_env() {
+  export XDG_RUNTIME_DIR="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
+
+  if [ -z "${HYPRLAND_INSTANCE_SIGNATURE:-}" ]; then
+    local signature
+    signature="$(find_hyprland_signature 2>/dev/null || true)"
+    if [ -n "$signature" ]; then
+      export HYPRLAND_INSTANCE_SIGNATURE="$signature"
+    fi
+  fi
+}
+
+apply_hyprland_border() {
+  local accent_hex="$1"
+
+  ensure_hyprland_env
+  log "hyprland signature=${HYPRLAND_INSTANCE_SIGNATURE:-<unset>}"
+
+  if ! hyprctl keyword "general:col.active_border" "rgba(${accent_hex}ff)" >/dev/null 2>&1; then
+    log "hyprctl failed to apply active border"
+  fi
+
+  if ! hyprctl keyword "general:col.inactive_border" "rgba(00000000)" >/dev/null 2>&1; then
+    log "hyprctl failed to apply inactive border"
+  fi
+}
+
 set_gsettings_string() {
   local schema="$1"
   local key="$2"
@@ -75,6 +118,26 @@ restart_portal_services_for_theme() {
   for unit in "${units[@]}"; do
     systemctl --user restart "$unit" >/dev/null 2>&1 || true
   done
+}
+
+refresh_chromium_theme() {
+  local accent="$1"
+  local browser_color_scheme="$2"
+  local policy_json
+
+  policy_json=$(printf '{"BrowserThemeColor":"%s","BrowserColorScheme":"%s"}' "$accent" "$browser_color_scheme")
+
+  if ! printf '%s' "$policy_json" | sudo -n tee /etc/chromium/policies/managed/strata.json > /dev/null; then
+    log "failed to write chromium policy"
+    return 0
+  fi
+
+  mkdir -p "$HOME/.config/chromium/Default"
+  printf '%s\n' "$accent" > "$HOME/.config/chromium/Default/strata-theme-color"
+
+  if ! chromium --refresh-platform-policy --no-startup-window >/dev/null 2>&1; then
+    log "chromium policy refresh command failed"
+  fi
 }
 
 ensure_local_papirus() {
@@ -683,14 +746,11 @@ GtkFileChooserDialog,
 }
 EOF
 
-printf '{"BrowserThemeColor":"%s","BrowserColorScheme":"device"}' "$ACCENT" \
-  | sudo -n tee /etc/chromium/policies/managed/strata.json > /dev/null || true
-chromium --refresh-platform-policy --no-startup-window >/dev/null 2>&1 || true
-
 if [ "$MODE" = "light" ]; then
   GTK_THEME_NAME="Adwaita"
   ICON_THEME_NAME="Papirus-Strata"
   GTK_PREFER_DARK="0"
+  CHROMIUM_COLOR_SCHEME="light"
   $DCONF write /org/gnome/desktop/interface/color-scheme "'prefer-light'" 2>/dev/null || true
   apply_papirus_folder_color "$PAPIRUS_FOLDER_COLOR"
   force_gtk_runtime_reload "$GTK_THEME_NAME" "$ICON_THEME_NAME" "prefer-light"
@@ -700,12 +760,15 @@ else
   GTK_THEME_NAME="Adwaita-dark"
   ICON_THEME_NAME="Papirus-Dark-Strata"
   GTK_PREFER_DARK="1"
+  CHROMIUM_COLOR_SCHEME="dark"
   $DCONF write /org/gnome/desktop/interface/color-scheme "'prefer-dark'" 2>/dev/null || true
   apply_papirus_folder_color "$PAPIRUS_FOLDER_COLOR"
   force_gtk_runtime_reload "$GTK_THEME_NAME" "$ICON_THEME_NAME" "prefer-dark"
   restart_nautilus_for_theme
   echo "QT_STYLE_OVERRIDE=$GTK_THEME_NAME" > "$HOME/.config/environment.d/qt.conf"
 fi
+
+refresh_chromium_theme "$ACCENT" "$CHROMIUM_COLOR_SCHEME"
 
 export GTK_THEME="$GTK_THEME_NAME"
 echo "GTK_THEME=$GTK_THEME_NAME" > "$HOME/.config/environment.d/gtk-theme.conf"
@@ -744,7 +807,7 @@ fi
 echo "accent=$ACCENT" > /tmp/strata-accent
 sudo -n /run/current-system/sw/bin/tee /var/lib/strata/theme.conf < /tmp/strata-accent > /dev/null 2>/dev/null || true
 
-hyprctl keyword "general:col.active_border" "rgba(${ACCENT_HEX}ff)" 2>/dev/null || true
+apply_hyprland_border "$ACCENT_HEX"
 makoctl reload 2>/dev/null || true
 
 if [ "$APPLY_MODE" = "--apply-wallpaper" ] && [ -n "$WALLPAPER" ] && [ -f "$WALLPAPER" ]; then

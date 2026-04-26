@@ -13,6 +13,7 @@ import "powermenu"
 import "clipboard"
 import "wallpickr"
 import "appcenter"
+import "updatecenter"
 
 ShellRoot {
   Bar {}
@@ -28,6 +29,7 @@ ShellRoot {
   WallPickr { id: wallPickr }
   Clipboard { id: clipboard }
   AppCenter { id: appCenter }
+  UpdateCenter { id: updateCenter }
 
   readonly property string clipboardDaemonScript: Qt.resolvedUrl("./scripts/clipboard-daemon.sh").toString().replace("file://", "")
   readonly property string spotifyNotifyScript: Qt.resolvedUrl("./scripts/spotify-notify.sh").toString().replace("file://", "")
@@ -250,6 +252,10 @@ ShellRoot {
   IpcHandler {
     target: "appcenter"
     function toggle(): void { appCenter.toggle() }
+  }
+  IpcHandler {
+    target: "updatecenter"
+    function toggle(): void { updateCenter.toggle() }
   }
 
   Process {

@@ -13,6 +13,7 @@ const logPath = path.join(cacheDir, "update.log");
 const flakeLockPath = path.join(dotfiles, "flake.lock");
 const appcenterCatalogPath = path.join(HOME, ".cache", "strata", "appcenter", "catalog.json");
 const appcenterStatusPath = path.join(HOME, ".cache", "strata", "appcenter", "rebuild-status.txt");
+const releaseConfPath = "/etc/strata-release.conf";
 
 const host = detectHost();
 const channel = host === "desktop" ? "main" : "stable";
@@ -23,9 +24,17 @@ const currentBranch = detectGitBranch(dotfiles);
 const lastLockAt = statMtime(flakeLockPath);
 const pendingApps = detectPendingApps(appcenterCatalogPath);
 const rebuildPending = detectAppCenterRebuildPending(appcenterStatusPath) || pendingApps > 0;
-const releaseInfo = mode === "release" ? detectReleaseUpdate(dotfiles, channel) : { available: false, summary: "" };
+const configuredRepo = readReleaseRepo(releaseConfPath);
+const upstreamInfo = mode === "release"
+  ? detectReleaseUpdate(configuredRepo, channel)
+  : detectBranchUpdate(dotfiles, currentBranch);
 const lastSuccessAt = previous && previous.lastSuccessAt ? previous.lastSuccessAt : null;
 const flakeLockChanged = !!(lastSuccessAt && lastLockAt && new Date(lastLockAt).getTime() > new Date(lastSuccessAt).getTime());
+const localChangesAvailable = mode === "local" && (flakeLockChanged || pendingApps > 0);
+const blockedReason = mode === "local" && gitDirty
+  ? "A worktree local esta alterada. Commit ou stash antes de atualizar o sistema."
+  : "";
+const rebootState = detectRebootState();
 
 let payload = {
   host,
@@ -42,7 +51,13 @@ let payload = {
   gitDirty,
   currentBranch,
   flakeLockChanged,
-  releaseUpdateAvailable: !!releaseInfo.available,
+  releaseUpdateAvailable: mode === "release" && !!upstreamInfo.available,
+  upstreamUpdateAvailable: !!upstreamInfo.available,
+  upstreamSummary: upstreamInfo.summary || "",
+  localChangesAvailable,
+  blockedReason,
+  rebootRecommended: rebootState.recommended,
+  rebootReason: rebootState.reason,
   lastSuccessAt,
   lastLockAt,
   finishedAt: previous && previous.finishedAt ? previous.finishedAt : lastSuccessAt,
@@ -52,12 +67,15 @@ let payload = {
   logPath,
   logPreview: buildLogPreview({
     mode,
-    releaseSummary: releaseInfo.summary,
+    upstreamSummary: upstreamInfo.summary,
+    localChangesAvailable,
     pendingApps,
     gitDirty,
     currentBranch,
     flakeLockChanged,
-    lastSuccessAt
+    lastSuccessAt,
+    blockedReason,
+    rebootReason: rebootState.reason
   })
 };
 
@@ -72,7 +90,13 @@ if (previous && previous.status === "running") {
     gitDirty,
     flakeLockChanged,
     pendingApps,
-    releaseUpdateAvailable: !!releaseInfo.available,
+    releaseUpdateAvailable: mode === "release" && !!upstreamInfo.available,
+    upstreamUpdateAvailable: !!upstreamInfo.available,
+    upstreamSummary: upstreamInfo.summary || "",
+    localChangesAvailable,
+    blockedReason,
+    rebootRecommended: rebootState.recommended,
+    rebootReason: rebootState.reason,
     logPreview: tailLog(logPath, 4)
   };
   writeAndPrint(payload);
@@ -90,7 +114,7 @@ if (previous && previous.status === "error" && !hasNewerSuccess(previous.lastFai
   payload.summaryCount = summarizeCount({
     flakeLockChanged,
     pendingApps,
-    releaseAvailable: !!releaseInfo.available
+    upstreamAvailable: !!upstreamInfo.available
   });
   payload.rebuildRequired = payload.summaryCount > 0 || rebuildPending;
   payload.logPreview = tailLog(logPath, 4);
@@ -98,11 +122,10 @@ if (previous && previous.status === "error" && !hasNewerSuccess(previous.lastFai
   process.exit(0);
 }
 
-const releaseAvailable = !!releaseInfo.available;
 const summaryCount = summarizeCount({
   flakeLockChanged,
   pendingApps,
-  releaseAvailable
+  upstreamAvailable: !!upstreamInfo.available
 });
 
 payload.summaryCount = summaryCount;
@@ -113,9 +136,13 @@ if (summaryCount > 0) {
 }
 
 if (payload.status === "updates") {
-  payload.currentStepLabel = mode === "release"
-    ? "A release do notebook pode ser aplicada diretamente deste painel."
-    : "Mudanças locais detectadas e prontas para rebuild.";
+  if (blockedReason) {
+    payload.currentStepLabel = blockedReason;
+  } else {
+    payload.currentStepLabel = mode === "release"
+      ? "A release configurada para este host pode ser aplicada diretamente deste painel."
+      : "O painel separa upstream remoto de mudancas locais prontas para rebuild.";
+  }
 }
 
 writeAndPrint(payload);
@@ -156,24 +183,55 @@ function detectAppCenterRebuildPending(filePath) {
   }
 }
 
-function detectReleaseUpdate(repo, channel) {
-  const result = spawnSync("git", ["-C", repo, "ls-remote", "--heads", "origin", channel], {
+function detectReleaseUpdate(repoName, channel) {
+  const curl = spawnSync("/run/current-system/sw/bin/curl", [
+    "-sf",
+    `https://api.github.com/repos/${repoName}/commits/${channel}`
+  ], {
     encoding: "utf8",
     timeout: 2500
   });
 
-  if (result.status !== 0) {
+  if (curl.status !== 0) {
     return { available: false, summary: "" };
   }
 
-  const remoteSha = ((result.stdout || "").trim().split(/\s+/)[0] || "").trim();
+  const match = (curl.stdout || "").match(/"sha"\s*:\s*"([a-f0-9]{7,40})"/i);
+  const remoteSha = match ? match[1] : "";
+  if (remoteSha === "") return { available: false, summary: "" };
+
+  const cachePath = `/var/cache/strata-last-commit-${channel}`;
+  const localSha = safeRead(cachePath).trim();
+  return {
+    available: localSha === "" || remoteSha !== localSha,
+    summary: localSha === ""
+      ? `github:${repoName}/${channel} ainda nao foi aplicado neste host.`
+      : (remoteSha !== localSha ? `github:${repoName}/${channel} possui um commit novo.` : "")
+  };
+}
+
+function detectBranchUpdate(repo, branch) {
+  if (!branch || branch === "-") return { available: false, summary: "" };
+
+  const remote = spawnSync("git", ["-C", repo, "ls-remote", "--heads", "origin", branch], {
+    encoding: "utf8",
+    timeout: 2500
+  });
+
+  if (remote.status !== 0) {
+    return { available: false, summary: "" };
+  }
+
+  const remoteSha = ((remote.stdout || "").trim().split(/\s+/)[0] || "").trim();
   if (remoteSha === "") return { available: false, summary: "" };
 
   const local = spawnSync("git", ["-C", repo, "rev-parse", "HEAD"], { encoding: "utf8" });
   const localSha = (local.stdout || "").trim();
   return {
     available: localSha !== "" && remoteSha !== localSha,
-    summary: localSha !== "" && remoteSha !== localSha ? "origin/" + channel + " possui um commit novo." : ""
+    summary: localSha !== "" && remoteSha !== localSha
+      ? `origin/${branch} difere do commit local deste host.`
+      : ""
   };
 }
 
@@ -193,6 +251,37 @@ function readJson(filePath) {
   }
 }
 
+function safeRead(filePath) {
+  try {
+    return fs.readFileSync(filePath, "utf8");
+  } catch {
+    return "";
+  }
+}
+
+function readReleaseRepo(filePath) {
+  const raw = safeRead(filePath);
+  const match = raw.match(/^\s*STRATA_UPDATE_REPO=(?:"([^"]+)"|'([^']+)'|([^\s#]+))/m);
+  return (match && (match[1] || match[2] || match[3])) || "PedroAugustoOK/Strata-Habitus";
+}
+
+function detectRebootState() {
+  const booted = realpath("/run/booted-system");
+  const current = realpath("/nix/var/nix/profiles/system");
+  if (booted !== "" && current !== "" && booted !== current) {
+    return {
+      recommended: true,
+      reason: "Uma geracao mais nova ja foi ativada. Reinicie para entrar no sistema atualizado."
+    };
+  }
+  return { recommended: false, reason: "" };
+}
+
+function realpath(target) {
+  const result = spawnSync("readlink", ["-f", target], { encoding: "utf8" });
+  return result.status === 0 ? (result.stdout || "").trim() : "";
+}
+
 function tailLog(filePath, count) {
   try {
     const lines = fs.readFileSync(filePath, "utf8").trim().split(/\r?\n/).filter(Boolean);
@@ -206,14 +295,18 @@ function buildLogPreview(input) {
   const lines = [];
   if (input.mode === "release") {
     lines.push("modo release ativo para este host");
-    if (input.releaseSummary) lines.push(input.releaseSummary);
+    if (input.upstreamSummary) lines.push(input.upstreamSummary);
   } else {
     lines.push("modo local ativo para o ambiente de desenvolvimento");
     lines.push("branch atual: " + input.currentBranch);
+    if (input.upstreamSummary) lines.push(input.upstreamSummary);
+    if (input.localChangesAvailable) lines.push("estado local pronto para rebuild");
   }
   if (input.pendingApps > 0) lines.push(input.pendingApps + " apps aguardando rebuild do App Center");
   if (input.flakeLockChanged) lines.push("flake.lock mudou desde o último sucesso");
   if (input.gitDirty) lines.push("worktree local contém alterações");
+  if (input.blockedReason) lines.push("update bloqueado ate limpar a worktree");
+  if (input.rebootReason) lines.push(input.rebootReason);
   if (lines.length === 0 && input.lastSuccessAt) lines.push("último sucesso registrado em " + input.lastSuccessAt);
   return lines.slice(0, 4);
 }
@@ -222,7 +315,7 @@ function summarizeCount(input) {
   let count = 0;
   if (input.flakeLockChanged) count += 1;
   if (input.pendingApps > 0) count += 1;
-  if (input.releaseAvailable) count += 1;
+  if (input.upstreamAvailable) count += 1;
   return count;
 }
 

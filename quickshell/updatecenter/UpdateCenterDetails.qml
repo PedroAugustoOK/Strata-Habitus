@@ -35,6 +35,9 @@ Rectangle {
           { label: "Fila App Center", value: root.store.pendingApps > 0 ? (root.store.pendingApps + " apps") : "vazia" },
           { label: "Branch", value: root.store.currentBranch },
           { label: "Worktree", value: root.store.gitDirty ? "alterada" : "limpa" },
+          { label: "Upstream", value: root.store.upstreamUpdateAvailable ? "disponivel" : "em dia" },
+          { label: "Estado local", value: root.store.localChangesAvailable ? "rebuild pendente" : "limpo" },
+          { label: "Reboot", value: root.store.rebootRecommended ? "recomendado" : "nao" },
           { label: "Passo atual", value: root.store.currentStep === "idle" ? "aguardando" : root.store.currentStep }
         ]
 
@@ -97,6 +100,17 @@ Rectangle {
             font { pixelSize: 12; family: "Inter" }
           }
         }
+      }
+
+      Text {
+        visible: root.store.upstreamSummary !== "" || root.store.blockedReason !== "" || root.store.rebootReason !== ""
+        Layout.fillWidth: true
+        text: root.store.blockedReason !== ""
+          ? root.store.blockedReason
+          : (root.store.rebootReason !== "" ? root.store.rebootReason : root.store.upstreamSummary)
+        wrapMode: Text.Wrap
+        color: Colors.text2
+        font { pixelSize: 12; family: "Inter" }
       }
     }
   }

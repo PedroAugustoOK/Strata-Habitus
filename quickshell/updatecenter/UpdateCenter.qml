@@ -329,15 +329,23 @@ PanelWindow {
           radius: 17
           color: store.running
             ? Qt.rgba(Colors.accent.r, Colors.accent.g, Colors.accent.b, 0.16)
-            : Colors.accent
+            : store.primaryEnabled()
+              ? Colors.accent
+              : Qt.rgba(Colors.text1.r, Colors.text1.g, Colors.text1.b, 0.12)
           border.width: 1
-          border.color: Qt.rgba(Colors.accent.r, Colors.accent.g, Colors.accent.b, store.running ? 0.24 : 0.36)
+          border.color: store.primaryEnabled()
+            ? Qt.rgba(Colors.accent.r, Colors.accent.g, Colors.accent.b, store.running ? 0.24 : 0.36)
+            : Qt.rgba(Colors.text1.r, Colors.text1.g, Colors.text1.b, 0.12)
           focus: true
 
           Text {
             anchors.centerIn: parent
             text: store.primaryLabel()
-            color: store.running ? Colors.accent : Colors.bg0
+            color: store.running
+              ? Colors.accent
+              : store.primaryEnabled()
+                ? Colors.bg0
+                : Colors.text3
             font { pixelSize: 14; family: "Inter"; weight: Font.DemiBold }
           }
 
@@ -350,7 +358,7 @@ PanelWindow {
 
           MouseArea {
             anchors.fill: parent
-            enabled: !store.running
+            enabled: store.primaryEnabled()
             cursorShape: Qt.PointingHandCursor
             onClicked: root.handlePrimaryAction()
           }

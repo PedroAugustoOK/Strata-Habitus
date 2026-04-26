@@ -31,6 +31,12 @@ Item {
   property bool gitDirty: false
   property bool flakeLockChanged: false
   property bool releaseUpdateAvailable: false
+  property bool upstreamUpdateAvailable: false
+  property string upstreamSummary: ""
+  property bool localChangesAvailable: false
+  property string blockedReason: ""
+  property bool rebootRecommended: false
+  property string rebootReason: ""
   property var lastUpdateAt: null
   property var lastLockAt: null
   property var lastFinishedAt: null
@@ -66,6 +72,7 @@ Item {
   }
 
   function heroTitle() {
+    if (blockedReason !== "" && status !== "running" && status !== "success") return "Atualização bloqueada por estado local"
     if (status === "clean") return "Sistema em dia"
     if (status === "running") return "Atualizando o sistema com segurança"
     if (status === "success") return "Atualização aplicada"
@@ -74,20 +81,27 @@ Item {
   }
 
   function heroBody() {
-    if (status === "clean") return "Nenhuma ação necessária no momento."
+    if (status === "clean") return rebootRecommended ? rebootReason : "Nenhuma ação necessária no momento."
     if (status === "running") return currentStepLabel
-    if (status === "success") return "O sistema foi atualizado com sucesso."
+    if (status === "success") return rebootRecommended ? rebootReason : "O sistema foi atualizado com sucesso."
     if (status === "error") return lastError !== "" ? lastError : "Revise os detalhes e tente novamente."
+    if (blockedReason !== "") return blockedReason
     if (mode === "release") return "O host atual usa o fluxo de release do Strata e pode aplicar a atualização diretamente daqui."
-    return "Atualizações locais detectadas e prontas para uso."
+    if (upstreamUpdateAvailable && localChangesAvailable) return "Existe update remoto e tambem ha mudancas locais prontas para rebuild."
+    if (upstreamUpdateAvailable) return "Existe update remoto disponivel para a branch atual."
+    if (localChangesAvailable) return "O estado local ja pede rebuild mesmo sem update remoto."
+    return "Atualizações detectadas e prontas para uso."
   }
 
   function statusLabel() {
+    if (blockedReason !== "" && status !== "running" && status !== "success") return "Bloqueado"
     if (status === "clean") return "Atualizado"
     if (status === "running") return "Em progresso"
     if (status === "success") return "Concluído"
     if (status === "error") return "Erro"
+    if (rebootRecommended) return "Reinício recomendado"
     if (mode === "release" && releaseUpdateAvailable) return "Release disponível"
+    if (upstreamUpdateAvailable) return "Upstream disponível"
     return rebuildRequired ? "Rebuild necessário" : "Mudanças detectadas"
   }
 
@@ -96,7 +110,14 @@ Item {
     if (status === "success") return "Concluir"
     if (status === "error") return "Tentar novamente"
     if (status === "clean") return "Fechar"
+    if (blockedReason !== "") return "Limpe a worktree"
     return "Atualizar agora"
+  }
+
+  function primaryEnabled() {
+    if (status === "running" || runProc.running) return false
+    if (status === "success" || status === "clean") return true
+    return blockedReason === ""
   }
 
   function detailsLabel() {
@@ -123,6 +144,7 @@ Item {
       closeRequested()
       return
     }
+    if (blockedReason !== "") return
 
     runProc.command = [nodeBin, runScript]
     runProc.running = true
@@ -154,6 +176,12 @@ Item {
     gitDirty = payload.gitDirty === true
     flakeLockChanged = payload.flakeLockChanged === true
     releaseUpdateAvailable = payload.releaseUpdateAvailable === true
+    upstreamUpdateAvailable = payload.upstreamUpdateAvailable === true
+    upstreamSummary = payload.upstreamSummary || ""
+    localChangesAvailable = payload.localChangesAvailable === true
+    blockedReason = payload.blockedReason || ""
+    rebootRecommended = payload.rebootRecommended === true
+    rebootReason = payload.rebootReason || ""
     lastUpdateAt = payload.lastSuccessAt ? new Date(payload.lastSuccessAt) : null
     lastLockAt = payload.lastLockAt ? new Date(payload.lastLockAt) : null
     lastFinishedAt = payload.finishedAt ? new Date(payload.finishedAt) : lastUpdateAt

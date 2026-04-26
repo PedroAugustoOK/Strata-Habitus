@@ -20,9 +20,16 @@ const appcenterIndex = path.join(dotfiles, "quickshell", "scripts", "appcenter-i
 const launcherIndex = path.join(dotfiles, "quickshell", "scripts", "launcher-index.js");
 const node = "/run/current-system/sw/bin/node";
 const flake = `path:${dotfiles}#${host}`;
+const currentBranch = detectBranch(dotfiles);
+const gitDirty = detectGitDirty(dotfiles);
 
 fs.mkdirSync(cacheDir, { recursive: true });
 fs.writeFileSync(logPath, "", "utf8");
+
+if (mode === "local" && gitDirty) {
+  fail("A worktree local esta alterada. Commit ou stash antes de atualizar o sistema.");
+}
+
 writeStatus({
   host,
   channel,
@@ -40,10 +47,16 @@ writeStatus({
   summaryCount: 1,
   rebuildRequired: true,
   pendingApps: 0,
-  currentBranch: detectBranch(dotfiles),
-  gitDirty: detectGitDirty(dotfiles),
+  currentBranch,
+  gitDirty,
   flakeLockChanged: false,
   releaseUpdateAvailable: false,
+  upstreamUpdateAvailable: false,
+  upstreamSummary: "",
+  localChangesAvailable: false,
+  blockedReason: "",
+  rebootRecommended: false,
+  rebootReason: "",
   lastError: "",
   logPreview: ["preparando terminal de update"]
 });
@@ -90,7 +103,7 @@ try {
 function buildCommand(context) {
   const updateAction = context.mode === "release"
     ? `sudo env STRATA_UPDATE_HOST=${sh(context.host)} STRATA_UPDATE_CHANNEL=${sh(context.channel)} ${sh(path.join(context.dotfiles, "strata-update.sh"))}`
-    : `cd ${sh(context.dotfiles)}\n${writeStep("inputs", "Atualizando inputs locais do flake.", 0.18)}\nnix flake update 2>&1 | tee -a ${sh(context.logPath)}\n${writeStep("build", "Montando a nova geração do sistema.", 0.46)}\nsudo nixos-rebuild switch --flake ${sh(context.flake)} 2>&1 | tee -a ${sh(context.logPath)}`;
+    : `cd ${sh(context.dotfiles)}\n${writeStep("inputs", "Sincronizando branch e inputs locais.", 0.18)}\ngit fetch origin 2>&1 | tee -a ${sh(context.logPath)}\nbranch=$(git branch --show-current)\nif [ -n "$branch" ] && git ls-remote --exit-code --heads origin "$branch" >/dev/null 2>&1; then\n  git pull --ff-only origin "$branch" 2>&1 | tee -a ${sh(context.logPath)}\nelse\n  printf 'Branch sem remoto correspondente; mantendo estado local atual.\\n' | tee -a ${sh(context.logPath)}\nfi\nnix flake update 2>&1 | tee -a ${sh(context.logPath)}\n${writeStep("build", "Montando a nova geração do sistema.", 0.46)}\nsudo nixos-rebuild switch --flake ${sh(context.flake)} 2>&1 | tee -a ${sh(context.logPath)}`;
 
   const commandLines = [
     `mkdir -p ${sh(context.cacheDir)}`,
@@ -137,16 +150,23 @@ function writeStep(step, label, progress) {
     summaryCount: 1,
     rebuildRequired: true,
     pendingApps: 0,
-    currentBranch: detectBranch(dotfiles),
-    gitDirty: detectGitDirty(dotfiles),
+    currentBranch,
+    gitDirty,
     flakeLockChanged: false,
     releaseUpdateAvailable: false,
+    upstreamUpdateAvailable: false,
+    upstreamSummary: "",
+    localChangesAvailable: false,
+    blockedReason: "",
+    rebootRecommended: false,
+    rebootReason: "",
     lastError: "",
     logPreview: []
   }, null, 2)}\nEOF`;
 }
 
 function successJson(context) {
+  const rebootState = detectRebootState();
   return JSON.stringify({
     host: context.host,
     channel: context.channel,
@@ -166,12 +186,18 @@ function successJson(context) {
     gitDirty: false,
     flakeLockChanged: false,
     releaseUpdateAvailable: false,
+    upstreamUpdateAvailable: false,
+    upstreamSummary: "",
+    localChangesAvailable: false,
+    blockedReason: "",
+    rebootRecommended: rebootState.recommended,
+    rebootReason: rebootState.reason,
     lastError: "",
     logPreview: [
       "nova geração aplicada",
       "índices atualizados",
-      "sistema pronto para uso"
-    ]
+      rebootState.recommended ? rebootState.reason : "sistema pronto para uso"
+    ].filter(Boolean)
   }, null, 2);
 }
 
@@ -195,6 +221,12 @@ function errorJson(context) {
     gitDirty: detectGitDirty(context.dotfiles),
     flakeLockChanged: false,
     releaseUpdateAvailable: false,
+    upstreamUpdateAvailable: false,
+    upstreamSummary: "",
+    localChangesAvailable: false,
+    blockedReason: "",
+    rebootRecommended: false,
+    rebootReason: "",
     lastError: "A atualização falhou. Abra o log para revisar o terminal.",
     logPreview: tailLog(logPath, 4)
   }, null, 2);
@@ -227,6 +259,23 @@ function detectGitDirty(repo) {
   return result.status === 0 && (result.stdout || "").trim() !== "";
 }
 
+function detectRebootState() {
+  const booted = realpath("/run/booted-system");
+  const current = realpath("/nix/var/nix/profiles/system");
+  if (booted !== "" && current !== "" && booted !== current) {
+    return {
+      recommended: true,
+      reason: "Uma geracao mais nova ja foi ativada. Reinicie para entrar no sistema atualizado."
+    };
+  }
+  return { recommended: false, reason: "" };
+}
+
+function realpath(target) {
+  const result = spawnSync("readlink", ["-f", target], { encoding: "utf8" });
+  return result.status === 0 ? (result.stdout || "").trim() : "";
+}
+
 function tailLog(filePath, count) {
   try {
     const lines = fs.readFileSync(filePath, "utf8").trim().split(/\r?\n/).filter(Boolean);
@@ -252,10 +301,16 @@ function fail(message) {
     summaryCount: 1,
     rebuildRequired: true,
     pendingApps: 0,
-    currentBranch: detectBranch(dotfiles),
-    gitDirty: detectGitDirty(dotfiles),
+    currentBranch,
+    gitDirty,
     flakeLockChanged: false,
     releaseUpdateAvailable: false,
+    upstreamUpdateAvailable: false,
+    upstreamSummary: "",
+    localChangesAvailable: false,
+    blockedReason: "",
+    rebootRecommended: false,
+    rebootReason: "",
     lastError: message,
     logPreview: [message]
   });

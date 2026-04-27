@@ -27,9 +27,11 @@ Item {
   property bool isIndexing: false
   property bool isSearching: false
   property bool isLaunching: false
+  property bool showAll: false
   property string launchError: ""
   property string indexError: ""
   property int resultLimit: 8
+  property int allAppsLimit: 1000
   property bool _pendingRefreshAfterIndex: false
   property bool _pendingSearchAfterIndex: false
 
@@ -55,10 +57,24 @@ Item {
     searchDelay.restart()
   }
 
+  function toggleAllMode() {
+    showAll = !showAll
+    requestSearch(query)
+  }
+
   function performSearch() {
     if (!ready && !isIndexing) return
     isSearching = true
-    searchProc.command = [nodeBin, nodeLauncherSearch, indexPath, historyPath, pinsPath, query, String(resultLimit)]
+    searchProc.command = [
+      nodeBin,
+      nodeLauncherSearch,
+      indexPath,
+      historyPath,
+      pinsPath,
+      showAll ? "all" : "default",
+      query,
+      String(showAll ? allAppsLimit : resultLimit)
+    ]
     searchProc.running = true
   }
 

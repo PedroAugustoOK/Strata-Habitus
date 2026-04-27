@@ -127,18 +127,16 @@ Item {
 
   Process {
     id: iconProc
-    command: [Paths.scripts + "/ws-icons.sh"]
+    command: ["/run/current-system/sw/bin/node", Paths.scripts + "/ws-icons.js"]
     stdout: SplitParser {
       onRead: data => {
-        var icons = {}
-        var entries = data.trim().split("|")
-        for (var i = 0; i < entries.length; i++) {
-          var parts = entries[i].split(":")
-          if (parts.length >= 2) {
-            icons[parseInt(parts[0])] = parts.slice(1).join(":")
-          }
+        const line = data.trim()
+        if (line === "") return
+        try {
+          wsRoot.wsIcons = JSON.parse(line)
+        } catch (error) {
+          console.log("workspace icon parse error:", error.message)
         }
-        wsRoot.wsIcons = icons
       }
     }
   }

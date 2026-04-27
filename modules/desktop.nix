@@ -12,9 +12,28 @@ in {
   programs.hyprland.withUWSM        = false;
   programs.uwsm.enable              = lib.mkForce false;
   programs.dconf.enable             = true;
+  services.gnome.gcr-ssh-agent.enable = false;
+  services.gnome.gnome-keyring.enable = true;
 
-  xdg.portal.enable       = true;
-  xdg.portal.extraPortals = [ pkgs.xdg-desktop-portal-hyprland ];
+  security.pam.services.login.enableGnomeKeyring = true;
+  security.pam.services.sddm.enableGnomeKeyring  = true;
+
+  xdg.portal = {
+    enable = true;
+    extraPortals = [
+      pkgs.xdg-desktop-portal-hyprland
+      pkgs.xdg-desktop-portal-gtk
+    ];
+    config = {
+      common = {
+        default = [ "hyprland" "gtk" ];
+        "org.freedesktop.impl.portal.ScreenCast" = [ "hyprland" ];
+        "org.freedesktop.impl.portal.Screenshot" = [ "hyprland" ];
+        "org.freedesktop.impl.portal.FileChooser" = [ "gtk" ];
+        "org.freedesktop.impl.portal.OpenURI" = [ "gtk" ];
+      };
+    };
+  };
 
   services.displayManager.sddm = {
     enable         = loginManagerEnabled;
@@ -44,8 +63,15 @@ in {
       /run/current-system/sw/bin/flatpak remote-add --system --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo >/dev/null 2>&1 || true
     fi
   '';
-  services.printing.enable              = false;
+  services.printing.enable              = true;
+  services.printing.browsing            = true;
   services.printing.drivers             = [ pkgs.hplipWithPlugin ];
+  services.avahi.enable                 = true;
+  services.avahi.nssmdns4               = true;
+  services.avahi.openFirewall           = true;
+  services.ipp-usb.enable               = true;
+  hardware.sane.enable                  = true;
+  hardware.sane.extraBackends           = [ pkgs.hplipWithPlugin ];
   services.udev.packages                = [
     pkgs.hplipWithPlugin
     pkgs.steam-devices-udev-rules

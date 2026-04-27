@@ -1,3 +1,4 @@
+import Quickshell
 import Quickshell.Io
 import QtQuick
 import QtQuick.Layouts
@@ -6,6 +7,9 @@ Item {
   id: root
   implicitWidth:  row.implicitWidth
   implicitHeight: row.implicitHeight
+  readonly property bool hasHardwareIndicators: DeviceState.hasBluetooth || DeviceState.hasWifi || DeviceState.hasBattery
+  readonly property string sessionBus: Quickshell.env("DBUS_SESSION_BUS_ADDRESS")
+  readonly property string runtimeDir: Quickshell.env("XDG_RUNTIME_DIR")
 
   RowLayout {
     id: row
@@ -27,6 +31,7 @@ Item {
       verticalAlignment: Text.AlignVCenter
     }
     Text {
+      visible: DeviceState.hasBluetooth
       id: btLabel
       color: Colors.text3
       font { family: "Material Symbols Rounded"; pixelSize: 14 }
@@ -34,6 +39,7 @@ Item {
       verticalAlignment: Text.AlignVCenter
     }
     Text {
+      visible: DeviceState.hasWifi
       id: wifiLabel
       color: Colors.text3
       font { family: "Material Symbols Rounded"; pixelSize: 14 }
@@ -41,9 +47,17 @@ Item {
       verticalAlignment: Text.AlignVCenter
     }
     BatteryRing {
+      visible: DeviceState.hasBattery
       id: batRing
       value:    100
       charging: false
+    }
+    Text {
+      visible: !root.hasHardwareIndicators
+      text: "󰒓"
+      color: Colors.text3
+      font { family: "JetBrainsMono Nerd Font"; pixelSize: 13 }
+      verticalAlignment: Text.AlignVCenter
     }
   }
 
@@ -98,11 +112,13 @@ Item {
 
   Process {
     id: btProc
-    command: ["sh", "-c",
-      "POWERED=$(bluetoothctl show 2>/dev/null | grep 'Powered:' | awk '{print $2}');" +
-      "if [ \"$POWERED\" != 'yes' ]; then echo 'off'; exit; fi;" +
-      "CONN=$(bluetoothctl devices Connected 2>/dev/null | wc -l);" +
-      "if [ \"$CONN\" -gt 0 ]; then echo 'connected'; else echo 'on'; fi"
+    command: [
+      "/run/current-system/sw/bin/env",
+      "DBUS_SESSION_BUS_ADDRESS=" + root.sessionBus,
+      "XDG_RUNTIME_DIR=" + root.runtimeDir,
+      "/run/current-system/sw/bin/bash",
+      Paths.scripts + "/bluetooth-helper.sh",
+      "status"
     ]
     stdout: SplitParser {
       onRead: data => {
@@ -124,9 +140,15 @@ Item {
   Timer {
     interval: 3000; running: true; repeat: true; triggeredOnStart: true
     onTriggered: {
-      batProc.running = true
-      netProc.running = true
-      btProc.running  = true
+      if (DeviceState.hasBattery) {
+        batProc.running = true
+      }
+      if (DeviceState.hasWifi) {
+        netProc.running = true
+      }
+      if (DeviceState.hasBluetooth) {
+        btProc.running = true
+      }
     }
   }
 }

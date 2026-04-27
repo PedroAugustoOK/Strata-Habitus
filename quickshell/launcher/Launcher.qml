@@ -42,6 +42,7 @@ PanelWindow {
     actionSelected = 0
     actionMode = false
     searchInput.text = ""
+    store.showAll = false
     store.launchError = ""
     card.opacity = 0
     card.scale = 0.985
@@ -269,7 +270,13 @@ PanelWindow {
               }
 
               if (event.modifiers & Qt.ControlModifier) {
-                if (event.key === Qt.Key_K) {
+                if (event.key === Qt.Key_A) {
+                  store.toggleAllMode()
+                  launcher.selected = 0
+                  launcher.actionSelected = 0
+                  launcher.actionMode = false
+                  event.accepted = true
+                } else if (event.key === Qt.Key_K) {
                   launcher.togglePinSelected()
                   event.accepted = true
                 } else if (event.key === Qt.Key_R) {
@@ -293,7 +300,7 @@ PanelWindow {
             spacing: 1
 
             Text {
-              text: store.isIndexing ? "indexando" : store.isSearching ? "buscando" : "apps"
+              text: store.isIndexing ? "indexando" : store.isSearching ? "buscando" : store.showAll ? "todos" : "apps"
               color: Colors.text3
               font { pixelSize: 10; family: "JetBrainsMono Nerd Font" }
             }
@@ -302,6 +309,39 @@ PanelWindow {
               text: String(store.results.length)
               color: Colors.text2
               font { pixelSize: 12; family: "JetBrainsMono Nerd Font" }
+            }
+          }
+
+          Rectangle {
+            radius: 10
+            color: store.showAll
+              ? Qt.rgba(Colors.accent.r, Colors.accent.g, Colors.accent.b, 0.16)
+              : Qt.rgba(1, 1, 1, 0.04)
+            border.width: 1
+            border.color: store.showAll
+              ? Qt.rgba(Colors.accent.r, Colors.accent.g, Colors.accent.b, 0.28)
+              : Qt.rgba(1, 1, 1, 0.06)
+            Layout.preferredHeight: 28
+            Layout.preferredWidth: allAppsLabel.implicitWidth + 18
+
+            Text {
+              id: allAppsLabel
+              anchors.centerIn: parent
+              text: "Todos os Apps"
+              color: store.showAll ? Colors.accent : Colors.text3
+              font { pixelSize: 10; family: "JetBrainsMono Nerd Font" }
+            }
+
+            MouseArea {
+              anchors.fill: parent
+              cursorShape: Qt.PointingHandCursor
+              onClicked: {
+                store.toggleAllMode()
+                launcher.selected = 0
+                launcher.actionSelected = 0
+                launcher.actionMode = false
+                searchInput.forceActiveFocus()
+              }
             }
           }
         }
@@ -349,6 +389,7 @@ PanelWindow {
           isIndexing: store.isIndexing
           ready: store.ready
           hasQuery: searchInput.text.trim().length > 0
+          showAll: store.showAll
           indexError: store.indexError
         }
       }
@@ -457,6 +498,7 @@ PanelWindow {
         Layout.leftMargin: 18
         Layout.rightMargin: 18
         selectedItem: launcher.selectedItem
+        showAll: store.showAll
       }
     }
   }

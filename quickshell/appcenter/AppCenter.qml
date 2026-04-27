@@ -322,7 +322,7 @@ PanelWindow {
         Text {
           x: 18
           y: 14
-          text: "App Center"
+          text: "Central de Apps"
           color: Colors.text1
           font { pixelSize: 22; family: "JetBrainsMono Nerd Font" }
         }

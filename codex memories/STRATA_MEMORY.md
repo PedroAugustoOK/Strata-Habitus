@@ -102,3 +102,105 @@ sudo nixos-generate-config --show-hardware-config > ~/dotfiles/hosts/desktop/har
 - Commit `0a3ab1d`
 - Added `Update Center`
 - Consolidated repo state after notebook theme fixes and current desktop work
+
+## Session update - 2026-04-27
+
+### Settings Center
+- `quickshell/settingscenter/SettingsCenter.qml` was added and iterated heavily.
+- Current state:
+  - PT-BR naming and copy
+  - vertical layout
+  - `Super+S`
+  - keyboard navigation working
+  - action list auto-scrolls with focus
+- It is now the preferred native entry point for:
+  - `Central de Controle`
+  - `Tema`
+  - `Wallpapers`
+  - `Central de Apps`
+  - `Central de Atualizações`
+  - system utilities
+
+### New desktop apps / system completeness
+- Added system apps for a more complete desktop:
+  - `gnome-calculator`
+  - `file-roller`
+  - `kooha`
+  - `gnome-clocks`
+  - `gnome-calendar`
+  - `gnome-control-center`
+  - `simple-scan`
+  - `system-config-printer`
+  - `thunderbird`
+- Printing and scanning were enabled in NixOS config.
+
+### Launcher
+- Launcher now also supports a `Todos os Apps` mode inside the existing overlay.
+- Main changes:
+  - `Ctrl+A` toggles full installed apps listing
+  - still searchable/filterable
+  - no separate panel was created
+
+### Wallpaper Stage
+- `WallPickr` now uses cached thumbnails for navigation performance.
+- `quickshell/scripts/wallpickr-index.sh` was added.
+- `imagemagick` was added as a dependency.
+
+### Clipboard
+- Clipboard text normalization was hardened for broken UTF-16-like browser payloads.
+- It now better classifies entries as:
+  - `Texto`
+  - `Link`
+  - `Links`
+
+### Workspaces
+- Workspace icons remain monochrome glyphs, not colored app icons.
+- Resolution logic now uses:
+  - manual map
+  - substring/category heuristics
+  - title fallback
+- This reduces single-letter fallbacks while preserving the visual style.
+
+### Icon theme direction
+- Strata moved from Papirus toward Colloid as the system icon theme.
+- Current strategy:
+  - GTK/File Manager should only switch between light/dark
+  - theme identity should come primarily from icon color variants
+- Current Colloid build was reduced to a practical subset:
+  - schemes: `default`
+  - colors: `default`, `pink`, `green`, `grey`, `purple`, `orange`
+
+### Tray / Spotify
+- Spotify tray icon broke during the icon-theme migration.
+- The tray now contains an explicit fallback in:
+  - `quickshell/bar/Tray.qml`
+- If a tray item looks like Spotify, it uses the `hicolor` Spotify icon directly.
+
+### File Manager theme issue
+- Main finding:
+  - trying to fully recolor Nautilus/GTK per palette caused unstable hybrid states
+- Current direction:
+  - keep Nautilus on `Adwaita` + light/dark
+  - use icon theme color for personality
+- `apply-theme-state.sh` was simplified in that direction.
+
+### Screen recorder diagnosis
+- Kooha is not reliable on host `desktop`.
+- Logs showed `xdg-desktop-portal-hyprland` screencast failures:
+  - `Out of buffers`
+  - `Asked for a wl_shm buffer which is legacy`
+  - `tried scheduling on already scheduled cb`
+- This correlates with the `desktop` hardware being `hybrid-amd-nvidia`.
+- Current mitigation attempted:
+  - explicit portal config
+  - `~/.config/hypr/xdph.conf` with `force_shm = true`
+  - `max_fps = 60`
+- Result:
+  - Kooha still unreliable / worse on this host
+- Practical decision:
+  - `gpu-screen-recorder-gtk` also did not work acceptably
+  - standardize on `obs-studio`
+  - in `SettingsCenter`, `Gravador de Tela` should open `obs-studio`
+
+### Current main unresolved item
+- Rebuild and validate the OBS flow on `desktop`.

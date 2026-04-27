@@ -171,7 +171,7 @@ PanelWindow {
           spacing: 5
 
           Text {
-            text: "System Update"
+            text: "Central de Atualizações"
             color: Colors.text1
             font { pixelSize: 28; family: "Inter"; weight: Font.DemiBold }
           }

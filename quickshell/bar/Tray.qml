@@ -24,6 +24,17 @@ Rectangle {
       delegate: Item {
         required property SystemTrayItem modelData
         width: 16; height: 16
+        readonly property string trayId: String(modelData.id || "").toLowerCase()
+        readonly property string trayTitle: String(modelData.title || "").toLowerCase()
+        readonly property string trayTooltip: String(modelData.tooltipTitle || "").toLowerCase()
+        readonly property string trayIcon: String(modelData.icon || "")
+        readonly property bool spotifyLike: trayId.includes("spotify")
+                                         || trayTitle.includes("spotify")
+                                         || trayTooltip.includes("spotify")
+                                         || trayIcon.toLowerCase().includes("spotify")
+        readonly property string resolvedIcon: spotifyLike
+                                             ? "file:///run/current-system/sw/share/icons/hicolor/24x24/apps/spotify-client.png"
+                                             : trayIcon
 
         Rectangle {
           anchors.centerIn: parent
@@ -36,7 +47,7 @@ Rectangle {
 
         Image {
           anchors.fill: parent
-          source:       modelData.icon
+          source:       resolvedIcon
           smooth:       true
           fillMode:     Image.PreserveAspectFit
         }

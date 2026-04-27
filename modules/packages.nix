@@ -3,6 +3,10 @@ let
   graphics = hostMeta.graphics or "generic";
   useIntelMedia = builtins.elem graphics [ "intel" "hybrid-intel-nvidia" ];
   appsStatePath = ../state/apps.nix;
+  colloidIconTheme = pkgs.colloid-icon-theme.override {
+    schemeVariants = [ "default" ];
+    colorVariants = [ "default" "pink" "green" "grey" "purple" "orange" ];
+  };
   strataUserApps =
     if builtins.pathExists appsStatePath then
       import appsStatePath { inherit pkgs; }
@@ -33,16 +37,21 @@ in {
     nautilus gvfs pavucontrol pwvucontrol
     impala bluetui playerctl hyprlock hypridle
     pipewire wireplumber blueman libnotify mako
-    adwaita-qt adwaita-qt6 gnome-themes-extra papirus-icon-theme papirus-folders
+    adwaita-qt adwaita-qt6 gnome-themes-extra colloidIconTheme
     obs-studio bibata-cursors fastfetch btop vscode gcc
     spotify fish starship loupe zathura libreoffice
+    gnome-calculator file-roller gnome-clocks gnome-calendar
+    gnome-control-center simple-scan system-config-printer thunderbird
     standardnotes mpv gsettings-desktop-schemas
-    hplipWithPlugin glib
+    hplipWithPlugin glib imagemagick
     codex
     qgis fzf
     lm_sensors
     eza bat zoxide
     direnv nix-direnv
+    protonmail-desktop protonmail-bridge-gui
+    proton-pass proton-authenticator
+    gnome-keyring seahorse
   ]) ++ strataUserApps;
 
   fonts.packages = with pkgs; [

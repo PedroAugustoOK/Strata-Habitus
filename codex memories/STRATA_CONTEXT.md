@@ -83,3 +83,53 @@ cd ~/dotfiles && ./strata-apply-channel.sh
 - Validate the `Update Center` in the real Quickshell session end-to-end
 - If needed, refine the live status/log behavior after the first real update run
 - Steam native remains a separate unresolved issue and should not be mixed with launcher/App Center diagnosis
+
+## Session continuation point - 2026-04-27
+
+### What changed today
+- A native `Centro de Configuração` was added in Quickshell and bound to `Super+S`.
+- PT-BR naming/copy was propagated through the main Strata overlays.
+- The launcher gained a `Todos os Apps` mode inside the existing overlay.
+- The icon theme direction changed from Papirus toward Colloid.
+- File Manager theming was intentionally simplified:
+  - only light/dark mode for GTK/Nautilus
+  - theme personality via icon colors instead of full palette repainting
+
+### Colloid state
+- Current package subset is intentionally reduced for rebuild practicality:
+  - scheme variants: `default`
+  - color variants: `default`, `pink`, `green`, `grey`, `purple`, `orange`
+- Theme color mapping currently follows:
+  - `rosepine` -> `pink`
+  - `everforest` -> `green`
+  - `nord` -> `grey`
+  - `tokyonight` -> `purple`
+  - `kanagawa` -> `purple`
+  - `gruvbox` -> `orange`
+  - `flexoki` -> `orange`
+  - `oxocarbon` -> `grey`
+  - `catppuccinlatte` -> `pink`
+
+### Recorder diagnosis on desktop
+- Host `desktop` is `hybrid-amd-nvidia`.
+- Kooha was tested and is not reliable there.
+- Logs from `xdg-desktop-portal-hyprland` repeatedly showed:
+  - `Out of buffers`
+  - `Asked for a wl_shm buffer which is legacy`
+  - `tried scheduling on already scheduled cb`
+- `force_shm = true` in `~/.config/hypr/xdph.conf` did not solve it.
+- Conclusion:
+  - this is currently treated as an XDPH screencast problem on the hybrid-GPU host, not a generic Kooha UI issue.
+
+### Recorder decision
+- `gpu-screen-recorder-gtk` also failed in practice on `desktop`.
+- Product direction is now:
+  - use `obs-studio` as the recorder
+  - stop spending time on Kooha/XDPH and `gpu-screen-recorder-gtk` for this setup
+- `SettingsCenter` should launch `obs-studio` for `Gravador de Tela`.
+
+### Immediate next step for tomorrow
+- Rebuild `desktop` if needed and validate the OBS flow.
+- If OBS is acceptable:
+  - keep it as the default recorder direction
+  - do not spend more time on Kooha/XDPH or `gpu-screen-recorder-gtk` for this host.

@@ -9,16 +9,19 @@ const CACHE_DIR = path.join(HOME, ".cache", "strata", "launcher");
 const INDEX_PATH = process.argv[2] || path.join(CACHE_DIR, "index.json");
 const HISTORY_PATH = process.argv[3] || path.join(HOME, "dotfiles", "state", "launcher-history.json");
 const PINS_PATH = process.argv[4] || path.join(HOME, "dotfiles", "state", "launcher-pins.json");
-const QUERY = process.argv[5] || "";
-const LIMIT = Number(process.argv[6] || 8);
+const MODE = process.argv[5] || "default";
+const QUERY = process.argv[6] || "";
+const LIMIT = Number(process.argv[7] || 8);
 
 const index = readJson(INDEX_PATH, []);
 const history = readJson(HISTORY_PATH, {});
 const pins = new Set(readJson(PINS_PATH, []));
 
-const results = QUERY.trim()
-  ? searchResults(index, history, pins, QUERY, LIMIT)
-  : defaultResults(index, history, pins, LIMIT);
+const results = MODE === "all"
+  ? allResults(index, history, pins, QUERY, LIMIT)
+  : QUERY.trim()
+    ? searchResults(index, history, pins, QUERY, LIMIT)
+    : defaultResults(index, history, pins, LIMIT);
 
 process.stdout.write(JSON.stringify({ ok: true, results }) + "\n");
 
@@ -66,6 +69,27 @@ function defaultResults(entries, historyMap, pinSet, limit) {
     context: "default",
     reason: defaultReason(item)
   }));
+}
+
+function allResults(entries, historyMap, pinSet, query, limit) {
+  const q = normalize(query);
+  const filtered = q
+    ? entries.filter(entry => scoreEntry(entry, historyMap[entry.id], pinSet.has(entry.id), q) > 0)
+    : entries.slice();
+
+  filtered.sort((a, b) => {
+    const aPinned = pinSet.has(a.id);
+    const bPinned = pinSet.has(b.id);
+    if (aPinned !== bPinned) return aPinned ? -1 : 1;
+    return a.name.localeCompare(b.name);
+  });
+
+  return filtered
+    .slice(0, limit)
+    .map(entry => present(entry, historyMap[entry.id], pinSet.has(entry.id), {
+      context: "all",
+      reason: "Instalado"
+    }));
 }
 
 function scoreEntry(entry, historyEntry, isPinned, query) {

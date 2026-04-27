@@ -8,6 +8,7 @@ Item {
   property bool isIndexing: false
   property bool ready: false
   property bool hasQuery: false
+  property bool showAll: false
   property string indexError: ""
 
   ColumnLayout {
@@ -21,7 +22,9 @@ Item {
           ? "Falha ao montar o indice"
           : root.hasQuery
             ? "Nenhum aplicativo encontrado"
-            : root.ready
+            : root.showAll
+              ? "Nenhum aplicativo instalado encontrado"
+              : root.ready
               ? "Nenhum app recente ainda"
               : "Preparando launcher"
       color: Colors.text1
@@ -34,7 +37,9 @@ Item {
         ? root.indexError
         : root.hasQuery
           ? "Tente outro nome, palavra-chave ou categoria."
-          : "Fixe alguns apps ou abra alguns para popular os resultados."
+          : root.showAll
+            ? "Use Ctrl+A para voltar ao modo rapido ou digite para filtrar a lista."
+            : "Fixe alguns apps ou abra alguns para popular os resultados."
       color: Colors.text3
       font { pixelSize: 11; family: "JetBrainsMono Nerd Font" }
       horizontalAlignment: Text.AlignHCenter
@@ -51,7 +56,9 @@ Item {
       Repeater {
         model: root.hasQuery
           ? ["nome", "palavra-chave", "categoria"]
-          : ["Enter abre", "Tab mostra acoes", "Ctrl+K fixa"]
+          : root.showAll
+            ? ["Ctrl+A volta", "digite para filtrar", "Enter abre"]
+            : ["Enter abre", "Tab mostra acoes", "Ctrl+K fixa"]
 
         delegate: Rectangle {
           required property var modelData

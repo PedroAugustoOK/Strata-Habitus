@@ -9,6 +9,7 @@
         { command = "/run/current-system/sw/bin/sed";    options = [ "NOPASSWD" ]; }
         { command = "/run/current-system/sw/bin/tee /var/lib/strata/theme.conf"; options = [ "NOPASSWD" ]; }
         { command = "/run/current-system/sw/bin/impala"; options = [ "NOPASSWD" ]; }
+        { command = "/run/current-system/sw/bin/strata-bluetooth-toggle"; options = [ "NOPASSWD" ]; }
       ];
     }
   ];

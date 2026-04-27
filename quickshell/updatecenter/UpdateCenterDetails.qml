@@ -32,7 +32,7 @@ Rectangle {
           { label: "Modo", value: root.store.mode },
           { label: "Último sucesso", value: root.store.formatDate(root.store.lastUpdateAt) },
           { label: "Estado", value: root.store.statusLabel() },
-          { label: "Fila App Center", value: root.store.pendingApps > 0 ? (root.store.pendingApps + " apps") : "vazia" },
+          { label: "Fila da Central de Apps", value: root.store.pendingApps > 0 ? (root.store.pendingApps + " apps") : "vazia" },
           { label: "Branch", value: root.store.currentBranch },
           { label: "Worktree", value: root.store.gitDirty ? "alterada" : "limpa" },
           { label: "Upstream", value: root.store.upstreamUpdateAvailable ? "disponivel" : "em dia" },

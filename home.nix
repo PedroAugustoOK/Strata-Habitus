@@ -1,8 +1,12 @@
-{ config, osConfig, pkgs, lib, username ? "ankh", ... }:
+{ config, osConfig, pkgs, lib, username ? "ankh", hostMeta, ... }:
 let
   dotfiles = "/home/${username}/dotfiles";
   link = path: config.lib.file.mkOutOfStoreSymlink "${dotfiles}/${path}";
   hostname = osConfig.networking.hostName;
+  colloidIconTheme = pkgs.colloid-icon-theme.override {
+    schemeVariants = [ "default" ];
+    colorVariants = [ "default" "pink" "green" "grey" "purple" "orange" ];
+  };
 in {
   home.enableNixpkgsReleaseCheck = false;
   home.username      = username;
@@ -29,10 +33,17 @@ in {
       printf '0\n' > "$STATE_DIR/wallpaper-index"
     fi
 
+    printf '%s\n' '${builtins.toJSON {
+      inherit hostname;
+      profile = hostMeta.profile or "desktop";
+    }}' > "$STATE_DIR/device-profile.json"
+
     if [ ! -f "$GENERATED_DIR/kitty/colors.conf" ] \
       || [ ! -f "$GENERATED_DIR/hypr/hyprlock.conf" ] \
       || [ ! -f "$GENERATED_DIR/starship/starship.toml" ] \
+      || [ ! -f "$GENERATED_DIR/gtk/gtk-3.0/gtk.css" ] \
       || [ ! -f "$GENERATED_DIR/gtk/gtk-3.0/settings.ini" ] \
+      || [ ! -f "$GENERATED_DIR/gtk/gtk-4.0/gtk.css" ] \
       || [ ! -f "$GENERATED_DIR/gtk/gtk-4.0/settings.ini" ]; then
       ${pkgs.bash}/bin/bash "$DOTFILES/quickshell/scripts/apply-theme-state.sh" >/dev/null 2>&1 || true
     fi
@@ -45,9 +56,10 @@ in {
       name = "Adwaita-dark";
       package = pkgs.gnome-themes-extra;
     };
+    gtk4.theme = config.gtk.theme;
     iconTheme = {
-      name    = "Papirus-Dark";
-      package = pkgs.papirus-icon-theme;
+      name    = "Colloid-Strata-Dark";
+      package = colloidIconTheme;
     };
     cursorTheme = {
       name    = "Bibata-Modern-Classic";
@@ -109,11 +121,13 @@ in {
       "application/vnd.oasis.opendocument.text"         = "writer.desktop";
       "application/vnd.oasis.opendocument.spreadsheet"  = "calc.desktop";
       "application/vnd.oasis.opendocument.presentation" = "impress.desktop";
+      "x-scheme-handler/proton-authenticator" = "proton-authenticator-handler.desktop";
     };
   };
 
   xdg.userDirs = {
     enable = true;
+    setSessionVariables = true;
     createDirectories = true;
     desktop = "$HOME/Área de Trabalho";
     documents = "$HOME/Documentos";
@@ -130,6 +144,13 @@ in {
   xdg.configFile."hypr/hyprlock.conf".source  = link "generated/hypr/hyprlock.conf";
   xdg.configFile."hypr/hypridle.conf".source  = link "hypridle.conf";
   xdg.configFile."hypr/monitors.conf".source  = link "hosts/${hostname}/hyprland-monitors.conf";
+  xdg.configFile."hypr/xdph.conf".text = ''
+    screencopy {
+      # Multi-GPU systems can fail DMA-BUF allocation and break Kooha after ~1s.
+      force_shm = true
+      max_fps = 60
+    }
+  '';
 
   # Shell & terminal
   xdg.configFile."fish/config.fish".source = link "fish/config.fish";
@@ -140,8 +161,16 @@ in {
   xdg.configFile."quickshell".source = link "quickshell";
   xdg.configFile."mako/config".source = link "generated/mako/config";
   xdg.configFile."satty/config.toml".source = link "generated/satty/config.toml";
+  xdg.configFile."gtk-3.0/gtk.css" = {
+    source = link "generated/gtk/gtk-3.0/gtk.css";
+    force = true;
+  };
   xdg.configFile."gtk-3.0/settings.ini" = {
     source = link "generated/gtk/gtk-3.0/settings.ini";
+    force = true;
+  };
+  xdg.configFile."gtk-4.0/gtk.css" = {
+    source = link "generated/gtk/gtk-4.0/gtk.css";
     force = true;
   };
   xdg.configFile."gtk-4.0/settings.ini" = {
@@ -154,6 +183,65 @@ in {
 
   # Ferramentas
   xdg.configFile."fastfetch".source = link "fastfetch";
+
+  # Overrides locais para apps Proton:
+  # - expõem ícones que os pacotes colocam só em share/pixmaps
+  # - registram o callback scheme do Authenticator para o fluxo de login
+  home.file.".local/share/applications/proton-pass.desktop".text = ''
+    [Desktop Entry]
+    Name=Proton Pass
+    Comment=Proton Pass desktop application
+    GenericName=Password Manager
+    Exec=proton-pass %U
+    Icon=${pkgs.proton-pass}/share/pixmaps/proton-pass.png
+    Type=Application
+    StartupNotify=true
+    StartupWMClass=proton-pass
+    Categories=Utility;
+  '';
+
+  home.file.".local/share/applications/proton-mail.desktop".text = ''
+    [Desktop Entry]
+    Name=Proton Mail
+    Comment=Proton official desktop application for Proton Mail and Proton Calendar
+    GenericName=Proton Mail
+    Exec=proton-mail %U
+    Icon=${pkgs.protonmail-desktop}/share/pixmaps/proton-mail.png
+    Type=Application
+    StartupNotify=true
+    StartupWMClass=proton-mail
+    Categories=Network;Email;
+    MimeType=x-scheme-handler/mailto;
+  '';
+
+  home.file.".local/share/applications/Proton Authenticator.desktop".text = ''
+    [Desktop Entry]
+    Name=Proton Authenticator
+    Comment=Proton Authenticator
+    Exec=proton-authenticator %U
+    Icon=${pkgs.proton-authenticator}/share/icons/hicolor/128x128/apps/proton-authenticator.png
+    Type=Application
+    Terminal=false
+    StartupNotify=true
+    StartupWMClass=proton-authenticator
+    Categories=Utility;
+    MimeType=x-scheme-handler/proton-authenticator;
+  '';
+
+  home.file.".local/share/applications/proton-authenticator-handler.desktop".text = ''
+    [Desktop Entry]
+    Name=Proton Authenticator Handler
+    Comment=Callback handler for Proton Authenticator login
+    Exec=proton-authenticator %U
+    Icon=${pkgs.proton-authenticator}/share/icons/hicolor/128x128/apps/proton-authenticator.png
+    Type=Application
+    Terminal=false
+    NoDisplay=true
+    StartupNotify=true
+    StartupWMClass=proton-authenticator
+    Categories=Utility;
+    MimeType=x-scheme-handler/proton-authenticator;
+  '';
 
   # Git e SSH
   home.file.".gitconfig".source    = link "git/config";

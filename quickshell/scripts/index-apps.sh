@@ -2,7 +2,7 @@
 CACHE="$HOME/.cache/strata-apps-v3.cache"
 if [ "$1" = "--rebuild" ]; then
   ICON_CACHE=$(mktemp)
-  find /run/current-system/sw/share/icons/Papirus-Dark/48x48 /run/current-system/sw/share/icons/Papirus/48x48 /run/current-system/sw/share/icons/hicolor/48x48 \
+  find /run/current-system/sw/share/icons "$HOME/.local/share/icons" \
     \( -name "*.png" -o -name "*.svg" \) 2>/dev/null | while read -r iconfile; do
     base=$(basename "$iconfile")
     name="${base%.*}"

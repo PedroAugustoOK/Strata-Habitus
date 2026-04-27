@@ -14,6 +14,7 @@ import "clipboard"
 import "wallpickr"
 import "appcenter"
 import "updatecenter"
+import "settingscenter"
 
 ShellRoot {
   Bar {}
@@ -30,6 +31,14 @@ ShellRoot {
   Clipboard { id: clipboard }
   AppCenter { id: appCenter }
   UpdateCenter { id: updateCenter }
+  SettingsCenter {
+    id: settingsCenter
+    onOpenControlCenter: controlCenter.toggle()
+    onOpenThemePicker: themePicker.toggle()
+    onOpenWallPickr: wallPickr.toggle()
+    onOpenAppCenter: appCenter.toggle()
+    onOpenUpdateCenter: updateCenter.toggle()
+  }
 
   readonly property string clipboardDaemonScript: Qt.resolvedUrl("./scripts/clipboard-daemon.sh").toString().replace("file://", "")
   readonly property string spotifyNotifyScript: Qt.resolvedUrl("./scripts/spotify-notify.sh").toString().replace("file://", "")
@@ -256,6 +265,10 @@ ShellRoot {
   IpcHandler {
     target: "updatecenter"
     function toggle(): void { updateCenter.toggle() }
+  }
+  IpcHandler {
+    target: "settingscenter"
+    function toggle(): void { settingsCenter.toggle() }
   }
 
   Process {

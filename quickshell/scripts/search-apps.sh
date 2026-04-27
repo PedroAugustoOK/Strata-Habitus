@@ -6,13 +6,9 @@ find /run/current-system/sw/share/applications ~/.local/share/applications /var/
   icon=$(grep -m1 "^Icon=" "$f" | sed 's/Icon=//')
   if echo "$name" | grep -qi "$q"; then
     iconpath=""
-    for theme in Papirus-Dark Papirus hicolor; do
-      for size in 48 32 64 128 256 24; do
-        found=$(find "/run/current-system/sw/share/icons/$theme/${size}x${size}" \
-          -name "${icon}.png" -o -name "${icon}.svg" 2>/dev/null | head -1)
-        [ -n "$found" ] && iconpath="$found" && break 2
-      done
-    done
+    found=$(find /run/current-system/sw/share/icons "$HOME/.local/share/icons" \
+      \( -name "${icon}.png" -o -name "${icon}.svg" -o -name "${icon}.xpm" \) 2>/dev/null | head -1)
+    [ -n "$found" ] && iconpath="$found"
     echo "$name|$exec|$iconpath"
   fi
 done | sort -u | head -8

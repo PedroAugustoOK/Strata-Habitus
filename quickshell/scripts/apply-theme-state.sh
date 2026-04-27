@@ -11,11 +11,32 @@ AWWW="/run/current-system/sw/bin/awww"
 AWWW_DAEMON="/run/current-system/sw/bin/awww-daemon"
 LOG_FILE="$HOME/.cache/strata-theme.log"
 APPLY_MODE="${1:-}"
+NAUTILUS_WAS_RUNNING=0
+LOCK_DIR="$HOME/.cache/strata-theme.lock"
+
+cleanup_lock() {
+  rmdir "$LOCK_DIR" 2>/dev/null || true
+}
 
 mkdir -p "$HOME/.cache" "$STATE_DIR" \
   "$GENERATED_DIR/kitty" "$GENERATED_DIR/mako" "$GENERATED_DIR/starship" \
   "$GENERATED_DIR/fish" "$GENERATED_DIR/nvim" "$GENERATED_DIR/hypr" \
   "$GENERATED_DIR/satty" "$GENERATED_DIR/gtk/gtk-3.0" "$GENERATED_DIR/gtk/gtk-4.0"
+
+for _ in $(seq 1 100); do
+  if mkdir "$LOCK_DIR" 2>/dev/null; then
+    break
+  fi
+
+  sleep 0.05
+done
+
+if [ ! -d "$LOCK_DIR" ]; then
+  log "theme apply skipped: lock timeout"
+  exit 0
+fi
+
+trap cleanup_lock EXIT
 
 get_val() {
   grep -o "\"$1\"[[:space:]]*:[[:space:]]*\"[^\"]*\"" "$2" | grep -o '"[^"]*"$' | tr -d '"'
@@ -23,6 +44,16 @@ get_val() {
 
 log() {
   printf '%s %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$*" >> "$LOG_FILE"
+}
+
+write_atomic() {
+  local target="$1"
+  local tmp
+
+  mkdir -p "$(dirname "$target")"
+  tmp="$(mktemp "${target}.tmp.XXXXXX")"
+  cat > "$tmp"
+  mv "$tmp" "$target"
 }
 
 find_hyprland_signature() {
@@ -75,37 +106,41 @@ set_gsettings_string() {
   gsettings set "$schema" "$key" "$value" 2>/dev/null || true
 }
 
-force_gtk_runtime_reload() {
-  local gtk_theme="$1"
-  local icon_theme="$2"
-  local color_scheme="$3"
-  local temp_theme temp_color temp_icon
+apply_gtk_runtime_settings() {
+  local icon_theme="$1"
+  local color_scheme="$2"
 
-  if [ "$gtk_theme" = "Adwaita" ]; then
-    temp_theme="Adwaita-dark"
-    temp_color="prefer-dark"
-    temp_icon="Papirus-Dark"
-  else
-    temp_theme="Adwaita"
-    temp_color="prefer-light"
-    temp_icon="Papirus"
-  fi
-
-  set_gsettings_string org.gnome.desktop.interface gtk-theme "$temp_theme"
-  set_gsettings_string org.gnome.desktop.interface color-scheme "$temp_color"
-  set_gsettings_string org.gnome.desktop.interface icon-theme "$temp_icon"
-
-  sleep 0.05
-
-  set_gsettings_string org.gnome.desktop.interface gtk-theme "$gtk_theme"
+  set_gsettings_string org.gnome.desktop.interface gtk-theme "Adwaita"
   set_gsettings_string org.gnome.desktop.interface color-scheme "$color_scheme"
   set_gsettings_string org.gnome.desktop.interface icon-theme "$icon_theme"
 }
 
-restart_nautilus_for_theme() {
-  if pgrep -x nautilus >/dev/null 2>&1; then
-    nautilus -q >/dev/null 2>&1 || true
+stop_nautilus_for_theme() {
+  local attempt
+
+  if ! pgrep -x nautilus >/dev/null 2>&1; then
+    NAUTILUS_WAS_RUNNING=0
+    return 0
   fi
+
+  NAUTILUS_WAS_RUNNING=1
+  nautilus -q >/dev/null 2>&1 || true
+
+  for attempt in $(seq 1 40); do
+    if ! pgrep -x nautilus >/dev/null 2>&1; then
+      return 0
+    fi
+
+    sleep 0.05
+  done
+}
+
+restart_nautilus_for_theme() {
+  if [ "$NAUTILUS_WAS_RUNNING" -ne 1 ]; then
+    return 0
+  fi
+
+  nohup env -u GTK_THEME nautilus --new-window >/dev/null 2>&1 &
 }
 
 restart_portal_services_for_theme() {
@@ -140,66 +175,140 @@ refresh_chromium_theme() {
   fi
 }
 
-ensure_local_papirus() {
-  local theme src dst local_theme
-  mkdir -p "$HOME/.local/share/icons"
+find_colloid_theme_dir() {
+  local mode="$1"
+  local scheme="$2"
+  local color="$3"
+  local best_dir=""
+  local best_score=-1
+  local candidate base lower score token
+  local known_schemes="nord dracula gruvbox everforest catppuccin"
+  local known_colors="purple pink red orange yellow green teal grey"
 
-  for theme in Papirus Papirus-Dark; do
-    src="/run/current-system/sw/share/icons/$theme"
-    local_theme="$theme-Strata"
-    dst="$HOME/.local/share/icons/$local_theme"
+  for candidate in /run/current-system/sw/share/icons/Colloid*; do
+    [ -d "$candidate" ] || continue
+    [ -f "$candidate/index.theme" ] || continue
 
-    [ -d "$src" ] || continue
+    base="$(basename "$candidate")"
+    lower="$(printf '%s' "$base" | tr '[:upper:]' '[:lower:]')"
+    score=0
 
-    if [ -L "$dst" ]; then
-      rm -f "$dst"
-    elif [ -d "$dst" ] && [ ! -w "$dst" ]; then
-      chmod -R u+rwX "$dst" 2>/dev/null || true
+    if [ "$mode" = "dark" ]; then
+      [[ "$lower" == *dark* ]] && score=$((score + 8))
+      [[ "$lower" == *light* ]] && score=$((score - 3))
+    else
+      [[ "$lower" == *light* ]] && score=$((score + 8))
+      [[ "$lower" == *dark* ]] && score=$((score - 3))
+      [[ "$lower" != *light* && "$lower" != *dark* ]] && score=$((score + 4))
     fi
 
-    [ -d "$dst" ] && continue
-
-    cp -aL "$src" "$dst" 2>/dev/null || true
-    chmod -R u+rwX "$dst" 2>/dev/null || true
-
-    if [ -f "$dst/index.theme" ]; then
-      sed -i "s/^Name=.*/Name=$local_theme/" "$dst/index.theme" 2>/dev/null || true
-    fi
-  done
-}
-
-recolor_papirus_theme() {
-  local theme_dir="$1"
-  local folder_color="$2"
-  local size prefix file_path file_name symlink_path
-  local sizes=("22x22" "24x24" "32x32" "48x48" "64x64")
-  local prefixes=("folder" "user")
-
-  [ -d "$theme_dir" ] || return 0
-
-  for size in "${sizes[@]}"; do
-    for prefix in "${prefixes[@]}"; do
-      for file_path in "$theme_dir/$size/places/$prefix-$folder_color"{-*,}.svg; do
-        [ -f "$file_path" ] || continue
-        [ -L "$file_path" ] && continue
-
-        file_name="${file_path##*/}"
-        symlink_path="${file_path/-$folder_color/}"
-        ln -sfn "$file_name" "$symlink_path"
+    if [ "$scheme" = "default" ]; then
+      for token in $known_schemes; do
+        [[ "$lower" == *"$token"* ]] && score=$((score - 2))
       done
+    elif [[ "$lower" == *"$scheme"* ]]; then
+      score=$((score + 6))
+    fi
+
+    if [ "$color" = "default" ]; then
+      for token in $known_colors; do
+        [[ "$lower" == *"$token"* ]] && score=$((score - 2))
+      done
+    elif [[ "$lower" == *"$color"* ]]; then
+      score=$((score + 6))
+    fi
+
+    if [ "$score" -gt "$best_score" ]; then
+      best_dir="$candidate"
+      best_score="$score"
+    fi
+  done
+
+  [ -n "$best_dir" ] && printf '%s\n' "$best_dir"
+}
+
+link_colloid_theme_alias() {
+  local alias_name="$1"
+  local target_dir="$2"
+  local alias_dir="$HOME/.local/share/icons/$alias_name"
+  local inherits_name
+  local spotify_source
+  local size panel_dir apps_dir categories_dir
+  local dir_list=""
+
+  mkdir -p "$HOME/.local/share/icons"
+  rm -rf "$alias_dir"
+  mkdir -p "$alias_dir"
+
+  inherits_name="$(basename "$target_dir")"
+
+  write_atomic "$alias_dir/index.theme" <<EOF
+[Icon Theme]
+Name=$alias_name
+Comment=Strata icon overlay for $inherits_name
+Inherits=$inherits_name,hicolor
+Directories=
+EOF
+
+  spotify_source="$(find /run/current-system/sw/share/icons/hicolor -path '*/apps/spotify-client.png' | sort | head -n1)"
+
+  if [ -n "$spotify_source" ] && [ -f "$spotify_source" ]; then
+    for size in 16x16 22x22 24x24 32x32 48x48; do
+      panel_dir="$alias_dir/$size/panel"
+      apps_dir="$alias_dir/$size/apps"
+      categories_dir="$alias_dir/$size/categories"
+      mkdir -p "$panel_dir" "$apps_dir" "$categories_dir"
+      ln -sfn "$spotify_source" "$panel_dir/spotify-indicator.png"
+      ln -sfn "$spotify_source" "$panel_dir/spotify-linux-32.png"
+      ln -sfn "$spotify_source" "$apps_dir/spotify-client.png"
+      ln -sfn "$spotify_source" "$apps_dir/spotify.png"
+      ln -sfn "$spotify_source" "$categories_dir/spotify-client.png"
+      ln -sfn "$spotify_source" "$categories_dir/spotify.png"
+      dir_list="${dir_list}${size}/panel,${size}/apps,${size}/categories,"
     done
+  fi
+
+  dir_list="${dir_list%,}"
+
+  write_atomic "$alias_dir/index.theme" <<EOF
+[Icon Theme]
+Name=$alias_name
+Comment=Strata icon overlay for $inherits_name
+Inherits=$inherits_name,hicolor
+Directories=$dir_list
+EOF
+
+  for size in 16x16 22x22 24x24 32x32 48x48; do
+    cat >> "$alias_dir/index.theme" <<EOF
+
+[${size}/panel]
+Size=${size%x*}
+Context=Status
+Type=Threshold
+
+[${size}/apps]
+Size=${size%x*}
+Context=Applications
+Type=Threshold
+
+[${size}/categories]
+Size=${size%x*}
+Context=Categories
+Type=Threshold
+EOF
   done
 }
 
-apply_papirus_folder_color() {
-  local folder_color="$1"
-  local light_theme="$HOME/.local/share/icons/Papirus-Strata"
-  local dark_theme="$HOME/.local/share/icons/Papirus-Dark-Strata"
+apply_colloid_icon_theme() {
+  local scheme="$1"
+  local color="$2"
+  local light_dir dark_dir
 
-  ensure_local_papirus
+  light_dir="$(find_colloid_theme_dir light "$scheme" "$color")"
+  dark_dir="$(find_colloid_theme_dir dark "$scheme" "$color")"
 
-  recolor_papirus_theme "$light_theme" "$folder_color"
-  recolor_papirus_theme "$dark_theme" "$folder_color"
+  [ -n "$light_dir" ] && link_colloid_theme_alias "Colloid-Strata-Light" "$light_dir"
+  [ -n "$dark_dir" ] && link_colloid_theme_alias "Colloid-Strata-Dark" "$dark_dir"
 }
 
 reload_kitty_theme() {
@@ -300,7 +409,8 @@ TERM_BG="$BG0"
 TERM_SELECTION_FG="$TERM_BG"
 TERM_ACTIVE_TAB_FG="$TERM_BG"
 TERM_INACTIVE_TAB_BG="$BG1"
-PAPIRUS_FOLDER_COLOR="grey"
+ICON_SCHEME_VARIANT="default"
+ICON_COLOR_VARIANT="default"
 
 if [ "$MODE" = "light" ]; then
   TERM_BG="$BG2"
@@ -337,7 +447,7 @@ fi
 case "$THEME_NAME" in
   gruvbox)
     NVIM_THEME="gruvbox"
-    PAPIRUS_FOLDER_COLOR="orange"
+    ICON_COLOR_VARIANT="orange"
     ;;
   rosepine)
     NVIM_THEME="rose-pine-dawn"
@@ -346,23 +456,23 @@ case "$THEME_NAME" in
     TERM_ACTIVE_TAB_FG="#faf4ed"
     TERM_INACTIVE_TAB_BG="#e1dbd3"
     OPACITY="0.985"
-    PAPIRUS_FOLDER_COLOR="pink"
+    ICON_COLOR_VARIANT="pink"
     ;;
   nord)
     NVIM_THEME="nord"
-    PAPIRUS_FOLDER_COLOR="nordic"
+    ICON_COLOR_VARIANT="grey"
     ;;
   tokyonight)
     NVIM_THEME="nord"
-    PAPIRUS_FOLDER_COLOR="blue"
+    ICON_COLOR_VARIANT="purple"
     ;;
   everforest)
     NVIM_THEME="gruvbox"
-    PAPIRUS_FOLDER_COLOR="green"
+    ICON_COLOR_VARIANT="green"
     ;;
   kanagawa)
     NVIM_THEME="nord"
-    PAPIRUS_FOLDER_COLOR="indigo"
+    ICON_COLOR_VARIANT="purple"
     ;;
   catppuccinlatte)
     NVIM_THEME="rose-pine-dawn"
@@ -371,7 +481,7 @@ case "$THEME_NAME" in
     TERM_ACTIVE_TAB_FG="#eff1f5"
     TERM_INACTIVE_TAB_BG="#dde2ea"
     OPACITY="0.985"
-    PAPIRUS_FOLDER_COLOR="blue"
+    ICON_COLOR_VARIANT="pink"
     ;;
   flexoki)
     NVIM_THEME="rose-pine-dawn"
@@ -380,11 +490,11 @@ case "$THEME_NAME" in
     TERM_ACTIVE_TAB_FG="#fffcf0"
     TERM_INACTIVE_TAB_BG="#ebe8dd"
     OPACITY="0.985"
-    PAPIRUS_FOLDER_COLOR="yellow"
+    ICON_COLOR_VARIANT="orange"
     ;;
   oxocarbon)
     NVIM_THEME="nord"
-    PAPIRUS_FOLDER_COLOR="bluegrey"
+    ICON_COLOR_VARIANT="grey"
     ;;
 esac
 
@@ -455,7 +565,7 @@ actions=1
 history=1
 progress-color=over $ACCENT
 icons=1
-icon-path=/run/current-system/sw/share/icons/Papirus-Dark:/run/current-system/sw/share/icons/Papirus:/run/current-system/sw/share/icons/hicolor
+icon-path=$HOME/.local/share/icons:/run/current-system/sw/share/icons:/run/current-system/sw/share/icons/hicolor
 
 format=<span size="x-small" color="$ACCENT">%a</span>\n<b>%s</b>\n<span size="x-small" color="$TEXT3">%b</span>
 
@@ -660,124 +770,58 @@ theme[upload_mid]="$ACCENT"
 theme[upload_end]="#f28779"
 EOF
 
-mkdir -p "$HOME/.config/gtk-4.0" "$HOME/.config/gtk-3.0" "$HOME/.config/environment.d"
+mkdir -p "$GENERATED_DIR/gtk/gtk-4.0" "$GENERATED_DIR/gtk/gtk-3.0" "$HOME/.config/environment.d"
 
-cat > "$HOME/.config/gtk-4.0/gtk.css" <<EOF
+stop_nautilus_for_theme
+
+write_atomic "$GENERATED_DIR/gtk/gtk-4.0/gtk.css" <<EOF
 @define-color accent_color $ACCENT;
 @define-color accent_bg_color $ACCENT;
 @define-color accent_fg_color $TEXT0;
-@define-color window_bg_color $BG1;
-@define-color window_fg_color $TEXT1;
-@define-color view_bg_color $BG1;
-@define-color view_fg_color $TEXT1;
-@define-color headerbar_bg_color $BG1;
-@define-color headerbar_fg_color $TEXT1;
-@define-color card_bg_color $BG2;
-@define-color card_fg_color $TEXT1;
-@define-color dialog_bg_color $BG1;
-@define-color dialog_fg_color $TEXT1;
-@define-color popover_bg_color $BG2;
-@define-color popover_fg_color $TEXT1;
 
 row:selected,
 .navigation-sidebar row:selected,
 sidebar row:selected {
   background-color: alpha($ACCENT, 0.16);
-  color: $TEXT1;
   border-radius: 10px;
-}
-
-filechooser,
-dialog.filechooser,
-window.filechooser,
-.dialog-action-area {
-  color: $TEXT1;
-}
-
-filechooser box,
-filechooser listview,
-filechooser columnview,
-filechooser treeview,
-filechooser viewport,
-filechooser stacksidebar,
-filechooser placessidebar,
-filechooser .sidebar,
-filechooser .navigation-sidebar {
-  background-color: $BG1;
-  color: $TEXT1;
-}
-
-filechooser entry,
-filechooser button,
-filechooser label,
-filechooser dropdown,
-filechooser combobox,
-filechooser popover {
-  color: $TEXT1;
 }
 EOF
 
-cat > "$HOME/.config/gtk-3.0/gtk.css" <<EOF
+write_atomic "$GENERATED_DIR/gtk/gtk-3.0/gtk.css" <<EOF
 @define-color theme_selected_bg_color $ACCENT;
 @define-color theme_selected_fg_color $TEXT1;
-@define-color theme_base_color $BG1;
-@define-color theme_bg_color $BG1;
-@define-color theme_fg_color $TEXT1;
-@define-color insensitive_bg_color $BG2;
-@define-color insensitive_fg_color $TEXT3;
-@define-color borders $BG2;
-@define-color unfocused_borders $BG2;
-@define-color wm_bg_a $BG1;
-@define-color wm_bg_b $BG1;
-@define-color wm_title $TEXT1;
-@define-color headerbar_bg_color $BG1;
-@define-color headerbar_fg_color $TEXT1;
-@define-color popover_bg_color $BG2;
-@define-color popover_fg_color $TEXT1;
-
-GtkFileChooserDialog,
-.filechooser,
-.filechooser .sidebar,
-.filechooser .view,
-.filechooser treeview.view,
-.filechooser viewport {
-  background-color: $BG1;
-  color: $TEXT1;
-}
 EOF
 
 if [ "$MODE" = "light" ]; then
   GTK_THEME_NAME="Adwaita"
-  ICON_THEME_NAME="Papirus-Strata"
+  QT_THEME_NAME="adwaita"
+  ICON_THEME_NAME="Colloid-Strata-Light"
   GTK_PREFER_DARK="0"
   CHROMIUM_COLOR_SCHEME="light"
-  $DCONF write /org/gnome/desktop/interface/color-scheme "'prefer-light'" 2>/dev/null || true
-  apply_papirus_folder_color "$PAPIRUS_FOLDER_COLOR"
-  force_gtk_runtime_reload "$GTK_THEME_NAME" "$ICON_THEME_NAME" "prefer-light"
-  restart_nautilus_for_theme
-  echo "QT_STYLE_OVERRIDE=$GTK_THEME_NAME" > "$HOME/.config/environment.d/qt.conf"
+  apply_colloid_icon_theme "$ICON_SCHEME_VARIANT" "$ICON_COLOR_VARIANT"
+  GTK_COLOR_SCHEME="prefer-light"
 else
-  GTK_THEME_NAME="Adwaita-dark"
-  ICON_THEME_NAME="Papirus-Dark-Strata"
+  GTK_THEME_NAME="Adwaita"
+  QT_THEME_NAME="adwaita-dark"
+  ICON_THEME_NAME="Colloid-Strata-Dark"
   GTK_PREFER_DARK="1"
   CHROMIUM_COLOR_SCHEME="dark"
-  $DCONF write /org/gnome/desktop/interface/color-scheme "'prefer-dark'" 2>/dev/null || true
-  apply_papirus_folder_color "$PAPIRUS_FOLDER_COLOR"
-  force_gtk_runtime_reload "$GTK_THEME_NAME" "$ICON_THEME_NAME" "prefer-dark"
-  restart_nautilus_for_theme
-  echo "QT_STYLE_OVERRIDE=$GTK_THEME_NAME" > "$HOME/.config/environment.d/qt.conf"
+  apply_colloid_icon_theme "$ICON_SCHEME_VARIANT" "$ICON_COLOR_VARIANT"
+  GTK_COLOR_SCHEME="prefer-dark"
 fi
 
 refresh_chromium_theme "$ACCENT" "$CHROMIUM_COLOR_SCHEME"
 
-export GTK_THEME="$GTK_THEME_NAME"
-echo "GTK_THEME=$GTK_THEME_NAME" > "$HOME/.config/environment.d/gtk-theme.conf"
-systemctl --user import-environment GTK_THEME >/dev/null 2>&1 || true
+write_atomic "$HOME/.config/environment.d/qt.conf" <<EOF
+QT_STYLE_OVERRIDE=$QT_THEME_NAME
+EOF
+rm -f "$HOME/.config/environment.d/gtk-theme.conf"
+systemctl --user unset-environment GTK_THEME >/dev/null 2>&1 || true
 if command -v dbus-update-activation-environment >/dev/null 2>&1; then
-  dbus-update-activation-environment --systemd GTK_THEME="$GTK_THEME_NAME" >/dev/null 2>&1 || true
+  dbus-update-activation-environment --systemd GTK_THEME= >/dev/null 2>&1 || true
 fi
 
-cat > "$GENERATED_DIR/gtk/gtk-3.0/settings.ini" <<EOF
+write_atomic "$GENERATED_DIR/gtk/gtk-3.0/settings.ini" <<EOF
 [Settings]
 gtk-theme-name=$GTK_THEME_NAME
 gtk-icon-theme-name=$ICON_THEME_NAME
@@ -786,7 +830,7 @@ gtk-cursor-theme-size=24
 gtk-application-prefer-dark-theme=$GTK_PREFER_DARK
 EOF
 
-cat > "$GENERATED_DIR/gtk/gtk-4.0/settings.ini" <<EOF
+write_atomic "$GENERATED_DIR/gtk/gtk-4.0/settings.ini" <<EOF
 [Settings]
 gtk-theme-name=$GTK_THEME_NAME
 gtk-icon-theme-name=$ICON_THEME_NAME
@@ -795,7 +839,11 @@ gtk-cursor-theme-size=24
 gtk-application-prefer-dark-theme=$GTK_PREFER_DARK
 EOF
 
+$DCONF write /org/gnome/desktop/interface/color-scheme "'$GTK_COLOR_SCHEME'" 2>/dev/null || true
+apply_gtk_runtime_settings "$ICON_THEME_NAME" "$GTK_COLOR_SCHEME"
 restart_portal_services_for_theme
+sleep 0.12
+restart_nautilus_for_theme
 
 reload_kitty_theme
 

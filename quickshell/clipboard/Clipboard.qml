@@ -42,6 +42,8 @@ PanelWindow {
       const format = (currentItem.imageFormat || "imagem").toUpperCase()
       return "Preview da imagem selecionada. Formato " + format + "."
     }
+    if (currentItem.kind === "link") return "Item textual classificado como link. Enter copia o conteudo normalizado."
+    if (currentItem.kind === "links") return "Item textual com multiplos links. Enter copia o conteudo normalizado."
     return currentItem.preview || currentItem.raw || ""
   }
   readonly property string listScript: Qt.resolvedUrl("../scripts/clipboard-list.js").toString().replace("file://", "")
@@ -459,7 +461,7 @@ PanelWindow {
 
               Text {
                 anchors.centerIn: parent
-                text: item.isImage ? "󰋩" : item.isBinary ? "󰈔" : "󰆍"
+                text: item.isImage ? "󰋩" : item.isBinary ? "󰈔" : item.kind === "link" || item.kind === "links" ? "󰌹" : "󰆍"
                 color: item.isImage ? Colors.accent : Colors.text2
                 font { pixelSize: 13; family: "JetBrainsMono Nerd Font" }
               }
@@ -560,7 +562,7 @@ PanelWindow {
 
             Text {
               anchors.centerIn: parent
-              text: root.currentItem ? (root.currentItem.isImage ? "󰋩" : root.currentItem.isBinary ? "󰈔" : "󰆍") : "?"
+              text: root.currentItem ? (root.currentItem.isImage ? "󰋩" : root.currentItem.isBinary ? "󰈔" : root.currentItem.kind === "link" || root.currentItem.kind === "links" ? "󰌹" : "󰆍") : "?"
               color: root.currentItem && root.currentItem.isImage ? Colors.accent : Colors.text2
               font { pixelSize: 18; family: "JetBrainsMono Nerd Font" }
             }

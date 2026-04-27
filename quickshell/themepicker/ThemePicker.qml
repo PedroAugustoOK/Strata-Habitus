@@ -204,7 +204,7 @@ PanelWindow {
         ColumnLayout {
           spacing: 4
           Text {
-            text: "Theme Strip"
+            text: "Faixa de Temas"
             color: Colors.text1
             font { pixelSize: 28; family: "Inter"; weight: Font.DemiBold }
           }
@@ -359,7 +359,7 @@ PanelWindow {
                     anchors.margins: 10
                     spacing: 2
                     Text {
-                      text: "Mode"
+                      text: "Modo"
                       color: modelData.text3
                       font { pixelSize: 9; family: "JetBrains Mono" }
                     }
@@ -385,7 +385,7 @@ PanelWindow {
                     anchors.margins: 10
                     spacing: 2
                     Text {
-                      text: "Accent"
+                      text: "Destaque"
                       color: modelData.text3
                       font { pixelSize: 9; family: "JetBrains Mono" }
                     }
@@ -413,7 +413,7 @@ PanelWindow {
                   spacing: 8
 
                   Text {
-                    text: "Interface tone"
+                    text: "Tom da interface"
                     color: modelData.text3
                     font { pixelSize: 9; family: "JetBrains Mono" }
                   }
@@ -447,7 +447,7 @@ PanelWindow {
 
                 Text {
                   anchors.centerIn: parent
-                  text: "Press Enter"
+                  text: "Pressione Enter"
                   color: modelData.bg0
                   font { pixelSize: 10; family: "JetBrains Mono"; weight: Font.Medium }
                 }

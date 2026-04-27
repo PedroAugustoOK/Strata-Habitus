@@ -4,6 +4,7 @@ import ".."
 
 Rectangle {
   property var selectedItem: null
+  property bool showAll: false
 
   color: "transparent"
 
@@ -30,6 +31,12 @@ Rectangle {
     }
 
     Text {
+      text: "Ctrl+A todos"
+      color: showAll ? Colors.accent : Colors.text3
+      font { pixelSize: 10; family: "JetBrainsMono Nerd Font" }
+    }
+
+    Text {
       text: "Tab acoes"
       color: Colors.text3
       font { pixelSize: 10; family: "JetBrainsMono Nerd Font" }
@@ -49,7 +56,7 @@ Rectangle {
            (selectedItem.actionCount > 0 ? (selectedItem.pinned ? " · " : "") + selectedItem.actionCount + " acoes" : "") +
            ((selectedItem.pinned || selectedItem.actionCount > 0) ? " · " : "") +
            (selectedItem.source === "flatpak" ? "Flatpak" : selectedItem.source === "user" ? "Local" : "Sistema"))
-        : "Esc fechar"
+        : (showAll ? "Lista completa de apps instalados" : "Esc fechar")
       color: Colors.text3
       font { pixelSize: 10; family: "JetBrainsMono Nerd Font" }
     }

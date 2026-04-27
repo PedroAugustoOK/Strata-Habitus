@@ -33,14 +33,24 @@ PanelWindow {
   function close() { closeAnim.start() }
   function refreshAll() {
     volProc.running       = true
-    brightProc.running    = true
     uptimeProc.running    = true
-    wifiNameProc.running  = true
-    wifiCheck.running     = true
-    btCheck.running       = true
-    powerModeProc.running = true
-    ccBatProc.running     = true
     sinkNameProc.running  = true
+    if (DeviceState.hasBrightness) {
+      brightProc.running = true
+    }
+    if (DeviceState.hasWifi) {
+      wifiNameProc.running = true
+      wifiCheck.running = true
+    }
+    if (DeviceState.hasBluetooth) {
+      btCheck.running = true
+    }
+    if (DeviceState.hasPowerProfiles) {
+      powerModeProc.running = true
+    }
+    if (DeviceState.hasBattery) {
+      ccBatProc.running = true
+    }
   }
 
   SequentialAnimation {
@@ -69,6 +79,12 @@ PanelWindow {
   property bool   showBrightPct: false
   property bool   showVolPct:   false
   property string sinkName:     "—"
+  readonly property string sessionBus: Quickshell.env("DBUS_SESSION_BUS_ADDRESS")
+  readonly property string runtimeDir: Quickshell.env("XDG_RUNTIME_DIR")
+  readonly property bool showLaptopHeader: DeviceState.isLaptop && DeviceState.hasBattery
+  readonly property bool showDesktopHeader: !showLaptopHeader
+  readonly property bool showConnectivity: DeviceState.hasWifi || DeviceState.hasBluetooth
+  readonly property int toggleCount: DeviceState.hasPowerProfiles ? 3 : 2
 
   Item {
     id: keyGrabber
@@ -83,7 +99,7 @@ PanelWindow {
     id: panel
     transformOrigin: Item.TopRight
     anchors { top: parent.top; right: parent.right; topMargin: 44; rightMargin: 20 }
-    width: 310
+    width: DeviceState.isDesktop ? 332 : 310
     height: col.implicitHeight + 28
     radius: 24
     color: Colors.bg1
@@ -99,6 +115,7 @@ PanelWindow {
 
       // ── Header: bateria grande + uptime ──────────────────
       Row {
+        visible: root.showLaptopHeader
         width: parent.width
         Item {
           width: parent.width / 2
@@ -148,6 +165,57 @@ PanelWindow {
         }
       }
 
+      Rectangle {
+        visible: root.showDesktopHeader
+        width: parent.width
+        height: 72
+        radius: 16
+        color: Colors.bg2
+
+        RowLayout {
+          anchors.fill: parent
+          anchors.leftMargin: 14
+          anchors.rightMargin: 14
+
+          Column {
+            Layout.fillWidth: true
+            spacing: 4
+
+            Text {
+              text: DeviceState.hostname.toUpperCase()
+              font { pixelSize: 10; family: "Roboto"; letterSpacing: 1.4; weight: Font.Medium }
+              color: Colors.text3
+            }
+            Text {
+              text: DeviceState.isDesktop ? "estação de trabalho" : "sessão principal"
+              font { pixelSize: 17; family: "Roboto"; weight: Font.DemiBold }
+              color: Colors.text1
+            }
+            Text {
+              text: root.sinkName
+              font { pixelSize: 10; family: "Roboto" }
+              color: Colors.text3
+              elide: Text.ElideRight
+            }
+          }
+
+          Rectangle {
+            Layout.preferredWidth: uptimeDesktop.implicitWidth + 18
+            Layout.preferredHeight: 28
+            radius: 10
+            color: Qt.rgba(Colors.accent.r, Colors.accent.g, Colors.accent.b, 0.12)
+
+            Text {
+              id: uptimeDesktop
+              anchors.centerIn: parent
+              text: root.uptimeStr
+              font { pixelSize: 10; family: "Roboto"; weight: Font.Medium }
+              color: Colors.accent
+            }
+          }
+        }
+      }
+
       // divider accent
       Rectangle { width: parent.width; height: 1; color: Qt.rgba(Colors.accent.r, Colors.accent.g, Colors.accent.b, 0.15) }
 
@@ -158,6 +226,7 @@ PanelWindow {
 
         // Brilho
         Row {
+          visible: DeviceState.hasBrightness
           width: parent.width
           spacing: 10
           Text {
@@ -316,16 +385,147 @@ PanelWindow {
         }
       }
 
+      Rectangle {
+        visible: DeviceState.isDesktop
+        width: parent.width
+        height: actionsGrid.implicitHeight + 16
+        radius: 14
+        color: Colors.bg2
+
+        GridLayout {
+          id: actionsGrid
+          anchors.fill: parent
+          anchors.margins: 10
+          columns: 2
+          rowSpacing: 8
+          columnSpacing: 8
+
+          Rectangle {
+            Layout.fillWidth: true
+            Layout.preferredHeight: 46
+            radius: 10
+            color: Qt.rgba(Colors.accent.r, Colors.accent.g, Colors.accent.b, 0.12)
+
+            Row {
+              anchors.centerIn: parent
+              spacing: 8
+              Text {
+                text: "󰒓"
+                font { pixelSize: 13; family: "JetBrainsMono Nerd Font" }
+                color: Colors.accent
+              }
+              Text {
+                text: "Configurações"
+                font { pixelSize: 10; family: "Roboto"; weight: Font.Medium }
+                color: Colors.text1
+              }
+            }
+
+            MouseArea {
+              anchors.fill: parent
+              cursorShape: Qt.PointingHandCursor
+              onClicked: { root.close(); settingsCenterProc.running = true }
+            }
+          }
+
+          Rectangle {
+            Layout.fillWidth: true
+            Layout.preferredHeight: 46
+            radius: 10
+            color: Colors.bg1
+
+            Row {
+              anchors.centerIn: parent
+              spacing: 8
+              Text {
+                text: "󰏗"
+                font { pixelSize: 13; family: "JetBrainsMono Nerd Font" }
+                color: Colors.accent
+              }
+              Text {
+                text: "Atualizações"
+                font { pixelSize: 10; family: "Roboto"; weight: Font.Medium }
+                color: Colors.text1
+              }
+            }
+
+            MouseArea {
+              anchors.fill: parent
+              cursorShape: Qt.PointingHandCursor
+              onClicked: { root.close(); updateCenterProc.running = true }
+            }
+          }
+
+          Rectangle {
+            Layout.fillWidth: true
+            Layout.preferredHeight: 46
+            radius: 10
+            color: Colors.bg1
+
+            Row {
+              anchors.centerIn: parent
+              spacing: 8
+              Text {
+                text: "󰀻"
+                font { pixelSize: 13; family: "JetBrainsMono Nerd Font" }
+                color: Colors.accent
+              }
+              Text {
+                text: "Central de Apps"
+                font { pixelSize: 10; family: "Roboto"; weight: Font.Medium }
+                color: Colors.text1
+              }
+            }
+
+            MouseArea {
+              anchors.fill: parent
+              cursorShape: Qt.PointingHandCursor
+              onClicked: { root.close(); appCenterProc.running = true }
+            }
+          }
+
+          Rectangle {
+            Layout.fillWidth: true
+            Layout.preferredHeight: 46
+            radius: 10
+            color: Colors.bg1
+
+            Row {
+              anchors.centerIn: parent
+              spacing: 8
+              Text {
+                text: "󰕧"
+                font { pixelSize: 13; family: "JetBrainsMono Nerd Font" }
+                color: Colors.accent
+              }
+              Text {
+                text: "OBS Studio"
+                font { pixelSize: 10; family: "Roboto"; weight: Font.Medium }
+                color: Colors.text1
+              }
+            }
+
+            MouseArea {
+              anchors.fill: parent
+              cursorShape: Qt.PointingHandCursor
+              onClicked: { root.close(); obsProc.running = true }
+            }
+          }
+        }
+      }
+
       // divider
       Rectangle { width: parent.width; height: 1; color: Qt.rgba(1,1,1,0.04) }
 
 
       // ── WiFi + BT como lista ──────────────────────────────
       Column {
+        visible: root.showConnectivity
         width: parent.width
         spacing: 10
 
         RowLayout {
+          visible: DeviceState.hasWifi
           width: parent.width
           spacing: 0
           Text {
@@ -388,6 +588,7 @@ PanelWindow {
         }
 
         RowLayout {
+          visible: DeviceState.hasBluetooth
           width: parent.width
           spacing: 0
           Text {
@@ -423,8 +624,15 @@ PanelWindow {
               anchors.fill: parent
               cursorShape: Qt.PointingHandCursor
               onClicked: {
-                root.btActive = !root.btActive
-                btToggleProc.command = ["sh", "-c", "/run/current-system/sw/bin/bluetoothctl power " + (root.btActive ? "on" : "off")]
+                console.log("BT toggle click", "bus:", root.sessionBus, "runtime:", root.runtimeDir)
+                btToggleProc.command = [
+                  "/run/current-system/sw/bin/env",
+                  "DBUS_SESSION_BUS_ADDRESS=" + root.sessionBus,
+                  "XDG_RUNTIME_DIR=" + root.runtimeDir,
+                  "/run/current-system/sw/bin/bash",
+                  Paths.scripts + "/bluetooth-helper.sh",
+                  "toggle"
+                ]
                 btToggleProc.running = true
               }
             }
@@ -450,7 +658,12 @@ PanelWindow {
       }
 
       // divider
-      Rectangle { width: parent.width; height: 1; color: Qt.rgba(1,1,1,0.04) }
+      Rectangle {
+        visible: root.showConnectivity
+        width: parent.width
+        height: 1
+        color: Qt.rgba(1,1,1,0.04)
+      }
 
       // ── Toggles inferiores ────────────────────────────────
       Row {
@@ -458,7 +671,7 @@ PanelWindow {
         spacing: 6
 
         Rectangle {
-          width: (parent.width - 12) / 3
+          width: (parent.width - ((root.toggleCount - 1) * 6)) / root.toggleCount
           height: 56
           radius: 10
           color: SystemState.dnd ? Qt.rgba(Colors.accent.r, Colors.accent.g, Colors.accent.b, 0.15) : Colors.bg2
@@ -492,7 +705,7 @@ PanelWindow {
         }
 
         Rectangle {
-          width: (parent.width - 12) / 3
+          width: (parent.width - ((root.toggleCount - 1) * 6)) / root.toggleCount
           height: 56
           radius: 10
           color: SystemState.caffeine ? Qt.rgba(Colors.accent.r, Colors.accent.g, Colors.accent.b, 0.15) : Colors.bg2
@@ -529,7 +742,8 @@ PanelWindow {
         }
 
         Rectangle {
-          width: (parent.width - 12) / 3
+          visible: DeviceState.hasPowerProfiles
+          width: (parent.width - ((root.toggleCount - 1) * 6)) / root.toggleCount
           height: 56
           radius: 10
           color: Colors.bg2
@@ -692,7 +906,25 @@ PanelWindow {
   }
 
   Process { id: wifiToggleProc; command: [] }
-  Process { id: btToggleProc;   command: [] }
+  Process {
+    id: btToggleProc
+    command: []
+    stdout: SplitParser {
+      onRead: data => {
+        console.log("BT toggle stdout:", data.trim())
+        var s = data.trim()
+        root.btActive = s !== "off"
+        root.btConnected = s === "connected"
+      }
+    }
+    stderr: SplitParser {
+      onRead: data => console.log("BT toggle stderr:", data.trim())
+    }
+    onRunningChanged: {
+      console.log("BT toggle running:", running)
+    }
+    onExited: btCheck.running = true
+  }
   Process { id: volSetProc;     command: [] }
   Process { id: brightSetProc;  command: [] }
   Process { id: caffeineProc;   command: [] }
@@ -700,6 +932,10 @@ PanelWindow {
   Process { id: audioProc;      command: ["/run/current-system/sw/bin/pwvucontrol"] }
   Process { id: wifiAppProc;    command: ["hyprctl", "dispatch", "exec", "kitty --title impala sudo impala"] }
   Process { id: btAppProc;      command: ["hyprctl", "dispatch", "exec", "kitty --title bluetui bluetui"] }
+  Process { id: settingsCenterProc; command: ["quickshell", "ipc", "call", "settingscenter", "toggle"] }
+  Process { id: updateCenterProc;   command: ["quickshell", "ipc", "call", "updatecenter", "toggle"] }
+  Process { id: appCenterProc;      command: ["quickshell", "ipc", "call", "appcenter", "toggle"] }
+  Process { id: obsProc;            command: ["hyprctl", "dispatch", "exec", "obs-studio"] }
 
   Process {
     id: volProc
@@ -744,9 +980,17 @@ PanelWindow {
   }
   Process {
     id: btCheck
-    command: ["sh", "-c", "POWERED=$(/run/current-system/sw/bin/bluetoothctl show 2>/dev/null | grep 'Powered:' | awk '{print $2}'); if [ \"$POWERED\" != \"yes\" ]; then echo off; exit; fi; CONN=$(/run/current-system/sw/bin/bluetoothctl devices Connected 2>/dev/null | wc -l); if [ \"$CONN\" -gt 0 ]; then echo connected; else echo on; fi"]
+    command: [
+      "/run/current-system/sw/bin/env",
+      "DBUS_SESSION_BUS_ADDRESS=" + root.sessionBus,
+      "XDG_RUNTIME_DIR=" + root.runtimeDir,
+      "/run/current-system/sw/bin/bash",
+      Paths.scripts + "/bluetooth-helper.sh",
+      "status"
+    ]
     stdout: SplitParser {
       onRead: data => {
+        console.log("BT status:", data.trim())
         var s = data.trim()
         root.btActive    = s !== "off"
         root.btConnected = s === "connected"
@@ -768,14 +1012,28 @@ PanelWindow {
 
   Timer {
     interval: 500; running: root.visible; repeat: true
-    onTriggered: { volProc.running = true; brightProc.running = true }
+    onTriggered: {
+      volProc.running = true
+      if (DeviceState.hasBrightness) {
+        brightProc.running = true
+      }
+    }
   }
   Timer {
     interval: 5000; running: root.visible; repeat: true; triggeredOnStart: true
     onTriggered: {
-      uptimeProc.running = true; wifiCheck.running = true
-      wifiNameProc.running = true; btCheck.running = true
-      ccBatProc.running = true; sinkNameProc.running = true
+      uptimeProc.running = true
+      sinkNameProc.running = true
+      if (DeviceState.hasWifi) {
+        wifiCheck.running = true
+        wifiNameProc.running = true
+      }
+      if (DeviceState.hasBluetooth) {
+        btCheck.running = true
+      }
+      if (DeviceState.hasBattery) {
+        ccBatProc.running = true
+      }
     }
   }
 }

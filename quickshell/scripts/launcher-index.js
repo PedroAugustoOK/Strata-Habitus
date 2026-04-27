@@ -96,19 +96,28 @@ function discoverIconRoots() {
   }
 
   push(path.join(XDG_DATA_HOME, "icons"));
+  push(path.join(XDG_DATA_HOME, "pixmaps"));
   push(path.join(HOME, ".icons"));
+  push(path.join(HOME, ".local/share/pixmaps"));
   push(path.join(HOME, ".local/share/flatpak/exports/share/icons"));
   push("/var/lib/flatpak/exports/share/icons");
   push(path.join(HOME, ".nix-profile/share/icons"));
+  push(path.join(HOME, ".nix-profile/share/pixmaps"));
   push(path.join(HOME, ".local/state/nix/profile/share/icons"));
+  push(path.join(HOME, ".local/state/nix/profile/share/pixmaps"));
   push(`/etc/profiles/per-user/${path.basename(HOME)}/share/icons`);
+  push(`/etc/profiles/per-user/${path.basename(HOME)}/share/pixmaps`);
   push("/nix/var/nix/profiles/default/share/icons");
-  push("/run/current-system/sw/share/icons/Papirus-Dark");
-  push("/run/current-system/sw/share/icons/Papirus");
+  push("/nix/var/nix/profiles/default/share/pixmaps");
+  push(path.join(HOME, ".local/share/icons"));
+  push(path.join(HOME, ".local/share/pixmaps"));
+  push("/run/current-system/sw/share/icons");
   push("/run/current-system/sw/share/icons/hicolor");
+  push("/run/current-system/sw/share/pixmaps");
 
   for (const dataDir of XDG_DATA_DIRS) {
     push(path.join(dataDir, "icons"));
+    push(path.join(dataDir, "pixmaps"));
   }
 
   return roots;

@@ -20,9 +20,19 @@ PanelWindow {
   property string currentWall: ""
   property int selectedIdx: 0
   property real cardYOffset: 18
-  readonly property string selectedWallpaper: wallpapers.length > 0
+  readonly property var selectedWallpaper: wallpapers.length > 0
     ? wallpapers[Math.max(0, Math.min(selectedIdx, wallpapers.length - 1))]
     : ""
+
+  function previewAt(index) {
+    if (index < 0 || index >= wallpapers.length) return ""
+    return wallpapers[index].preview || wallpapers[index].path || ""
+  }
+
+  function wallpaperAt(index) {
+    if (index < 0 || index >= wallpapers.length) return ""
+    return wallpapers[index].path || ""
+  }
 
   function toggle() {
     if (visible) {
@@ -134,7 +144,7 @@ PanelWindow {
           root.moveSelection(1)
           e.accepted = true
         } else if (e.key === Qt.Key_Return || e.key === Qt.Key_Enter) {
-          root.applyWallpaper(root.selectedWallpaper)
+          root.applyWallpaper(root.selectedWallpaper.path)
           e.accepted = true
         }
       }
@@ -148,7 +158,7 @@ PanelWindow {
       RowLayout {
         Layout.fillWidth: true
         Text {
-          text: "Wallpaper Stage"
+          text: "Palco de Wallpapers"
           color: Colors.text1
           font { pixelSize: 28; family: "Inter"; weight: Font.DemiBold }
         }
@@ -182,10 +192,11 @@ PanelWindow {
 
           Image {
             anchors.fill: parent
-            source: root.selectedWallpaper !== "" ? "file://" + root.selectedWallpaper : ""
+            source: root.selectedWallpaper && root.selectedWallpaper.preview ? "file://" + root.selectedWallpaper.preview : ""
             fillMode: Image.PreserveAspectCrop
             asynchronous: true
             smooth: true
+            cache: true
           }
 
           Rectangle {
@@ -198,7 +209,7 @@ PanelWindow {
 
           MouseArea {
             anchors.fill: parent
-            onClicked: root.applyWallpaper(root.selectedWallpaper)
+            onClicked: root.applyWallpaper(root.selectedWallpaper.path)
           }
         }
 
@@ -219,10 +230,11 @@ PanelWindow {
 
           Image {
             anchors.fill: parent
-            source: root.selectedIdx > 0 ? "file://" + root.wallpapers[root.selectedIdx - 1] : ""
+            source: root.selectedIdx > 0 ? "file://" + root.previewAt(root.selectedIdx - 1) : ""
             fillMode: Image.PreserveAspectCrop
             asynchronous: true
             smooth: true
+            cache: true
           }
 
           Rectangle {
@@ -253,10 +265,11 @@ PanelWindow {
 
           Image {
             anchors.fill: parent
-            source: root.selectedIdx < root.wallpapers.length - 1 ? "file://" + root.wallpapers[root.selectedIdx + 1] : ""
+            source: root.selectedIdx < root.wallpapers.length - 1 ? "file://" + root.previewAt(root.selectedIdx + 1) : ""
             fillMode: Image.PreserveAspectCrop
             asynchronous: true
             smooth: true
+            cache: true
           }
 
           Rectangle {
@@ -317,14 +330,14 @@ PanelWindow {
 
           Text {
             anchors.centerIn: parent
-            text: "Apply"
+            text: "Aplicar"
             color: Colors.bg0
             font { pixelSize: 11; family: "JetBrains Mono"; weight: Font.Medium }
           }
 
           MouseArea {
             anchors.fill: parent
-            onClicked: root.applyWallpaper(root.selectedWallpaper)
+            onClicked: root.applyWallpaper(root.selectedWallpaper.path)
           }
         }
       }
@@ -348,14 +361,17 @@ PanelWindow {
 
   Process {
     id: listProc
-    command: ["sh", "-c", "find " + root.wallpapersDir + "/" + root.currentTheme + " -type f \\( -iname '*.jpg' -o -iname '*.png' \\) | sort"]
+    command: ["/run/current-system/sw/bin/bash", Paths.scripts + "/wallpickr-index.sh", root.wallpapersDir, root.currentTheme]
     stdout: SplitParser {
       onRead: data => {
-        const p = data.trim()
-        if (p === "") return
-        root.wallpapers = root.wallpapers.concat([p])
+        const line = data.trim()
+        if (line === "") return
+        const parts = line.split("\t")
+        if (parts.length < 2) return
+        const item = { path: parts[0], preview: parts[1] }
+        root.wallpapers = root.wallpapers.concat([item])
         if (root.currentWall !== "") {
-          const idx = root.wallpapers.indexOf(root.currentWall)
+          const idx = root.wallpapers.findIndex(entry => entry.path === root.currentWall)
           if (idx >= 0) root.selectedIdx = idx
         }
       }

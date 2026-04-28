@@ -1,5 +1,6 @@
 { ... }: {
   networking.dhcpcd.wait = "background";
+  networking.firewall.checkReversePath = false;
 
   networking.wireless.iwd.enable = true;
   networking.wireless.iwd.settings = {

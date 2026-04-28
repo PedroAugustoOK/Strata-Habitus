@@ -37,8 +37,9 @@ in {
     nautilus gvfs pavucontrol pwvucontrol
     impala bluetui playerctl hyprlock hypridle
     pipewire wireplumber blueman libnotify mako
+    wireguard-tools
     adwaita-qt adwaita-qt6 gnome-themes-extra colloidIconTheme
-    obs-studio bibata-cursors fastfetch btop vscode gcc
+    obs-studio wf-recorder bibata-cursors fastfetch btop vscode gcc
     spotify fish starship loupe zathura libreoffice
     gnome-calculator file-roller gnome-clocks gnome-calendar
     gnome-control-center simple-scan system-config-printer thunderbird

@@ -10,6 +10,7 @@ in
     [
       ./modules/boot.nix
       ./modules/network.nix
+      ./modules/protonvpn-wireguard.nix
       ./modules/locale.nix
       ./modules/audio.nix
       ./modules/packages.nix

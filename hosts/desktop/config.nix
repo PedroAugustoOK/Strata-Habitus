@@ -18,5 +18,11 @@
   services.xserver.videoDrivers = [ "amdgpu" "nvidia" ];
   hardware.graphics.enable = true;
 
+  strata.protonVPNWireGuard = {
+    enable = true;
+    autoStart = false;
+    configFile = "/home/ankh/Projects/VPN/Strata-BR-18.conf";
+  };
+
   # Sem senha root — acesso via sudo com usuário wheel
 }

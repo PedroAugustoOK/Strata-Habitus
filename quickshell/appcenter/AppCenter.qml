@@ -162,7 +162,9 @@ PanelWindow {
       return Qt.rgba(Colors.accent.r, Colors.accent.g, Colors.accent.b, 0.14)
     }
     if (item.installed) {
-      return Qt.rgba(0.38, 0.82, 0.58, Colors.darkMode ? 0.18 : 0.14)
+      return Colors.darkMode
+        ? Qt.rgba(0.38, 0.82, 0.58, 0.18)
+        : Qt.rgba(0.19, 0.58, 0.33, 0.20)
     }
     return root.softFill
   }
@@ -171,7 +173,7 @@ PanelWindow {
     if (!item) return Colors.text3
     if (item.source === "nix" && item.managed && !item.installed) return Qt.color("#f0bf6b")
     if (item.managed) return Colors.accent
-    if (item.installed) return Qt.color("#74d38e")
+    if (item.installed) return Colors.darkMode ? Qt.color("#74d38e") : Qt.color("#1f6b3e")
     return Colors.text3
   }
 

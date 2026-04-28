@@ -29,7 +29,8 @@ PanelWindow {
     { key: "controlcenter", section: "Aparência", title: "Central de Controle", body: "Brilho, áudio e ajustes rápidos.", badge: "CC" },
     { key: "updatecenter", section: "Sistema", title: "Central de Atualizações", body: "Rebuild, release e status.", badge: "UP" },
     { key: "settings", section: "Sistema", title: "Configurações do Sistema", body: "Preferências gerais do desktop.", badge: "GS" },
-    { key: "recorder", section: "Sistema", title: "Gravador de Tela", body: "Abra o OBS Studio.", badge: "OB" },
+    { key: "protonvpn", section: "Sistema", title: "Proton VPN", body: "Conecte ou desconecte o túnel WireGuard manual.", badge: "PV" },
+    { key: "recorder", section: "Sistema", title: "Gravador de Tela", body: "Inicie ou pare uma gravação rápida sem abrir janelas.", badge: "RC" },
     { key: "bluetooth", section: "Dispositivos", title: "Bluetooth", body: "Pareamento e dispositivos sem fio.", badge: "BT" },
     { key: "printer", section: "Dispositivos", title: "Impressoras", body: "Filas e administração.", badge: "PR" },
     { key: "scanner", section: "Dispositivos", title: "Scanner", body: "Digitalização simples.", badge: "SC" },
@@ -90,7 +91,8 @@ PanelWindow {
     if (action === "appcenter") { root.openAppCenter(); close(); return }
     if (action === "updatecenter") { root.openUpdateCenter(); close(); return }
     if (action === "settings") return launch(["gnome-control-center"])
-    if (action === "recorder") return launch(["obs-studio"])
+    if (action === "protonvpn") return launch(["bash", "/home/ankh/.config/quickshell/scripts/protonvpn-toggle-notify.sh"])
+    if (action === "recorder") return launch(["bash", "/home/ankh/.config/quickshell/scripts/screenrecord.sh"])
     if (action === "bluetooth") return launch(["gnome-control-center", "bluetooth"])
     if (action === "printer") return launch(["system-config-printer"])
     if (action === "scanner") return launch(["simple-scan"])

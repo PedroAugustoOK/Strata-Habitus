@@ -79,12 +79,14 @@ PanelWindow {
   property bool   showBrightPct: false
   property bool   showVolPct:   false
   property string sinkName:     "—"
+  property bool   screenRecording: false
+  property bool   protonVpnConnected: false
   readonly property string sessionBus: Quickshell.env("DBUS_SESSION_BUS_ADDRESS")
   readonly property string runtimeDir: Quickshell.env("XDG_RUNTIME_DIR")
   readonly property bool showLaptopHeader: DeviceState.isLaptop && DeviceState.hasBattery
   readonly property bool showDesktopHeader: !showLaptopHeader
   readonly property bool showConnectivity: DeviceState.hasWifi || DeviceState.hasBluetooth
-  readonly property int toggleCount: DeviceState.hasPowerProfiles ? 3 : 2
+  readonly property int toggleCount: DeviceState.hasPowerProfiles ? 4 : 3
 
   Item {
     id: keyGrabber
@@ -404,7 +406,7 @@ PanelWindow {
             Layout.fillWidth: true
             Layout.preferredHeight: 46
             radius: 10
-            color: Qt.rgba(Colors.accent.r, Colors.accent.g, Colors.accent.b, 0.12)
+            color: Colors.bg1
 
             Row {
               anchors.centerIn: parent
@@ -488,27 +490,32 @@ PanelWindow {
             Layout.fillWidth: true
             Layout.preferredHeight: 46
             radius: 10
-            color: Colors.bg1
+            color: root.protonVpnConnected
+              ? Qt.rgba(Colors.accent.r, Colors.accent.g, Colors.accent.b, 0.15)
+              : Colors.bg1
+            Behavior on color { ColorAnimation { duration: 150 } }
 
             Row {
               anchors.centerIn: parent
               spacing: 8
               Text {
-                text: "󰕧"
+                text: "󰌾"
                 font { pixelSize: 13; family: "JetBrainsMono Nerd Font" }
-                color: Colors.accent
+                color: root.protonVpnConnected ? Colors.accent : Colors.text3
+                Behavior on color { ColorAnimation { duration: 150 } }
               }
               Text {
-                text: "OBS Studio"
+                text: root.protonVpnConnected ? "VPN conectada" : "Proton VPN"
                 font { pixelSize: 10; family: "Roboto"; weight: Font.Medium }
-                color: Colors.text1
+                color: root.protonVpnConnected ? Colors.accent : Colors.text1
+                Behavior on color { ColorAnimation { duration: 150 } }
               }
             }
 
             MouseArea {
               anchors.fill: parent
               cursorShape: Qt.PointingHandCursor
-              onClicked: { root.close(); obsProc.running = true }
+              onClicked: { root.close(); protonVpnProc.running = true }
             }
           }
         }
@@ -742,6 +749,37 @@ PanelWindow {
         }
 
         Rectangle {
+          width: (parent.width - ((root.toggleCount - 1) * 6)) / root.toggleCount
+          height: 56
+          radius: 10
+          color: root.screenRecording ? Qt.rgba(228 / 255, 104 / 255, 118 / 255, 0.15) : Colors.bg2
+          Behavior on color { ColorAnimation { duration: 150 } }
+          Column {
+            anchors.centerIn: parent
+            spacing: 4
+            Text {
+              anchors.horizontalCenter: parent.horizontalCenter
+              text: root.screenRecording ? "󰻃" : "󰕧"
+              font { pixelSize: 16; family: "JetBrainsMono Nerd Font" }
+              color: root.screenRecording ? "#e46876" : Colors.text3
+              Behavior on color { ColorAnimation { duration: 150 } }
+            }
+            Text {
+              anchors.horizontalCenter: parent.horizontalCenter
+              text: root.screenRecording ? "gravando" : "gravar"
+              font { pixelSize: 8; family: "Roboto" }
+              color: root.screenRecording ? "#e46876" : Colors.text3
+              Behavior on color { ColorAnimation { duration: 150 } }
+            }
+          }
+          MouseArea {
+            anchors.fill: parent
+            cursorShape: Qt.PointingHandCursor
+            onClicked: obsProc.running = true
+          }
+        }
+
+        Rectangle {
           visible: DeviceState.hasPowerProfiles
           width: (parent.width - ((root.toggleCount - 1) * 6)) / root.toggleCount
           height: 56
@@ -929,13 +967,34 @@ PanelWindow {
   Process { id: brightSetProc;  command: [] }
   Process { id: caffeineProc;   command: [] }
   Process { id: powerSetProc;   command: [] }
+  Process {
+    id: screenrecordStateProc
+    command: ["bash", Paths.scripts + "/screenrecord-status.sh"]
+    stdout: SplitParser {
+      onRead: data => {
+        const parts = data.trim().split("\t")
+        root.screenRecording = (parts[0] || "") === "recording"
+      }
+    }
+  }
+  Process {
+    id: protonVpnStateProc
+    command: ["bash", Paths.scripts + "/protonvpn-status.sh"]
+    stdout: SplitParser {
+      onRead: data => {
+        const parts = data.trim().split("\t")
+        root.protonVpnConnected = (parts[0] || "") === "connected"
+      }
+    }
+  }
   Process { id: audioProc;      command: ["/run/current-system/sw/bin/pwvucontrol"] }
   Process { id: wifiAppProc;    command: ["hyprctl", "dispatch", "exec", "kitty --title impala sudo impala"] }
   Process { id: btAppProc;      command: ["hyprctl", "dispatch", "exec", "kitty --title bluetui bluetui"] }
   Process { id: settingsCenterProc; command: ["quickshell", "ipc", "call", "settingscenter", "toggle"] }
   Process { id: updateCenterProc;   command: ["quickshell", "ipc", "call", "updatecenter", "toggle"] }
   Process { id: appCenterProc;      command: ["quickshell", "ipc", "call", "appcenter", "toggle"] }
-  Process { id: obsProc;            command: ["hyprctl", "dispatch", "exec", "obs-studio"] }
+  Process { id: obsProc;            command: ["hyprctl", "dispatch", "exec", "bash /home/ankh/.config/quickshell/scripts/screenrecord.sh"] }
+  Process { id: protonVpnProc;      command: ["hyprctl", "dispatch", "exec", "bash /home/ankh/.config/quickshell/scripts/protonvpn-toggle-notify.sh"] }
 
   Process {
     id: volProc
@@ -1010,6 +1069,13 @@ PanelWindow {
     }
   }
 
+  Timer {
+    interval: 1000; running: root.visible; repeat: true; triggeredOnStart: true
+    onTriggered: {
+      screenrecordStateProc.running = true
+      protonVpnStateProc.running = true
+    }
+  }
   Timer {
     interval: 500; running: root.visible; repeat: true
     onTriggered: {

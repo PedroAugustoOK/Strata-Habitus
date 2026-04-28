@@ -255,7 +255,14 @@ function detectBranch(repo) {
 }
 
 function detectGitDirty(repo) {
-  const result = spawnSync("git", ["-C", repo, "status", "--short"], { encoding: "utf8" });
+  const result = spawnSync("git", [
+    "-C", repo,
+    "status",
+    "--porcelain",
+    "--",
+    ".",
+    ":(exclude)codex memories/**"
+  ], { encoding: "utf8" });
   return result.status === 0 && (result.stdout || "").trim() !== "";
 }
 

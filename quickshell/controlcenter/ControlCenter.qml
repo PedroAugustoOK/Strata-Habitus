@@ -51,6 +51,8 @@ PanelWindow {
     if (DeviceState.hasBattery) {
       ccBatProc.running = true
     }
+    notificationHistoryProc.running = true
+    notificationDndStatusProc.running = true
   }
 
   SequentialAnimation {
@@ -81,12 +83,79 @@ PanelWindow {
   property string sinkName:     "—"
   property bool   screenRecording: false
   property bool   protonVpnConnected: false
+  property var    notificationHistory: []
+  property var    notificationIgnoredKeys: []
   readonly property string sessionBus: Quickshell.env("DBUS_SESSION_BUS_ADDRESS")
   readonly property string runtimeDir: Quickshell.env("XDG_RUNTIME_DIR")
   readonly property bool showLaptopHeader: DeviceState.isLaptop && DeviceState.hasBattery
   readonly property bool showDesktopHeader: !showLaptopHeader
   readonly property bool showConnectivity: DeviceState.hasWifi || DeviceState.hasBluetooth
   readonly property int toggleCount: DeviceState.hasPowerProfiles ? 4 : 3
+
+  function mergeNotificationHistory(items) {
+    const incoming = Array.isArray(items) ? items : []
+    const current = Array.isArray(root.notificationHistory) ? root.notificationHistory.slice() : []
+    const ignored = new Set(Array.isArray(root.notificationIgnoredKeys) ? root.notificationIgnoredKeys : [])
+    const byKey = new Map()
+
+    for (const entry of current) {
+      if (!ignored.has(entry.key || ""))
+        byKey.set(entry.key, entry)
+    }
+
+    for (const entry of incoming) {
+      const key = entry.key || `${entry.appName || ""}\u0000${entry.summary || ""}\u0000${entry.body || ""}`
+      if (!key || ignored.has(key))
+        continue
+      if (!byKey.has(key)) {
+        byKey.set(key, {
+          id: Number(entry.id || 0),
+          key,
+          groupKey: entry.groupKey || "",
+          appName: entry.appName || "",
+          summary: entry.summary || "",
+          body: entry.body || "",
+          actionsCount: Number(entry.actionsCount || 0),
+          iconPath: entry.iconPath || ""
+        })
+      } else {
+        const existing = byKey.get(key)
+        if (!existing)
+          continue
+
+        byKey.set(key, {
+          id: Math.max(Number(existing.id || 0), Number(entry.id || 0)),
+          key,
+          groupKey: entry.groupKey || existing.groupKey || "",
+          appName: entry.appName || existing.appName || "",
+          summary: entry.summary || existing.summary || "",
+          body: entry.body || existing.body || "",
+          actionsCount: Math.max(Number(existing.actionsCount || 0), Number(entry.actionsCount || 0)),
+          iconPath: entry.iconPath || existing.iconPath || ""
+        })
+      }
+    }
+
+    root.notificationHistory = Array.from(byKey.values()).sort((a, b) => (b.id || 0) - (a.id || 0))
+  }
+
+  function clearNotificationHistory() {
+    const ignored = new Set(Array.isArray(root.notificationIgnoredKeys) ? root.notificationIgnoredKeys : [])
+    for (const entry of root.notificationHistory) {
+      if (entry.key)
+        ignored.add(entry.key)
+    }
+    root.notificationIgnoredKeys = Array.from(ignored)
+    root.notificationHistory = []
+  }
+
+  function removeNotificationByKey(key) {
+    const ignored = new Set(Array.isArray(root.notificationIgnoredKeys) ? root.notificationIgnoredKeys : [])
+    if (key)
+      ignored.add(key)
+    root.notificationIgnoredKeys = Array.from(ignored)
+    root.notificationHistory = root.notificationHistory.filter(entry => entry.key !== key)
+  }
 
   Item {
     id: keyGrabber
@@ -705,8 +774,7 @@ PanelWindow {
             anchors.fill: parent
             cursorShape: Qt.PointingHandCursor
             onClicked: {
-              SystemState.dnd = !SystemState.dnd
-              NotificationService.dnd = SystemState.dnd
+              notificationDndToggleProc.running = true
             }
           }
         }
@@ -823,17 +891,34 @@ PanelWindow {
       Column {
         width: parent.width
         spacing: 8
-        visible: NotificationService.notifications.length > 0
 
         Rectangle { width: parent.width; height: 1; color: Qt.rgba(1,1,1,0.04) }
 
         RowLayout {
           width: parent.width
-          Text {
-            text: "notificações"
-            color: Colors.text3
-            font { pixelSize: 10; family: "Roboto" }
+          Row {
+            spacing: 8
             Layout.fillWidth: true
+
+            Text {
+              text: "notificações"
+              color: Colors.text3
+              font { pixelSize: 10; family: "Roboto" }
+            }
+            Rectangle {
+              width: notifCountText.implicitWidth + 12
+              height: 18
+              radius: 9
+              color: Colors.bg2
+
+              Text {
+                id: notifCountText
+                anchors.centerIn: parent
+                text: String(root.notificationHistory.length)
+                color: Colors.text3
+                font { pixelSize: 9; family: "Roboto"; weight: Font.Medium }
+              }
+            }
           }
           Row {
             spacing: 6
@@ -851,7 +936,7 @@ PanelWindow {
               MouseArea {
                 anchors.fill: parent
                 cursorShape: Qt.PointingHandCursor
-                onClicked: { SystemState.dnd = !SystemState.dnd; NotificationService.dnd = SystemState.dnd }
+                onClicked: notificationDndToggleProc.running = true
               }
             }
             Rectangle {
@@ -868,72 +953,191 @@ PanelWindow {
               MouseArea {
                 anchors.fill: parent
                 cursorShape: Qt.PointingHandCursor
-                onClicked: NotificationService.dismissAll()
+                onClicked: {
+                  root.clearNotificationHistory()
+                  notificationDismissAllProc.running = true
+                }
               }
             }
           }
         }
 
-        Column {
+        Rectangle {
           width: parent.width
-          spacing: 6
-          bottomPadding: 4
-          Repeater {
-            model: NotificationService.notifications
-            delegate: Rectangle {
-              required property Notification modelData
-              width: parent.width
-              height: nc.implicitHeight + 16
-              radius: 12
-              color: Colors.bg2
-              Rectangle {
-                anchors { left: parent.left; top: parent.top; bottom: parent.bottom; topMargin: 8; bottomMargin: 8 }
-                width: 3
-                radius: 2
-                color: Colors.accent
-                opacity: 0.6
+          height: root.notificationHistory.length > 0 ? 224 : 92
+          radius: 18
+          color: Qt.rgba(Colors.bg2.r, Colors.bg2.g, Colors.bg2.b, 0.92)
+
+          Rectangle {
+            anchors.fill: parent
+            anchors.margins: 1
+            radius: 15
+            color: "transparent"
+            border.width: 1
+            border.color: Qt.rgba(Colors.text1.r, Colors.text1.g, Colors.text1.b, Colors.darkMode ? 0.05 : 0.08)
+          }
+
+          Item {
+            anchors.fill: parent
+            anchors.margins: 10
+
+            Column {
+              anchors.centerIn: parent
+              width: parent.width - 8
+              spacing: 4
+              visible: root.notificationHistory.length === 0
+
+              Text {
+                width: parent.width
+                horizontalAlignment: Text.AlignHCenter
+                text: "sem notificações recentes"
+                color: Colors.text2
+                font { pixelSize: 11; family: "Roboto"; weight: Font.Medium }
               }
+              Text {
+                width: parent.width
+                horizontalAlignment: Text.AlignHCenter
+                text: SystemState.dnd ? "silenciamento ativo" : "novos avisos aparecem aqui"
+                color: Colors.text3
+                font { pixelSize: 9; family: "Roboto" }
+              }
+            }
+
+            Flickable {
+              anchors.fill: parent
+              visible: root.notificationHistory.length > 0
+              clip: true
+              contentWidth: width
+              contentHeight: historyColumn.implicitHeight
+
               Column {
-                id: nc
-                anchors { left: parent.left; right: parent.right; top: parent.top; leftMargin: 16; rightMargin: 12; topMargin: 8 }
-                spacing: 2
-                RowLayout {
-                  width: parent.width
-                  Text {
-                    text: modelData.appName
-                    color: Colors.accent
-                    font { pixelSize: 9; family: "Roboto" }
-                    Layout.fillWidth: true
-                  }
-                  Text {
-                    text: "✕"
-                    color: Colors.text3
-                    font.pixelSize: 10
-                    MouseArea {
+                id: historyColumn
+                width: parent.width
+                spacing: 6
+
+                Repeater {
+                  model: root.notificationHistory
+                  delegate: Rectangle {
+                    required property var modelData
+                    width: historyColumn.width
+                    height: cardRow.implicitHeight + 18
+                    radius: 16
+                    color: Qt.rgba(Colors.bg1.r, Colors.bg1.g, Colors.bg1.b, 0.94)
+                    border.width: 1
+                    border.color: Qt.rgba(Colors.text1.r, Colors.text1.g, Colors.text1.b, Colors.darkMode ? 0.04 : 0.08)
+
+                    RowLayout {
+                      id: cardRow
                       anchors.fill: parent
-                      cursorShape: Qt.PointingHandCursor
-                      onClicked: modelData.dismiss()
+                      anchors.margins: 9
+                      spacing: 10
+
+                      Rectangle {
+                        width: 38
+                        height: 38
+                        radius: 19
+                        color: Qt.rgba(Colors.accent.r, Colors.accent.g, Colors.accent.b, 0.14)
+                        Layout.alignment: Qt.AlignTop
+
+                        Text {
+                          anchors.centerIn: parent
+                          visible: !iconImage.visible
+                          text: "󰍡"
+                          color: Colors.accent
+                          font { pixelSize: 14; family: "JetBrainsMono Nerd Font" }
+                        }
+
+                        Image {
+                          id: iconImage
+                          anchors.centerIn: parent
+                          width: 22
+                          height: 22
+                          source: modelData.iconPath || ""
+                          visible: source !== ""
+                          smooth: true
+                          fillMode: Image.PreserveAspectFit
+                        }
+                      }
+
+                      ColumnLayout {
+                        Layout.fillWidth: true
+                        spacing: 2
+
+                        RowLayout {
+                          Layout.fillWidth: true
+                          spacing: 6
+
+                          Text {
+                            text: modelData.appName || "Sistema"
+                            color: Colors.text2
+                            font { pixelSize: 9; family: "Roboto"; weight: Font.Medium }
+                            elide: Text.ElideRight
+                            Layout.fillWidth: true
+                          }
+
+                          Rectangle {
+                            width: 20
+                            height: 20
+                            radius: 10
+                            color: closeMouse.containsMouse ? Qt.rgba(Colors.text1.r, Colors.text1.g, Colors.text1.b, 0.10) : "transparent"
+
+                            Text {
+                              anchors.centerIn: parent
+                              text: "✕"
+                              color: Colors.text3
+                              font.pixelSize: 9
+                            }
+
+                            MouseArea {
+                              id: closeMouse
+                              anchors.fill: parent
+                              hoverEnabled: true
+                              cursorShape: Qt.PointingHandCursor
+                              onClicked: root.removeNotificationByKey(modelData.key)
+                            }
+                          }
+                        }
+
+                        Text {
+                          text: modelData.summary || "sem título"
+                          color: Colors.text1
+                          font { pixelSize: 12; family: "Roboto"; weight: Font.DemiBold }
+                          Layout.fillWidth: true
+                          wrapMode: Text.WordWrap
+                          maximumLineCount: 2
+                          elide: Text.ElideRight
+                        }
+
+                        Text {
+                          visible: (modelData.body || "") !== ""
+                          text: modelData.body || ""
+                          color: Colors.text3
+                          font { pixelSize: 10; family: "Roboto" }
+                          Layout.fillWidth: true
+                          wrapMode: Text.WordWrap
+                          maximumLineCount: 3
+                          elide: Text.ElideRight
+                        }
+
+                        Rectangle {
+                          visible: modelData.actionsCount > 0
+                          height: 20
+                          radius: 10
+                          color: Qt.rgba(Colors.accent.r, Colors.accent.g, Colors.accent.b, 0.10)
+                          Layout.topMargin: 4
+                          width: actionMetaText.implicitWidth + 16
+
+                          Text {
+                            id: actionMetaText
+                            anchors.centerIn: parent
+                            text: modelData.actionsCount === 1 ? "1 ação" : modelData.actionsCount + " ações"
+                            color: Colors.accent
+                            font { pixelSize: 9; family: "Roboto"; weight: Font.Medium }
+                          }
+                        }
+                      }
                     }
                   }
-                }
-                Text {
-                  text: modelData.summary
-                  color: Colors.text1
-                  font { pixelSize: 11; family: "Roboto"; weight: Font.Medium }
-                  width: parent.width
-                  wrapMode: Text.WordWrap
-                  maximumLineCount: 1
-                  elide: Text.ElideRight
-                }
-                Text {
-                  visible: modelData.body !== ""
-                  text: modelData.body
-                  color: Colors.text3
-                  font { pixelSize: 10; family: "Roboto" }
-                  width: parent.width
-                  wrapMode: Text.WordWrap
-                  maximumLineCount: 2
-                  elide: Text.ElideRight
                 }
               }
             }
@@ -995,6 +1199,44 @@ PanelWindow {
   Process { id: appCenterProc;      command: ["quickshell", "ipc", "call", "appcenter", "toggle"] }
   Process { id: obsProc;            command: ["hyprctl", "dispatch", "exec", "bash /home/ankh/.config/quickshell/scripts/screenrecord.sh"] }
   Process { id: protonVpnProc;      command: ["hyprctl", "dispatch", "exec", "bash /home/ankh/.config/quickshell/scripts/protonvpn-toggle-notify.sh"] }
+  Process {
+    id: notificationHistoryProc
+    command: ["/run/current-system/sw/bin/node", Paths.scripts + "/notification-history.js"]
+    stdout: SplitParser {
+      onRead: data => {
+        const text = data.trim()
+        if (!text)
+          return
+        try {
+          root.mergeNotificationHistory(JSON.parse(text))
+        } catch (error) {
+          console.log("Notification history parse failed:", text)
+        }
+      }
+    }
+  }
+  Process {
+    id: notificationDndStatusProc
+    command: ["bash", Paths.scripts + "/notification-dnd.sh", "status"]
+    stdout: SplitParser {
+      onRead: data => {
+        SystemState.dnd = data.trim() === "on"
+      }
+    }
+  }
+  Process {
+    id: notificationDndToggleProc
+    command: ["bash", Paths.scripts + "/notification-dnd.sh", "toggle"]
+    stdout: SplitParser {
+      onRead: data => {
+        SystemState.dnd = data.trim() === "on"
+      }
+    }
+  }
+  Process {
+    id: notificationDismissAllProc
+    command: ["makoctl", "dismiss", "--all", "--no-history"]
+  }
 
   Process {
     id: volProc
@@ -1083,6 +1325,13 @@ PanelWindow {
       if (DeviceState.hasBrightness) {
         brightProc.running = true
       }
+    }
+  }
+  Timer {
+    interval: 1200; running: root.visible; repeat: true; triggeredOnStart: true
+    onTriggered: {
+      notificationHistoryProc.running = true
+      notificationDndStatusProc.running = true
     }
   }
   Timer {

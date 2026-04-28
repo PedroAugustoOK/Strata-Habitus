@@ -178,16 +178,44 @@ PanelWindow {
         id: statusPill
         height: 28; radius: 14
         color:  Colors.bg2
-        width:  sr.implicitWidth + 24
+        readonly property bool hasTransientIndicators: SystemState.dnd || SystemState.caffeine
+        width:  sr.implicitWidth + 24 + (hasTransientIndicators ? transientRow.implicitWidth + 10 : 0)
         Behavior on width { NumberAnimation { duration: barRoot.pillAnimMedium; easing.type: Easing.OutCubic } }
         MouseArea {
           anchors.fill: parent
           cursorShape: Qt.PointingHandCursor
           onClicked: ccToggle.running = true
         }
+        Row {
+          id: transientRow
+          anchors { left: parent.left; leftMargin: 12; verticalCenter: parent.verticalCenter }
+          spacing: 6
+          visible: statusPill.hasTransientIndicators
+
+          Text {
+            visible: SystemState.dnd
+            text: "󰂛"
+            color: Colors.accent
+            font { family: "JetBrainsMono Nerd Font"; pixelSize: 13 }
+            verticalAlignment: Text.AlignVCenter
+          }
+          Item {
+            visible: SystemState.caffeine
+            width: 13
+            height: 16
+
+            Text {
+              anchors.centerIn: parent
+              anchors.verticalCenterOffset: 1
+              text: "󰅶"
+              color: Colors.accent
+              font { family: "JetBrainsMono Nerd Font"; pixelSize: 13 }
+            }
+          }
+        }
         StatusRight {
           id: sr
-          anchors.centerIn: parent
+          anchors { right: parent.right; rightMargin: 12; verticalCenter: parent.verticalCenter }
         }
       }
     }

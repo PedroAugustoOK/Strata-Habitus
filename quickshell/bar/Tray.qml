@@ -6,8 +6,8 @@ import ".."
 
 Rectangle {
   id: trayPill
-  height: 24
-  radius: 12
+  height: 28
+  radius: 14
   color:  Colors.bg2
   width:  trayRow.implicitWidth + 20
   visible: SystemTray.items.values.length > 0

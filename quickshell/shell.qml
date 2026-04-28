@@ -41,11 +41,14 @@ ShellRoot {
   }
 
   readonly property string clipboardDaemonScript: Qt.resolvedUrl("./scripts/clipboard-daemon.sh").toString().replace("file://", "")
+  readonly property string notificationIconDaemonScript: Qt.resolvedUrl("./scripts/notification-icon-daemon.sh").toString().replace("file://", "")
   readonly property string spotifyNotifyScript: Qt.resolvedUrl("./scripts/spotify-notify.sh").toString().replace("file://", "")
 
   Component.onCompleted: {
     clipboardDaemon.command = ["/run/current-system/sw/bin/bash", clipboardDaemonScript, "start"]
     clipboardDaemon.running = true
+    notificationIconDaemon.command = ["/run/current-system/sw/bin/bash", notificationIconDaemonScript, "start"]
+    notificationIconDaemon.running = true
     spotifyNotify.command = ["/run/current-system/sw/bin/bash", spotifyNotifyScript, "start"]
     spotifyNotify.running = true
   }
@@ -73,6 +76,10 @@ ShellRoot {
 
   Process {
     id: spotifyNotify
+    command: []
+  }
+  Process {
+    id: notificationIconDaemon
     command: []
   }
 

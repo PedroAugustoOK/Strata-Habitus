@@ -17,20 +17,6 @@ Item {
     spacing: 8
 
     Text {
-      visible: SystemState.dnd
-      text:    "󰂛"
-      color:   Colors.accent
-      font { family: "JetBrainsMono Nerd Font"; pixelSize: 13 }
-      verticalAlignment: Text.AlignVCenter
-    }
-    Text {
-      visible: SystemState.caffeine
-      text:    "󰅶"
-      color:   Colors.accent
-      font { family: "JetBrainsMono Nerd Font"; pixelSize: 13 }
-      verticalAlignment: Text.AlignVCenter
-    }
-    Text {
       visible: DeviceState.hasBluetooth
       id: btLabel
       color: Colors.text3

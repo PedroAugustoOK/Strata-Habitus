@@ -47,7 +47,7 @@ PanelWindow {
         }
 
         Timer {
-          interval: modelData.expireTimeout > 0 ? modelData.expireTimeout : 5000
+          interval: modelData.expireTimeout > 0 ? modelData.expireTimeout : 3000
           running: true
           onTriggered: exitAnim.start()
         }

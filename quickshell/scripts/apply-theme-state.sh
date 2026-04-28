@@ -555,7 +555,7 @@ background-color=$BG1
 border-color=$ACCENT
 text-color=$TEXT1
 font=JetBrains Mono 9
-default-timeout=6000
+default-timeout=3000
 max-icon-size=32
 icon-location=left
 icon-border-radius=8
@@ -582,6 +582,9 @@ border-size=2
 border-color=#f28779
 text-color=$TEXT0
 default-timeout=0
+
+[mode=do-not-disturb]
+invisible=1
 
 [grouped]
 format=<span size="x-small" color="$ACCENT">%a</span>\n<b>%s</b> <span size="x-small" color="$TEXT3">(%g)</span>\n<span size="x-small" color="$TEXT3">%b</span>

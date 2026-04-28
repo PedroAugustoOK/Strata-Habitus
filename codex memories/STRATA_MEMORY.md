@@ -380,3 +380,69 @@ sudo nixos-generate-config --show-hardware-config > ~/dotfiles/hosts/desktop/har
 - Still not closed end-to-end from this shell:
   - real browser callback completion for `proton-authenticator://...`
   - live Hyprland workspace glyph appearance for Proton windows
+
+## Session update - 2026-04-28 (notifications + bar + vpn follow-up)
+
+### Bar / status pill
+- The right-side status pill was reworked so transient indicators no longer shift the Wi-Fi/Bluetooth block.
+- Current behavior:
+  - `DND` and `cafeína` live on the left side of the status pill
+  - hardware indicators stay anchored on the right
+- `quickshell/bar/Tray.qml` was also normalized to the same `28px` pill height used by the rest of the bar.
+
+### Proton VPN UX
+- Proton VPN status detection was corrected for the current WireGuard shape.
+- Important finding:
+  - this setup uses policy routing via `wg-quick`
+  - looking only at the main routing table was a false negative
+- Current repo state:
+  - `quickshell/scripts/protonvpn-status.sh` treats an active WireGuard interface as connected
+  - `quickshell/scripts/protonvpn-toggle-notify.sh` now sends immediate `Conectando/Desligando` feedback and confirms final state asynchronously
+  - `quickshell/scripts/protonvpn-diagnose.sh` was added for fast tunnel inspection
+- Real validation achieved:
+  - `protonvpn-wg.service` starts successfully
+  - interface `Strata-BR-18` appears
+  - `wg show ... latest-handshakes` returns a non-zero handshake timestamp
+  - external IP changes through the Proton tunnel
+
+### Notification architecture
+- Main architectural correction:
+  - the active desktop notification source is `mako`, not Quickshell's internal `NotificationServer`
+  - `quickshell/shell.qml` still has `Notifications {}` disabled
+- Because of that, the Control Center inbox now reads from `makoctl history -j` and `makoctl list -j`.
+- New helpers:
+  - `quickshell/scripts/notification-history.js`
+  - `quickshell/scripts/notification-dnd.sh`
+  - `quickshell/scripts/notification-icon-daemon.sh`
+
+### Notification inbox behavior
+- The Control Center notifications section was redesigned into a mobile-style card stack.
+- Current behavior:
+  - fixed inbox area with empty state
+  - session-visible history sourced from `mako`
+  - `silenciar` toggles real `mako` mode `do-not-disturb`
+  - `limpar` removes inbox items locally and dismisses active `mako` notifications
+  - normal notification fallback timeout is now `3000ms`
+- `mako` config direction:
+  - `default-timeout=3000`
+  - explicit `[mode=do-not-disturb] invisible=1`
+
+### Notification content shaping
+- Website notifications now suppress raw site/domain lines when they are only noise:
+  - examples like `claude.ai`
+  - `web.whatsapp.com`
+- Spotify notification handling was deduplicated:
+  - inbox keeps at most one Spotify notification card
+  - newer track changes replace/update the previous Spotify card instead of stacking
+
+### Notification icons
+- Notification cards now attempt to render app/site icons.
+- Important Chromium/web finding:
+  - `mako` exposes site icons through temporary `app_icon` files under `/tmp/...`
+  - those files expire too quickly for a late-read inbox
+- Practical fix:
+  - `notification-icon-daemon.sh` runs in the background with Quickshell
+  - it continuously warms icon cache through `notification-history.js`
+  - temporary web icons are copied into `~/.cache/strata/notifications`
+- Result:
+  - Chromium notifications in the Control Center can preserve the site icon instead of falling back to the browser icon

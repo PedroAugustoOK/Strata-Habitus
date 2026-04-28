@@ -283,3 +283,56 @@ cd ~/dotfiles && ./strata-apply-channel.sh
   - Proton VPN connected
 - Motion rule:
   - pills should animate in/out with short width/opacity/scale transitions
+
+## Session continuation point - 2026-04-28 (notifications + polish)
+
+### Control Center notifications source of truth
+- Important implementation finding:
+  - the visible desktop notification system is `mako`
+  - Quickshell notification toasts are currently disabled in `quickshell/shell.qml`
+- Consequence:
+  - inbox/history in `ControlCenter.qml` must read from `makoctl`, not from `NotificationService.notifications`
+
+### Current notification stack
+- Main files:
+  - `quickshell/controlcenter/ControlCenter.qml`
+  - `quickshell/scripts/notification-history.js`
+  - `quickshell/scripts/notification-dnd.sh`
+  - `quickshell/scripts/notification-icon-daemon.sh`
+  - `quickshell/scripts/apply-theme-state.sh`
+  - `generated/mako/config`
+- Current behavior:
+  - inbox is always present in the Control Center
+  - notifications are shown as mobile-style cards
+  - source is `makoctl history -j` + `makoctl list -j`
+  - normal notifications use `3000ms` timeout
+  - DND button maps to real `mako` mode `do-not-disturb`
+
+### Web notification icon preservation
+- Chromium/web notifications expose temporary `app_icon` paths.
+- Directly reading history later is not enough because those files may already be gone.
+- Current fix:
+  - background daemon pre-caches notification icons into:
+    - `~/.cache/strata/notifications`
+- This is required if the Control Center should keep site icons after the popup disappears.
+
+### Notification shaping rules
+- Raw site lines should be suppressed in website notification bodies when they are only transport noise.
+- Spotify is intentionally grouped into a single evolving inbox card instead of stacking multiple track-change cards.
+
+### Shared UI scope
+- Current `ControlCenter.qml` remains shared between desktop and notebook.
+- Therefore both currently inherit:
+  - Proton VPN section
+  - screen recorder section
+  - notifications inbox
+- No host-specific split was introduced in this session.
+
+### Publish state
+- Session changes were committed on `main` as:
+  - `ae5d3ed` `Refine control center notifications and VPN UX`
+- The same commit was pushed to:
+  - `origin/main`
+  - `origin/stable`
+- Intended notebook action:
+  - run the normal channel apply flow on the notebook host

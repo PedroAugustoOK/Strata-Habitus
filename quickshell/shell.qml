@@ -15,6 +15,7 @@ import "wallpickr"
 import "appcenter"
 import "updatecenter"
 import "settingscenter"
+import "webapps"
 
 ShellRoot {
   Bar {}
@@ -30,6 +31,7 @@ ShellRoot {
   WallPickr { id: wallPickr }
   Clipboard { id: clipboard }
   AppCenter { id: appCenter }
+  WebApps { id: webApps }
   UpdateCenter { id: updateCenter }
   SettingsCenter {
     id: settingsCenter
@@ -37,6 +39,7 @@ ShellRoot {
     onOpenThemePicker: themePicker.toggle()
     onOpenWallPickr: wallPickr.toggle()
     onOpenAppCenter: appCenter.toggle()
+    onOpenWebApps: webApps.toggle()
     onOpenUpdateCenter: updateCenter.toggle()
   }
 
@@ -268,6 +271,10 @@ ShellRoot {
   IpcHandler {
     target: "appcenter"
     function toggle(): void { appCenter.toggle() }
+  }
+  IpcHandler {
+    target: "webapps"
+    function toggle(): void { webApps.toggle() }
   }
   IpcHandler {
     target: "updatecenter"

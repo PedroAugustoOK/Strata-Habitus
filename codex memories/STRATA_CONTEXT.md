@@ -88,6 +88,36 @@ cd ~/dotfiles && ./strata-apply-channel.sh
   - Proton app workspace glyph resolution
   - `Proton Authenticator` login callback flow
 
+## Notebook divergence note - 2026-04-28
+- Current session work is being done directly on notebook host `strata`
+- These UI changes were made on `stable` from the notebook, not from `desktop`
+- Treat this as notebook-side polish/divergence for now
+- Do not assume the same behavior or files are already validated on `desktop`
+- A later pass should decide how to port or replay the notebook changes back onto the desktop development flow
+
+## Session continuation point - 2026-04-28 (notebook UI pass)
+
+### What changed on notebook
+- A new `Apps Web` overlay was added and bound to `Super+K`
+- `Settings Center` gained an `Apps Web` entry
+- The `Clipboard` overlay was simplified:
+  - help text was removed from the header
+  - typography was moved closer to the rest of Strata overlays
+  - light-theme surfaces were corrected to avoid washed-out white-on-white panels
+- Clipboard binds changed on notebook:
+  - `Super+V` -> clipboard
+  - `Super+Shift+G` -> floating toggle
+  - `Super+Shift+F` -> fullscreen
+- Control Center notifications gained per-card expand/collapse on click
+- Chromium/web notifications in the Control Center now suppress noisy raw site-origin lines in the body
+
+### Important notebook-specific notification decision
+- Keep `mako` as the active popup notification renderer
+- Do not switch popup rendering back to Quickshell for Chromium/site notifications right now
+- Reason:
+  - `mako` remains the reliable delivery path for Chromium web notifications on this host
+  - Quickshell should keep acting as inbox/history presentation on top of `mako`
+
 ## Session continuation point - 2026-04-27
 
 ### What changed today

@@ -101,6 +101,7 @@ function normalizeNotification(node) {
     : (node.actions && typeof node.actions === "object" ? Object.keys(node.actions).length : 0);
   const body = sanitizeBody(rawBody, appName, summary);
   const groupKey = classifyGroupKey(appName, desktopEntry, summary);
+  const notificationKey = groupKey || buildKey(appName, summary, rawBody || body);
   const iconName = firstNonEmpty([
     node["app-icon"],
     node.app_icon,
@@ -118,7 +119,7 @@ function normalizeNotification(node) {
 
   return {
     id,
-    key: groupKey || buildKey(appName, summary, body),
+    key: notificationKey,
     groupKey,
     appName,
     summary,
@@ -321,15 +322,19 @@ function sanitizeBody(body, appName, summary) {
     || /^https?:\/\//i.test(text.trim());
 
   if (siteLike) {
-    text = text
-      .split(/\r?\n/)
-      .filter(line => {
+    const lines = text.split(/\r?\n/);
+    text = lines
+      .filter((line, index) => {
         const trimmed = line.trim();
         if (!trimmed)
           return true;
         if (/^https?:\/\/\S+$/i.test(trimmed))
           return false;
         if (/^[a-z0-9.-]+\.[a-z]{2,}(\/.*)?$/i.test(trimmed))
+          return false;
+        if (looksLikeSiteLabel(trimmed))
+          return false;
+        if (index === 0 && looksLikeOriginLabel(trimmed))
           return false;
         return true;
       })
@@ -339,6 +344,30 @@ function sanitizeBody(body, appName, summary) {
   }
 
   return text;
+}
+
+function looksLikeSiteLabel(value) {
+  const trimmed = `${value || ""}`.trim();
+  if (!trimmed)
+    return false;
+  if (trimmed.length > 48)
+    return false;
+  if (/^www\./i.test(trimmed))
+    return true;
+  if (/^[a-z0-9-]+(\.[a-z0-9-]+)+$/i.test(trimmed))
+    return true;
+  return false;
+}
+
+function looksLikeOriginLabel(value) {
+  const trimmed = `${value || ""}`.trim();
+  if (!trimmed)
+    return false;
+  if (looksLikeSiteLabel(trimmed))
+    return true;
+  if (/^[a-z0-9 ._-]{2,32}$/i.test(trimmed) && /\b(web|site|browser)\b/i.test(trimmed))
+    return true;
+  return false;
 }
 
 function cacheNotificationIcon(sourcePath, cacheKey) {

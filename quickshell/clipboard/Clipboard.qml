@@ -26,6 +26,22 @@ PanelWindow {
   property string imagePreviewError: ""
   property int imagePreviewVersion: 0
   property string imagePreviewToken: ""
+  readonly property color panelFill: Colors.darkMode
+    ? Qt.rgba(Colors.bg2.r, Colors.bg2.g, Colors.bg2.b, 0.34)
+    : Qt.rgba(Colors.bg2.r, Colors.bg2.g, Colors.bg2.b, 0.82)
+  readonly property color panelEdge: Colors.darkMode
+    ? Qt.rgba(Colors.text1.r, Colors.text1.g, Colors.text1.b, 0.08)
+    : Qt.rgba(Colors.text1.r, Colors.text1.g, Colors.text1.b, 0.12)
+  readonly property color fieldFill: Colors.darkMode
+    ? Qt.rgba(0, 0, 0, 0.16)
+    : Qt.rgba(1, 1, 1, 0.58)
+  readonly property color fieldEdge: Qt.rgba(Colors.text1.r, Colors.text1.g, Colors.text1.b, Colors.darkMode ? 0.08 : 0.12)
+  readonly property color subtleFill: Colors.darkMode
+    ? Qt.rgba(Colors.text1.r, Colors.text1.g, Colors.text1.b, 0.05)
+    : Qt.rgba(Colors.text1.r, Colors.text1.g, Colors.text1.b, 0.045)
+  readonly property color hoverFill: Colors.darkMode
+    ? Qt.rgba(Colors.text1.r, Colors.text1.g, Colors.text1.b, 0.045)
+    : Qt.rgba(Colors.text1.r, Colors.text1.g, Colors.text1.b, 0.06)
 
   readonly property var currentItem: {
     if (filtered.length === 0) return null
@@ -305,29 +321,21 @@ PanelWindow {
           y: 18
           text: "Clipboard"
           color: Colors.text1
-          font { pixelSize: 22; family: "JetBrainsMono Nerd Font" }
-        }
-
-        Text {
-          x: 24
-          y: 48
-          text: "Setas navegam, Enter copia, mouse seleciona e clique aplica."
-          color: Colors.text3
-          font { pixelSize: 10; family: "JetBrainsMono Nerd Font" }
+          font { pixelSize: 22; family: "Inter"; weight: Font.DemiBold }
         }
 
         Rectangle {
           id: searchBox
           x: 24
-          y: 104 - 44
+          y: 46
           width: 430
           height: 44
           radius: 14
-          color: Qt.rgba(1, 1, 1, 0.05)
+          color: root.fieldFill
           border.width: 1
           border.color: searchInput.activeFocus
             ? Qt.rgba(Colors.accent.r, Colors.accent.g, Colors.accent.b, 0.32)
-            : Qt.rgba(1, 1, 1, 0.08)
+            : root.fieldEdge
 
           Text {
             x: 14
@@ -345,7 +353,7 @@ PanelWindow {
             anchors.leftMargin: 42
             anchors.rightMargin: 14
             color: Colors.text1
-            font { pixelSize: 14; family: "JetBrainsMono Nerd Font" }
+            font { pixelSize: 14; family: "Inter" }
             Keys.priority: Keys.BeforeItem
             onTextChanged: root.query = text
             Keys.onEscapePressed: root.close()
@@ -384,7 +392,7 @@ PanelWindow {
             anchors.rightMargin: 14
             text: "Pesquisar historico..."
             color: Colors.text3
-            font { pixelSize: 14; family: "JetBrainsMono Nerd Font" }
+            font { pixelSize: 14; family: "Inter" }
             visible: searchInput.text.length === 0
           }
         }
@@ -399,17 +407,17 @@ PanelWindow {
           radius: 17
           color: (root.loading || root.acting)
             ? Qt.rgba(Colors.accent.r, Colors.accent.g, Colors.accent.b, 0.18)
-            : Qt.rgba(1, 1, 1, 0.05)
+            : root.fieldFill
           border.width: 1
           border.color: (root.loading || root.acting)
             ? Qt.rgba(Colors.accent.r, Colors.accent.g, Colors.accent.b, 0.26)
-            : Qt.rgba(1, 1, 1, 0.08)
+            : root.fieldEdge
 
           Text {
             anchors.centerIn: parent
             text: root.loading ? "carregando historico" : root.acting ? "aplicando" : (root.filtered.length + " itens")
             color: (root.loading || root.acting) ? Colors.accent : Colors.text2
-            font { pixelSize: 11; family: "JetBrainsMono Nerd Font" }
+            font { pixelSize: 11; family: "Inter"; weight: Font.Medium }
           }
         }
       }
@@ -421,9 +429,9 @@ PanelWindow {
         width: 430
         height: 460
         radius: 18
-        color: Qt.rgba(1, 1, 1, 0.035)
+        color: root.panelFill
         border.width: 1
-        border.color: Qt.rgba(1, 1, 1, 0.07)
+        border.color: root.panelEdge
         clip: true
 
         ListView {
@@ -442,7 +450,7 @@ PanelWindow {
             color: root.selected === index
               ? Qt.rgba(Colors.accent.r, Colors.accent.g, Colors.accent.b, 0.16)
               : rowMouse.containsMouse
-                ? Qt.rgba(1, 1, 1, 0.045)
+                ? root.hoverFill
                 : "transparent"
             border.width: root.selected === index ? 1 : 0
             border.color: root.selected === index
@@ -457,7 +465,7 @@ PanelWindow {
               radius: 12
               color: item.isImage
                 ? Qt.rgba(Colors.accent.r, Colors.accent.g, Colors.accent.b, 0.16)
-                : Qt.rgba(1, 1, 1, 0.05)
+                : root.subtleFill
 
               Text {
                 anchors.centerIn: parent
@@ -472,7 +480,7 @@ PanelWindow {
               y: 12
               text: item.label || ""
               color: item.isImage ? Colors.accent : Colors.text2
-              font { pixelSize: 10; family: "JetBrainsMono Nerd Font" }
+              font { pixelSize: 10; family: "Inter"; weight: Font.Medium }
             }
 
             Text {
@@ -481,7 +489,7 @@ PanelWindow {
               width: parent.width - 118
               text: item.preview || ""
               color: Colors.text1
-              font { pixelSize: 11; family: "JetBrainsMono Nerd Font" }
+              font { pixelSize: 11; family: "Inter" }
               elide: Text.ElideRight
               maximumLineCount: 2
               wrapMode: Text.Wrap
@@ -535,9 +543,9 @@ PanelWindow {
         anchors.rightMargin: 24
         anchors.bottom: leftPanel.bottom
         radius: 18
-        color: Qt.rgba(1, 1, 1, 0.035)
+        color: root.panelFill
         border.width: 1
-        border.color: Qt.rgba(1, 1, 1, 0.07)
+        border.color: root.panelEdge
         clip: true
 
         Rectangle {
@@ -558,7 +566,7 @@ PanelWindow {
             width: 50
             height: 50
             radius: 16
-            color: Qt.rgba(1, 1, 1, 0.08)
+            color: root.subtleFill
 
             Text {
               anchors.centerIn: parent
@@ -574,7 +582,7 @@ PanelWindow {
             width: parent.width - 98
             text: root.currentItem ? root.currentItem.label : "Nenhum item"
             color: Colors.text1
-            font { pixelSize: 18; family: "JetBrainsMono Nerd Font" }
+            font { pixelSize: 18; family: "Inter"; weight: Font.DemiBold }
             elide: Text.ElideRight
           }
 
@@ -584,7 +592,7 @@ PanelWindow {
             width: parent.width - 98
             text: root.currentItem ? ("ID " + root.currentItem.id) : "Selecione um item a esquerda."
             color: Colors.text3
-            font { pixelSize: 10; family: "JetBrainsMono Nerd Font" }
+            font { pixelSize: 10; family: "Inter" }
             elide: Text.ElideRight
           }
         }
@@ -599,18 +607,18 @@ PanelWindow {
           anchors.rightMargin: 16
           height: 250
           radius: 18
-          color: Qt.rgba(1, 1, 1, 0.06)
+          color: root.fieldFill
           border.width: 1
           border.color: root.currentItem && root.currentItem.isImage
             ? Qt.rgba(Colors.accent.r, Colors.accent.g, Colors.accent.b, 0.30)
-            : Qt.rgba(1, 1, 1, 0.08)
+            : root.fieldEdge
           clip: true
 
           Rectangle {
             anchors.fill: parent
             anchors.margins: 10
             radius: 14
-            color: Qt.rgba(1, 1, 1, 0.08)
+            color: root.subtleFill
           }
 
           Image {
@@ -640,7 +648,7 @@ PanelWindow {
               width: parent.width
               text: root.currentItem ? (root.currentItem.preview || root.currentItem.raw || "") : "Selecione um item para ver o conteudo aqui."
               color: Colors.text2
-              font { pixelSize: 12; family: "JetBrainsMono Nerd Font" }
+              font { pixelSize: 12; family: "Inter" }
               wrapMode: Text.Wrap
             }
           }
@@ -655,7 +663,7 @@ PanelWindow {
                 ? "falha ao renderizar preview"
                 : "gerando preview..."
             color: root.imagePreviewError !== "" || previewImage.status === Image.Error ? "#ff8e8e" : Colors.text3
-            font { pixelSize: 11; family: "JetBrainsMono Nerd Font" }
+            font { pixelSize: 11; family: "Inter" }
             wrapMode: Text.WordWrap
             horizontalAlignment: Text.AlignHCenter
           }
@@ -666,7 +674,7 @@ PanelWindow {
             visible: !root.currentItem
             text: "Passe o mouse ou use as setas para focar um item."
             color: Colors.text3
-            font { pixelSize: 11; family: "JetBrainsMono Nerd Font" }
+            font { pixelSize: 11; family: "Inter" }
             horizontalAlignment: Text.AlignHCenter
             wrapMode: Text.WordWrap
           }
@@ -698,21 +706,21 @@ PanelWindow {
                 ? "Preview pronto. Clique para copiar imediatamente ou use Enter."
                 : root.currentItemDescription
               color: Colors.text2
-              font { pixelSize: 11; family: "JetBrainsMono Nerd Font" }
+              font { pixelSize: 11; family: "Inter" }
               wrapMode: Text.WordWrap
             }
 
             Rectangle {
               width: parent.width
               height: 1
-              color: Qt.rgba(1, 1, 1, 0.06)
+              color: root.panelEdge
             }
 
             Text {
               width: parent.width
               text: "Teclado: Up/Down, PageUp/PageDown, Home/End, Enter, Ctrl+Delete, Esc."
               color: Colors.text3
-              font { pixelSize: 10; family: "JetBrainsMono Nerd Font" }
+              font { pixelSize: 10; family: "Inter" }
               wrapMode: Text.WordWrap
             }
 
@@ -720,7 +728,7 @@ PanelWindow {
               width: parent.width
               text: "Mouse: passar por cima seleciona, clique aplica, clique fora fecha."
               color: Colors.text3
-              font { pixelSize: 10; family: "JetBrainsMono Nerd Font" }
+              font { pixelSize: 10; family: "Inter" }
               wrapMode: Text.WordWrap
             }
           }
@@ -742,17 +750,17 @@ PanelWindow {
             radius: 14
             color: root.currentItem
               ? Qt.rgba(Colors.accent.r, Colors.accent.g, Colors.accent.b, 0.18)
-              : Qt.rgba(1, 1, 1, 0.04)
+              : root.subtleFill
             border.width: 1
             border.color: root.currentItem
               ? Qt.rgba(Colors.accent.r, Colors.accent.g, Colors.accent.b, 0.24)
-              : Qt.rgba(1, 1, 1, 0.06)
+              : root.panelEdge
 
             Text {
               anchors.centerIn: parent
               text: root.currentItem ? "Copiar Selecionado" : "Sem selecao"
               color: root.currentItem ? Colors.accent : Colors.text3
-              font { pixelSize: 11; family: "JetBrainsMono Nerd Font" }
+              font { pixelSize: 11; family: "Inter"; weight: Font.Medium }
             }
 
             MouseArea {
@@ -768,16 +776,16 @@ PanelWindow {
             height: 46
             radius: 14
             color: root.currentItem
-              ? Qt.rgba(1, 1, 1, 0.05)
-              : Qt.rgba(1, 1, 1, 0.03)
+              ? root.fieldFill
+              : root.subtleFill
             border.width: 1
-            border.color: Qt.rgba(1, 1, 1, 0.06)
+            border.color: root.panelEdge
 
             Text {
               anchors.centerIn: parent
               text: root.currentItem ? "Apagar do Historico" : "Nada para apagar"
               color: root.currentItem ? Colors.text2 : Colors.text3
-              font { pixelSize: 10; family: "JetBrainsMono Nerd Font" }
+              font { pixelSize: 10; family: "Inter"; weight: Font.Medium }
             }
 
             MouseArea {
@@ -801,7 +809,7 @@ PanelWindow {
           anchors.centerIn: parent
           text: root.errorMessage
           color: "#ff8e8e"
-          font { pixelSize: 10; family: "JetBrainsMono Nerd Font" }
+          font { pixelSize: 10; family: "Inter" }
           visible: text !== ""
         }
       }

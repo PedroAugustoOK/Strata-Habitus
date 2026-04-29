@@ -10,8 +10,14 @@ background-color=#111113
 text-color=#e5e9f0
 font=Roboto 11
 default-timeout=5000
-max-icon-size=40
+max-icon-size=38
 icons=1
+icon-location=left
+icon-border-radius=8
+text-alignment=left
+markup=1
+actions=1
+history=1
 icon-path=/run/current-system/sw/share/icons/Papirus-Dark:/run/current-system/sw/share/icons/Papirus:/run/current-system/sw/share/icons/hicolor
 
 format=<span size="small" color="#88c0d0">%a</span>\n<b>%s</b>\n<span size="small" color="#7b88a1">%b</span>

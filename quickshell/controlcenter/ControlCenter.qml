@@ -85,6 +85,7 @@ PanelWindow {
   property bool   protonVpnConnected: false
   property var    notificationHistory: []
   property var    notificationIgnoredKeys: []
+  property var    notificationExpandedKeys: []
   readonly property string sessionBus: Quickshell.env("DBUS_SESSION_BUS_ADDRESS")
   readonly property string runtimeDir: Quickshell.env("XDG_RUNTIME_DIR")
   readonly property bool showLaptopHeader: DeviceState.isLaptop && DeviceState.hasBattery
@@ -146,6 +147,7 @@ PanelWindow {
         ignored.add(entry.key)
     }
     root.notificationIgnoredKeys = Array.from(ignored)
+    root.notificationExpandedKeys = []
     root.notificationHistory = []
   }
 
@@ -154,7 +156,25 @@ PanelWindow {
     if (key)
       ignored.add(key)
     root.notificationIgnoredKeys = Array.from(ignored)
+    root.notificationExpandedKeys = (Array.isArray(root.notificationExpandedKeys) ? root.notificationExpandedKeys : []).filter(item => item !== key)
     root.notificationHistory = root.notificationHistory.filter(entry => entry.key !== key)
+  }
+
+  function isNotificationExpanded(key) {
+    return Array.isArray(root.notificationExpandedKeys) && root.notificationExpandedKeys.indexOf(key) >= 0
+  }
+
+  function toggleNotificationExpanded(key) {
+    if (!key)
+      return
+
+    const current = Array.isArray(root.notificationExpandedKeys) ? root.notificationExpandedKeys.slice() : []
+    const index = current.indexOf(key)
+    if (index >= 0)
+      current.splice(index, 1)
+    else
+      current.push(key)
+    root.notificationExpandedKeys = current
   }
 
   Item {
@@ -1019,12 +1039,23 @@ PanelWindow {
                   model: root.notificationHistory
                   delegate: Rectangle {
                     required property var modelData
+                    readonly property bool expanded: root.isNotificationExpanded(modelData.key)
                     width: historyColumn.width
                     height: cardRow.implicitHeight + 18
                     radius: 16
                     color: Qt.rgba(Colors.bg1.r, Colors.bg1.g, Colors.bg1.b, 0.94)
                     border.width: 1
                     border.color: Qt.rgba(Colors.text1.r, Colors.text1.g, Colors.text1.b, Colors.darkMode ? 0.04 : 0.08)
+
+                    Behavior on height {
+                      NumberAnimation { duration: 140; easing.type: Easing.OutCubic }
+                    }
+
+                    MouseArea {
+                      anchors.fill: parent
+                      cursorShape: Qt.PointingHandCursor
+                      onClicked: root.toggleNotificationExpanded(modelData.key)
+                    }
 
                     RowLayout {
                       id: cardRow
@@ -1104,8 +1135,8 @@ PanelWindow {
                           font { pixelSize: 12; family: "Roboto"; weight: Font.DemiBold }
                           Layout.fillWidth: true
                           wrapMode: Text.WordWrap
-                          maximumLineCount: 2
-                          elide: Text.ElideRight
+                          maximumLineCount: expanded ? 0 : 2
+                          elide: expanded ? Text.ElideNone : Text.ElideRight
                         }
 
                         Text {
@@ -1115,8 +1146,8 @@ PanelWindow {
                           font { pixelSize: 10; family: "Roboto" }
                           Layout.fillWidth: true
                           wrapMode: Text.WordWrap
-                          maximumLineCount: 3
-                          elide: Text.ElideRight
+                          maximumLineCount: expanded ? 0 : 3
+                          elide: expanded ? Text.ElideNone : Text.ElideRight
                         }
 
                         Rectangle {

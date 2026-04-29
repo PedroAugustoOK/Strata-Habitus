@@ -55,7 +55,6 @@ const nixBase = new Set(readBaseNixApps(PACKAGES_MODULE));
 const nixActive = readActiveSystemPackages();
 const nixDesktopHints = readActiveDesktopHints();
 const flatpakInstalled = readFlatpakInstalled();
-
 const nixCatalog = loadCachedCatalog(NIX_CACHE_PATH, buildNixCatalog);
 const flatpakBuild = loadFlatpakCatalog();
 const flatpakCatalog = Array.isArray(flatpakBuild) ? flatpakBuild : flatpakBuild.items;

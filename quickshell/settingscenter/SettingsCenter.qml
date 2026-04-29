@@ -18,6 +18,7 @@ PanelWindow {
   signal openThemePicker()
   signal openWallPickr()
   signal openAppCenter()
+  signal openWebApps()
   signal openUpdateCenter()
 
   property real cardYOffset: 18
@@ -35,6 +36,7 @@ PanelWindow {
     { key: "printer", section: "Dispositivos", title: "Impressoras", body: "Filas e administração.", badge: "PR" },
     { key: "scanner", section: "Dispositivos", title: "Scanner", body: "Digitalização simples.", badge: "SC" },
     { key: "appcenter", section: "Apps e Arquivos", title: "Central de Apps", body: "Instalação e fila declarativa.", badge: "AP" },
+    { key: "webapps", section: "Apps e Arquivos", title: "Apps Web", body: "Nome, link e imagem.", badge: "WA" },
     { key: "archive", section: "Apps e Arquivos", title: "Arquivos Compactados", body: "Abrir, extrair e criar.", badge: "AR" },
     { key: "mail", section: "Apps e Arquivos", title: "E-mail", body: "Thunderbird e contas locais.", badge: "ML" }
   ]
@@ -89,6 +91,7 @@ PanelWindow {
     if (action === "themepicker") { root.openThemePicker(); close(); return }
     if (action === "wallpickr") { root.openWallPickr(); close(); return }
     if (action === "appcenter") { root.openAppCenter(); close(); return }
+    if (action === "webapps") { root.openWebApps(); close(); return }
     if (action === "updatecenter") { root.openUpdateCenter(); close(); return }
     if (action === "settings") return launch(["gnome-control-center"])
     if (action === "protonvpn") return launch(["bash", "/home/ankh/.config/quickshell/scripts/protonvpn-toggle-notify.sh"])

@@ -45,7 +45,7 @@
   - persistent history
   - image preview
   - close on copy
-  - `Super+Y` flow working
+  - current notebook bind is `Super+V`
 
 ### Theme system
 - Theme propagation is custom and intentionally integrated across:
@@ -446,3 +446,50 @@ sudo nixos-generate-config --show-hardware-config > ~/dotfiles/hosts/desktop/har
   - temporary web icons are copied into `~/.cache/strata/notifications`
 - Result:
   - Chromium notifications in the Control Center can preserve the site icon instead of falling back to the browser icon
+
+## Session update - 2026-04-28 (notebook-only UI iteration)
+
+### Important branch/host note
+- This round of changes was made directly on notebook host `strata`
+- The working branch during this session is `stable`
+- Treat these as notebook-originated UI changes until they are intentionally replayed or merged back into the desktop development path
+
+### Web apps overlay
+- New files were added for a native web-app management overlay:
+  - `quickshell/webapps/WebApps.qml`
+  - `quickshell/webapps/WebAppsStore.qml`
+  - `quickshell/scripts/webapp-lib.js`
+  - `quickshell/scripts/webapps-index.js`
+  - `quickshell/scripts/webapps-apply.js`
+- Current notebook integration:
+  - `Super+K`
+  - `Settings Center -> Apps Web`
+- Current design direction:
+  - simpler two-column card
+  - no top counter
+  - no inline search field on the installed list
+  - main action labeled `Adicionar`
+- Important implementation caveat still remembered:
+  - catalog/state/install identity for web apps still needs a cleaner architectural pass later
+
+### Clipboard UI pass on notebook
+- Clipboard overlay was restyled to align better with the rest of Strata:
+  - title/body typography moved away from the old all-monospace treatment
+  - light-theme panel contrast was corrected
+  - excess instructional copy in the header was removed
+- Current notebook binds:
+  - `Super+V` -> clipboard
+  - `Super+Shift+G` -> floating toggle
+  - `Super+Shift+F` -> fullscreen
+
+### Control Center notifications
+- Notification cards in the Control Center now support click-to-expand for longer text
+- The explicit `expandir/mostrar menos` hint text was intentionally removed
+- Web notification normalization was refined so site-origin noise can be removed from the body without breaking deduplication keys
+
+### Notification renderer decision
+- Keep `mako` as the live popup notification renderer
+- Do not move Chromium/site popup rendering back into Quickshell yet
+- Practical reason:
+  - Chromium notifications remain more reliable through `mako`
+  - Quickshell should continue as the inbox/history layer on top

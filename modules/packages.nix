@@ -43,7 +43,7 @@ in {
     spotify fish starship loupe zathura libreoffice
     gnome-calculator file-roller gnome-clocks gnome-calendar
     gnome-control-center simple-scan system-config-printer thunderbird
-    standardnotes mpv gsettings-desktop-schemas
+    standardnotes  gsettings-desktop-schemas
     hplipWithPlugin glib imagemagick
     codex
     qgis fzf

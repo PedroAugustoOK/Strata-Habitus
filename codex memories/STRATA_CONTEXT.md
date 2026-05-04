@@ -258,6 +258,105 @@ cd ~/dotfiles && ./strata-apply-channel.sh
   - `x-scheme-handler/proton-authenticator -> proton-authenticator-handler.desktop`
 - Still pending only in a live graphical session:
   - real `Proton Authenticator` browser callback completion
+
+## Session continuation point - 2026-04-29 (stable sync attempt on desktop)
+
+### What was confirmed about branches
+- User confirmed the notebook-side changes were published to `stable`, not `main`
+- Git comparison on `desktop` showed:
+  - `origin/stable` is ahead of `main` by one commit
+  - commit: `06588ea` `Apply notebook stable UI pass and web apps overlay`
+- Reverse diff showed no commits on `main` missing from `origin/stable`
+
+### What `06588ea` actually changes
+- Affects UI/session files, not host/GPU files
+- Files touched include:
+  - `quickshell/webapps/*`
+  - `quickshell/controlcenter/ControlCenter.qml`
+  - `quickshell/settingscenter/SettingsCenter.qml`
+  - `quickshell/clipboard/Clipboard.qml`
+  - `quickshell/scripts/notification-history.js`
+  - `hyprland.conf`
+  - `mako/config`
+  - `flake.lock`
+- Important non-findings:
+  - does **not** touch `hosts/*`
+  - does **not** touch `configuration.nix`
+  - does **not** touch `home.nix`
+  - does **not** touch GPU-specific modules/config for the hybrid AMD/NVIDIA desktop
+
+### Desktop sync attempt
+- The desktop repo was switched to `stable` successfully:
+```bash
+cd ~/dotfiles
+git fetch origin
+git checkout stable
+git pull --ff-only origin stable
+```
+- First rebuild attempt:
+```bash
+sudo nixos-rebuild test --flake path:$HOME/dotfiles#desktop
+```
+- It appeared stuck for a long time at:
+  - `fetching rust-src from https://cache.nixos.org`
+- That attempt was cancelled safely with `Ctrl+C`
+
+### Diagnostic findings from the failed attempt
+- After cancellation there was no leftover `nixos-rebuild`/`nix build` process still running
+- Isolated fetch test succeeded:
+```bash
+nix build nixpkgs#rustc.src -L
+```
+- This strongly suggests the earlier `rust-src` stall was transient and not a permanent cache/network failure
+
+### Second rebuild attempt
+- Retried with detailed logs:
+```bash
+cd ~/dotfiles
+sudo nixos-rebuild test --flake path:$HOME/dotfiles#desktop -L
+```
+- This progressed past the old fetch point and entered a heavy local build path:
+  - `rusty-v8`
+  - `v8`
+  - `temporal_rs`
+  - `temporal_capi`
+- The visible long-running point was:
+  - `rusty-v8>    Compiling temporal_capi v0.2.3`
+- User reported the notebook had shown the same behavior before
+- The second attempt was also cancelled because the user had to leave
+
+### Current best hypothesis
+- The sync problem is **not** the hybrid AMD/NVIDIA desktop config
+- The active blocker is a large Rust/V8 build triggered by the current package set under the updated `flake.lock`
+- Most likely suspect inside the declarative package list:
+  - `codex` in `modules/packages.nix`
+- Rationale:
+  - `codex` is present in `environment.systemPackages`
+  - the build chain resembles a Deno/V8-style dependency path (`rusty-v8`, `temporal_*`)
+- This was not fully dependency-proven in-session, but it is the current operational hypothesis
+
+### Safe stopping state
+- The user cancelled `nixos-rebuild test`, not `switch`
+- Therefore:
+  - no partially activated test generation should be relied upon
+  - the currently booted system should still be the prior working state
+  - powering off after cancellation was considered safe
+
+### Recommended continuation next session
+- Goal: sync desktop to `stable` without spending hours in the Rust/V8 build path
+- First practical option:
+  - temporarily remove `codex` from `modules/packages.nix`
+  - rerun:
+```bash
+cd ~/dotfiles
+sudo nixos-rebuild test --flake path:$HOME/dotfiles#desktop -L
+sudo nixos-rebuild switch --flake path:$HOME/dotfiles#desktop
+```
+- Second option:
+  - keep `codex` and allow the long `rusty-v8` build to continue if time permits
+- Important note:
+  - branch checkout is currently on `stable`
+  - after successful validation on `desktop`, the repo should usually be switched back to `main` for normal development flow
   - actual Proton workspace glyph appearance via Hyprland live clients
 
 ### Recorder state on desktop

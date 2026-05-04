@@ -318,6 +318,68 @@ sudo nixos-generate-config --show-hardware-config > ~/dotfiles/hosts/desktop/har
     - `Control Center`
     - top bar connected-state pill
 - Current desktop host config points to:
+
+## Session update - 2026-04-29
+
+### Stable sync attempt on desktop
+- User needed to bring `desktop` up to the same level as notebook work already published to `stable`
+- Verified branch relationship:
+  - `origin/stable` contained one notebook-side commit ahead of `main`
+  - commit `06588ea` `Apply notebook stable UI pass and web apps overlay`
+- Verified risk profile of that commit:
+  - touches Quickshell/UI/session files and `flake.lock`
+  - does not touch `hosts/*`, GPU config, `configuration.nix`, or `home.nix`
+
+### What the notebook-side stable commit contains
+- Added `Apps Web` overlay
+- Added `Settings Center` entry for `Apps Web`
+- Updated clipboard UI and binds:
+  - notebook bind now uses `Super+V`
+  - float/fullscreen binds moved to `Super+Shift+G` and `Super+Shift+F`
+- Added expandable notification history cards in `Control Center`
+- Improved notification body cleanup for noisy Chromium/site-origin content
+- Kept `mako` as the popup delivery layer
+
+### Rebuild blocker encountered on desktop
+- `git checkout stable` and `git pull --ff-only origin stable` succeeded
+- First `nixos-rebuild test` looked stuck at:
+  - `fetching rust-src from https://cache.nixos.org`
+- That run was cancelled
+- Follow-up diagnostic:
+  - `nix build nixpkgs#rustc.src -L` succeeded
+- Conclusion:
+  - the earlier `rust-src` stall was not a hard permanent failure
+
+### Current real blocker
+- Re-running with `-L` advanced into a long local Rust/V8 build:
+  - `rusty-v8`
+  - `temporal_rs`
+  - `temporal_capi`
+- Observed long-running visible line:
+  - `Compiling temporal_capi v0.2.3`
+- This resembles a Deno/V8 dependency path rather than a desktop GPU/config issue
+
+### Current working hypothesis
+- The likely trigger is `codex` from `modules/packages.nix`
+- `codex` is declared in `environment.systemPackages`
+- The hypothesis was based on the dependency shape, not on a completed formal `why-depends` proof
+- Practical implication:
+  - if the goal is simply to sync desktop to the notebook UI state quickly, temporarily removing `codex` is the best next experiment
+
+### Safe operational rule remembered
+- Cancelling `sudo nixos-rebuild test ...` is acceptable here
+- Since `test` was cancelled before completion:
+  - the old system generation should remain the effective active state
+  - shutting down immediately afterward was considered safe
+
+### Next-session continuation plan
+- Keep in mind that the local repo is currently checked out on `stable`
+- Recommended resume path:
+  1. Temporarily remove `codex` from `modules/packages.nix`
+  2. Run `sudo nixos-rebuild test --flake path:$HOME/dotfiles#desktop -L`
+  3. If successful, run `sudo nixos-rebuild switch --flake path:$HOME/dotfiles#desktop`
+  4. Validate Web Apps, clipboard binds, Settings Center, Control Center notification expansion
+  5. After validation, switch repo checkout back to `main` for normal desktop development flow
   - `/home/ankh/Projects/VPN/Strata-BR-18.conf`
 - Important sudo decision:
   - Strata UI actions may start/stop `protonvpn-wg.service` via NOPASSWD sudo rules

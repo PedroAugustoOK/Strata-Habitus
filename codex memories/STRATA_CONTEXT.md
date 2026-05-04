@@ -600,3 +600,87 @@ cd ~/dotfiles && ./strata-apply-channel.sh
   - Codex close guard
   - smooth theme/wallpaper transition work
   - Caelestia research notes and future implementation direction
+
+## Session continuation point - 2026-05-04 (dynamic island)
+
+### Dynamic island architecture
+- The active island is now the bar-integrated `DynamicPill`, not the separate experimental `quickshell/island/Island.qml`.
+- The experimental island folder still exists as test/lab code and is not instantiated in `shell.qml`.
+- Main new files:
+  - `quickshell/OverlayState.qml`
+  - `quickshell/DynamicIslandState.qml`
+  - `quickshell/bar/DynamicPill.qml`
+  - `quickshell/bar/DynamicIslandCard.qml`
+- `OverlayState` tracks:
+  - active overlay name
+  - island geometry (`islandX`, `islandY`, `islandWidth`, `islandHeight`)
+  - island center coordinates
+- `DynamicIslandState` tracks the expanded island payload:
+  - media
+  - notification
+  - recording
+
+### Bar layout decision
+- Workspaces no longer live inside the island.
+- Current intended bar composition:
+  - left: active window title
+  - center-left: workspace pill
+  - center: dynamic island
+  - right: status/tray/clock
+- Rationale:
+  - workspaces are spatial navigation and should remain visible
+  - the island is contextual system state and command surface
+
+### Overlay animation direction
+- Major overlays now scale from the island geometry instead of from a generic center/corner:
+  - Launcher
+  - Clipboard
+  - App Center
+  - Update Center
+  - Theme Picker
+  - WallPickr
+  - Control Center
+- This is a QML-only first step toward the future integrated frame/drawer direction.
+- The overlays still retain their current card layouts; only their animation origin was unified.
+
+### Expanded island card
+- `DynamicIslandCard` is a separate overlay `PanelWindow`, because drawing expansion inside the bar window would be clipped by the bar height.
+- Behavior:
+  - click media island -> opens compact media card
+  - media card includes title, artist, progress, previous/play-pause/next
+  - click notification island -> opens compact notification card
+  - click recording island -> opens recording status card
+  - click outside or Escape closes
+  - if island mode changes, stale expanded card closes
+
+### Mako notification integration
+- Product direction:
+  - mako is now the DBus/history backend
+  - the island is the visible notification surface
+  - Control Center is the notification history/inbox
+- `apply-theme-state.sh` now generates mako config with:
+  - `max-visible=0`
+  - `max-history=100`
+  - high urgency timeout `9000ms`
+- `hyprland.conf` starts mako with:
+  - `mako --config ~/dotfiles/generated/mako/config`
+- `DynamicPill` polls `notification-history.js` every `900ms`.
+- Notification pill shows:
+  - app name
+  - summary/body
+  - cached icon when available
+  - danger tone for high urgency
+- Right-click on notification mode dismisses the active mako notification without preserving it in history.
+
+### Validation
+- Quickshell config load was validated repeatedly with:
+```bash
+timeout 5 quickshell -p /home/ankh/dotfiles/quickshell/shell.qml --no-color
+```
+- Result:
+  - configuration loaded successfully
+  - only pre-existing `Keys` warnings appeared for some overlay `PanelWindow`s
+- Script validation:
+```bash
+bash -n quickshell/scripts/apply-theme-state.sh
+```

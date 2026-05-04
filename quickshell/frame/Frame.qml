@@ -1,67 +1,95 @@
 import Quickshell
 import Quickshell.Wayland
 import QtQuick
+import ".."
 
 Item {
-  // Borda esquerda
   PanelWindow {
     anchors { top: true; left: true; bottom: true }
-    implicitWidth: 2
+    implicitWidth: 12
     color: "transparent"
     exclusionMode: ExclusionMode.Ignore
-    Canvas {
-      anchors.fill: parent
-      onPaint: {
-        const ctx = getContext("2d")
-        ctx.clearRect(0, 0, width, height)
-        ctx.strokeStyle = "rgba(255,255,255,0.08)"
-        ctx.lineWidth = 1
-        ctx.beginPath()
-        ctx.moveTo(1, 34)
-        ctx.lineTo(1, height)
-        ctx.stroke()
+    Rectangle {
+      x: 0
+      y: 34
+      width: 4
+      height: parent.height - y
+      color: Qt.rgba(Colors.barBackground.r, Colors.barBackground.g, Colors.barBackground.b, Colors.darkMode ? 0.70 : 0.62)
+    }
+    Rectangle {
+      x: 4
+      y: 34
+      width: 1
+      height: parent.height - y
+      color: Qt.rgba(Colors.panelBorder.r, Colors.panelBorder.g, Colors.panelBorder.b, Colors.darkMode ? 0.65 : 0.80)
+    }
+    Rectangle {
+      x: 5
+      y: 34
+      width: 7
+      height: parent.height - y
+      gradient: Gradient {
+        orientation: Gradient.Horizontal
+        GradientStop { position: 0.0; color: Qt.rgba(0, 0, 0, Colors.darkMode ? 0.20 : 0.08) }
+        GradientStop { position: 1.0; color: Qt.rgba(0, 0, 0, 0.0) }
       }
     }
   }
 
-  // Borda direita
   PanelWindow {
     anchors { top: true; right: true; bottom: true }
-    implicitWidth: 2
+    implicitWidth: 12
     color: "transparent"
     exclusionMode: ExclusionMode.Ignore
-    Canvas {
-      anchors.fill: parent
-      onPaint: {
-        const ctx = getContext("2d")
-        ctx.clearRect(0, 0, width, height)
-        ctx.strokeStyle = "rgba(255,255,255,0.08)"
-        ctx.lineWidth = 1
-        ctx.beginPath()
-        ctx.moveTo(1, 34)
-        ctx.lineTo(1, height)
-        ctx.stroke()
+    Rectangle {
+      x: parent.width - 4
+      y: 34
+      width: 4
+      height: parent.height - y
+      color: Qt.rgba(Colors.barBackground.r, Colors.barBackground.g, Colors.barBackground.b, Colors.darkMode ? 0.70 : 0.62)
+    }
+    Rectangle {
+      x: parent.width - 5
+      y: 34
+      width: 1
+      height: parent.height - y
+      color: Qt.rgba(Colors.panelBorder.r, Colors.panelBorder.g, Colors.panelBorder.b, Colors.darkMode ? 0.65 : 0.80)
+    }
+    Rectangle {
+      x: 0
+      y: 34
+      width: 7
+      height: parent.height - y
+      gradient: Gradient {
+        orientation: Gradient.Horizontal
+        GradientStop { position: 0.0; color: Qt.rgba(0, 0, 0, 0.0) }
+        GradientStop { position: 1.0; color: Qt.rgba(0, 0, 0, Colors.darkMode ? 0.20 : 0.08) }
       }
     }
   }
 
-  // Borda inferior com cantos
   PanelWindow {
     anchors { left: true; right: true; bottom: true }
-    implicitHeight: 2
+    implicitHeight: 12
     color: "transparent"
     exclusionMode: ExclusionMode.Ignore
-    Canvas {
-      anchors.fill: parent
-      onPaint: {
-        const ctx = getContext("2d")
-        ctx.clearRect(0, 0, width, height)
-        ctx.strokeStyle = "rgba(255,255,255,0.08)"
-        ctx.lineWidth = 1
-        ctx.beginPath()
-        ctx.moveTo(0, 1)
-        ctx.lineTo(width, 1)
-        ctx.stroke()
+    Rectangle {
+      anchors { left: parent.left; right: parent.right; bottom: parent.bottom }
+      height: 4
+      color: Qt.rgba(Colors.barBackground.r, Colors.barBackground.g, Colors.barBackground.b, Colors.darkMode ? 0.70 : 0.62)
+    }
+    Rectangle {
+      anchors { left: parent.left; right: parent.right; bottom: parent.bottom; bottomMargin: 4 }
+      height: 1
+      color: Qt.rgba(Colors.panelBorder.r, Colors.panelBorder.g, Colors.panelBorder.b, Colors.darkMode ? 0.65 : 0.80)
+    }
+    Rectangle {
+      anchors { left: parent.left; right: parent.right; bottom: parent.bottom; bottomMargin: 5 }
+      height: 7
+      gradient: Gradient {
+        orientation: Gradient.Vertical
+        GradientStop { position: 0.0; color: Qt.rgba(0, 0, 0, 0.0) }
+        GradientStop { position: 1.0; color: Qt.rgba(0, 0, 0, Colors.darkMode ? 0.20 : 0.08) }
       }
     }
   }

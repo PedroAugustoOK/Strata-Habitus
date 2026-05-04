@@ -1,4 +1,6 @@
 Bar Bar.qml
+DynamicPill 1.0 DynamicPill.qml
+DynamicIslandCard 1.0 DynamicIslandCard.qml
 Workspaces Workspaces.qml
 Clock Clock.qml
 StatusRight StatusRight.qml

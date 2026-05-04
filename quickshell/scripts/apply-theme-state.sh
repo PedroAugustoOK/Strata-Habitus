@@ -98,7 +98,7 @@ apply_hyprland_border() {
   ensure_hyprland_env
   log "hyprland signature=${HYPRLAND_INSTANCE_SIGNATURE:-<unset>}"
 
-  if ! hyprctl keyword "general:col.active_border" "rgba(${accent_hex}ff)" >/dev/null 2>&1; then
+  if ! hyprctl keyword "general:col.active_border" "rgba(${accent_hex}66)" >/dev/null 2>&1; then
     log "hyprctl failed to apply active border"
   fi
 
@@ -606,6 +606,8 @@ border-color=$PRIMARY
 text-color=$TEXT1
 font=JetBrains Mono 9
 default-timeout=3000
+max-visible=0
+max-history=100
 max-icon-size=32
 icon-location=left
 icon-border-radius=8
@@ -631,7 +633,7 @@ border-color=$PRIMARY
 border-size=2
 border-color=$DANGER
 text-color=$TEXT0
-default-timeout=0
+default-timeout=9000
 
 [mode=do-not-disturb]
 invisible=1

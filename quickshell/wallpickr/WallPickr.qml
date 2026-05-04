@@ -13,6 +13,10 @@ PanelWindow {
   WlrLayershell.keyboardFocus: WlrKeyboardFocus.OnDemand
   focusable: true
   visible: false
+  onVisibleChanged: {
+    if (visible) OverlayState.setActive("wallpickr")
+    else OverlayState.clear("wallpickr")
+  }
 
   property string wallpapersDir: Paths.wallpapers
   property string currentTheme: "gruvbox"
@@ -45,7 +49,8 @@ PanelWindow {
     selectedIdx = 0
     visible = true
     card.opacity = 0
-    card.scale = 0.985
+    cardScale.xScale = 0.985
+    cardScale.yScale = 0.985
     cardYOffset = 16
     themeProc.running = true
     currentWallProc.running = true
@@ -78,7 +83,8 @@ PanelWindow {
     ParallelAnimation {
       NumberAnimation { target: root; property: "cardYOffset"; from: 16; to: 0; duration: 170; easing.type: Easing.OutCubic }
       NumberAnimation { target: card; property: "opacity"; from: 0; to: 1; duration: 120; easing.type: Easing.OutQuad }
-      NumberAnimation { target: card; property: "scale"; from: 0.985; to: 1; duration: 170; easing.type: Easing.OutCubic }
+      NumberAnimation { target: cardScale; property: "xScale"; from: 0.985; to: 1; duration: 170; easing.type: Easing.OutCubic }
+      NumberAnimation { target: cardScale; property: "yScale"; from: 0.985; to: 1; duration: 170; easing.type: Easing.OutCubic }
     }
     ScriptAction { script: keyGrabber.forceActiveFocus() }
   }
@@ -87,7 +93,8 @@ PanelWindow {
     id: closeAnim
     ParallelAnimation {
       NumberAnimation { target: root; property: "cardYOffset"; to: 10; duration: 100; easing.type: Easing.InCubic }
-      NumberAnimation { target: card; property: "scale"; to: 0.992; duration: 100; easing.type: Easing.InCubic }
+      NumberAnimation { target: cardScale; property: "xScale"; to: 0.992; duration: 100; easing.type: Easing.InCubic }
+      NumberAnimation { target: cardScale; property: "yScale"; to: 0.992; duration: 100; easing.type: Easing.InCubic }
       NumberAnimation { target: card; property: "opacity"; to: 0; duration: 80; easing.type: Easing.InQuad }
     }
     ScriptAction { script: root.visible = false }
@@ -111,6 +118,13 @@ PanelWindow {
     border.color: Qt.rgba(Colors.text1.r, Colors.text1.g, Colors.text1.b, Colors.darkMode ? 0.10 : 0.14)
     clip: true
     opacity: 0
+    transform: Scale {
+      id: cardScale
+      origin.x: Math.max(0, Math.min(card.width, OverlayState.islandCenterX - card.x))
+      origin.y: Math.max(0, Math.min(card.height, OverlayState.islandCenterY - card.y))
+      xScale: 1
+      yScale: 1
+    }
 
     Rectangle {
       anchors.fill: parent

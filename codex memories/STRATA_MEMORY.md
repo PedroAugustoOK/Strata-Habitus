@@ -769,3 +769,89 @@ sudo nixos-generate-config --show-hardware-config > ~/dotfiles/hosts/desktop/har
 - User requested:
   - record everything in memory/context
   - push complete current repo state to GitHub
+
+## Session update - 2026-05-04 (dynamic island + notification surface)
+
+### Dynamic island role
+- The active production island is `quickshell/bar/DynamicPill.qml`.
+- `quickshell/island/Island.qml` was confirmed to be a second/test island only.
+- Workspaces were separated from the island and restored as an always-visible pill in the bar.
+- Bar direction:
+  - active window title on the left
+  - workspace pill near center
+  - dynamic island in center
+  - status/tray/clock on the right
+- This avoids hiding workspace navigation whenever media/notifications/recording are active.
+
+### New island state files
+- Added:
+  - `quickshell/OverlayState.qml`
+  - `quickshell/DynamicIslandState.qml`
+  - `quickshell/bar/DynamicPill.qml`
+  - `quickshell/bar/DynamicIslandCard.qml`
+- Registered:
+  - `OverlayState` and `DynamicIslandState` in `quickshell/qmldir`
+  - `DynamicPill` and `DynamicIslandCard` in `quickshell/bar/qmldir`
+- `shell.qml` now instantiates:
+  - `DynamicIslandCard {}`
+
+### Overlay animation integration
+- `OverlayState` now records the island geometry.
+- Major overlays use that geometry as their animation origin:
+  - Launcher
+  - Clipboard
+  - App Center
+  - Update Center
+  - Theme Picker
+  - WallPickr
+  - Control Center
+- This preserves existing card UI while making overlays feel like they emerge from the island.
+- It is the current bridge toward the future Caelestia-inspired Strata frame/drawer architecture.
+
+### Expanded island
+- Clicking the island now opens an expanded card when context exists:
+  - media -> compact media controls
+  - notification -> notification detail card
+  - recording -> recording status card
+- The expanded island is a separate overlay layer because it cannot be drawn inside the bar window without clipping.
+- Media card controls:
+  - previous
+  - play/pause
+  - next
+  - progress bar
+- Notification card shows:
+  - app/icon
+  - summary
+  - body/app fallback
+  - urgency tone
+- Click outside or Escape closes the expanded card.
+- The card closes automatically if the island mode changes and would otherwise show stale content.
+
+### Notifications and mako
+- Mako is now intended to be invisible notification backend/history, not the visible notification UI.
+- Generated mako config now includes:
+  - `max-visible=0`
+  - `max-history=100`
+  - high urgency timeout `9000ms`
+- `hyprland.conf` starts mako explicitly with:
+  - `mako --config ~/dotfiles/generated/mako/config`
+- `DynamicPill` polls `notification-history.js` every `900ms`.
+- The island notification pill now handles:
+  - cached notification icon
+  - app name
+  - summary/body
+  - high urgency danger color
+  - right-click dismissal through `makoctl dismiss -n <id> --no-history`
+- Control Center remains the notification inbox/history.
+
+### Validation
+- QML load validation passed with:
+```bash
+timeout 5 quickshell -p /home/ankh/dotfiles/quickshell/shell.qml --no-color
+```
+- `apply-theme-state.sh` syntax validation passed with:
+```bash
+bash -n quickshell/scripts/apply-theme-state.sh
+```
+- Known remaining warnings:
+  - pre-existing `Keys` attachment warnings on some overlay `PanelWindow`s.

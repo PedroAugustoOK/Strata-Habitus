@@ -19,6 +19,7 @@ import "screenshot"
 
 ShellRoot {
   Bar {}
+  DynamicIslandCard {}
   TrayMenu {}
   CalendarMenu {}
   Launcher { id: launcher }

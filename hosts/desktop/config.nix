@@ -17,6 +17,20 @@
 
   services.xserver.videoDrivers = [ "amdgpu" "nvidia" ];
   hardware.graphics.enable = true;
+  hardware.i2c.enable = true;
+
+  services.hardware.openrgb = {
+    enable = true;
+    package = pkgs.openrgb-with-all-plugins;
+    motherboard = "amd";
+    startupProfile = "red.orp";
+  };
+
+  users.users.${username}.extraGroups = [ "i2c" ];
+
+  environment.systemPackages = with pkgs; [
+    i2c-tools
+  ];
 
   strata.protonVPNWireGuard = {
     enable = true;

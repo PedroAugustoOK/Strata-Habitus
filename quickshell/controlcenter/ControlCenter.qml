@@ -17,6 +17,10 @@ PanelWindow {
   WlrLayershell.layer: WlrLayer.Overlay
   focusable: true
   visible: false
+  onVisibleChanged: {
+    if (visible) OverlayState.setActive("controlcenter")
+    else OverlayState.clear("controlcenter")
+  }
 
   function toggle() {
     if (visible) {
@@ -26,7 +30,8 @@ PanelWindow {
       refreshAll()
       keyGrabber.forceActiveFocus()
       panel.opacity = 0
-      panel.scale = 0.92
+      panelScale.xScale = 0.92
+      panelScale.yScale = 0.92
       openAnim.start()
     }
   }
@@ -58,12 +63,21 @@ PanelWindow {
   SequentialAnimation {
     id: openAnim
     NumberAnimation { target: panel; property: "opacity"; to: 1; duration: 80 }
-    NumberAnimation { target: panel; property: "scale"; from: 0.92; to: 1.02; duration: 220; easing.type: Easing.OutCubic }
-    NumberAnimation { target: panel; property: "scale"; to: 1.0; duration: 80; easing.type: Easing.InOutQuad }
+    ParallelAnimation {
+      NumberAnimation { target: panelScale; property: "xScale"; from: 0.92; to: 1.02; duration: 220; easing.type: Easing.OutCubic }
+      NumberAnimation { target: panelScale; property: "yScale"; from: 0.92; to: 1.02; duration: 220; easing.type: Easing.OutCubic }
+    }
+    ParallelAnimation {
+      NumberAnimation { target: panelScale; property: "xScale"; to: 1.0; duration: 80; easing.type: Easing.InOutQuad }
+      NumberAnimation { target: panelScale; property: "yScale"; to: 1.0; duration: 80; easing.type: Easing.InOutQuad }
+    }
   }
   SequentialAnimation {
     id: closeAnim
-    NumberAnimation { target: panel; property: "scale"; to: 0.92; duration: 160; easing.type: Easing.InCubic }
+    ParallelAnimation {
+      NumberAnimation { target: panelScale; property: "xScale"; to: 0.92; duration: 160; easing.type: Easing.InCubic }
+      NumberAnimation { target: panelScale; property: "yScale"; to: 0.92; duration: 160; easing.type: Easing.InCubic }
+    }
     NumberAnimation { target: panel; property: "opacity"; to: 0; duration: 60 }
     ScriptAction { script: root.visible = false }
   }
@@ -179,7 +193,6 @@ PanelWindow {
 
   Rectangle {
     id: panel
-    transformOrigin: Item.TopRight
     anchors { top: parent.top; right: parent.right; topMargin: 44; rightMargin: 20 }
     width: DeviceState.isDesktop ? 332 : 310
     height: col.implicitHeight + 28
@@ -187,6 +200,13 @@ PanelWindow {
     color: Colors.bg1
     clip: true
     opacity: 0
+    transform: Scale {
+      id: panelScale
+      origin.x: Math.max(0, Math.min(panel.width, OverlayState.islandCenterX - panel.x))
+      origin.y: Math.max(0, Math.min(panel.height, OverlayState.islandCenterY - panel.y))
+      xScale: 1
+      yScale: 1
+    }
 
     MouseArea { anchors.fill: parent }
 

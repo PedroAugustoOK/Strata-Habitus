@@ -12,6 +12,10 @@ PanelWindow {
   exclusionMode: ExclusionMode.Ignore
   focusable: true
   visible: false
+  onVisibleChanged: {
+    if (visible) OverlayState.setActive("themepicker")
+    else OverlayState.clear("themepicker")
+  }
   WlrLayershell.keyboardFocus: WlrKeyboardFocus.OnDemand
 
   property string currentTheme: "gruvbox"
@@ -79,7 +83,8 @@ PanelWindow {
     visible = true
     transitionOpacity = 0
     card.opacity = 0
-    card.scale = 0.985
+    cardScale.xScale = 0.985
+    cardScale.yScale = 0.985
     cardYOffset = 16
     openAnim.start()
   }
@@ -116,7 +121,8 @@ PanelWindow {
     ParallelAnimation {
       NumberAnimation { target: root; property: "cardYOffset"; from: 16; to: 0; duration: 190; easing.type: Easing.OutCubic }
       NumberAnimation { target: card; property: "opacity"; from: 0; to: 1; duration: 140; easing.type: Easing.OutQuad }
-      NumberAnimation { target: card; property: "scale"; from: 0.985; to: 1; duration: 190; easing.type: Easing.OutCubic }
+      NumberAnimation { target: cardScale; property: "xScale"; from: 0.985; to: 1; duration: 190; easing.type: Easing.OutCubic }
+      NumberAnimation { target: cardScale; property: "yScale"; from: 0.985; to: 1; duration: 190; easing.type: Easing.OutCubic }
     }
     ScriptAction { script: keyGrabber.forceActiveFocus() }
   }
@@ -125,7 +131,8 @@ PanelWindow {
     id: closeAnim
     ParallelAnimation {
       NumberAnimation { target: root; property: "cardYOffset"; to: 10; duration: 120; easing.type: Easing.InCubic }
-      NumberAnimation { target: card; property: "scale"; to: 0.992; duration: 120; easing.type: Easing.InCubic }
+      NumberAnimation { target: cardScale; property: "xScale"; to: 0.992; duration: 120; easing.type: Easing.InCubic }
+      NumberAnimation { target: cardScale; property: "yScale"; to: 0.992; duration: 120; easing.type: Easing.InCubic }
       NumberAnimation { target: card; property: "opacity"; to: 0; duration: 95; easing.type: Easing.InQuad }
     }
     ScriptAction { script: root.visible = false }
@@ -156,6 +163,13 @@ PanelWindow {
     border.color: Qt.rgba(Colors.text1.r, Colors.text1.g, Colors.text1.b, Colors.darkMode ? 0.18 : 0.22)
     clip: true
     opacity: 0
+    transform: Scale {
+      id: cardScale
+      origin.x: Math.max(0, Math.min(card.width, OverlayState.islandCenterX - card.x))
+      origin.y: Math.max(0, Math.min(card.height, OverlayState.islandCenterY - card.y))
+      xScale: 1
+      yScale: 1
+    }
 
     Rectangle {
       anchors.fill: parent

@@ -109,6 +109,8 @@ PanelWindow {
   }
 
   onVisibleChanged: {
+    if (visible) OverlayState.setActive("settingscenter")
+    else OverlayState.clear("settingscenter")
     if (visible) {
       keyGrabber.forceActiveFocus()
       ensureCurrentActionVisible()

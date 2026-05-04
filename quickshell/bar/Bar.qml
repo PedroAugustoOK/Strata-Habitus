@@ -7,26 +7,48 @@ import ".."
 PanelWindow {
   id: barRoot
   anchors { top: true; left: true; right: true }
-  implicitHeight: 34
+  implicitHeight: 40
   exclusiveZone:  34
-  color: Colors.barBackground
+  color: "transparent"
   property bool screenRecording: false
   property string screenRecordingElapsed: "--:--"
   property bool protonVpnConnected: false
   property string protonVpnLabel: "Proton"
   property int pillAnimFast: 140
   property int pillAnimMedium: 180
+  Rectangle {
+    id: barSurface
+    anchors { top: parent.top; left: parent.left; right: parent.right }
+    height: 34
+    color: Colors.barBackground
+  }
+  Rectangle {
+    id: barHairline
+    anchors { left: parent.left; right: parent.right; top: barSurface.bottom }
+    height: 1
+    color: Qt.rgba(0, 0, 0, Colors.darkMode ? 0.18 : 0.08)
+  }
+  Rectangle {
+    id: barShadow
+    anchors { left: parent.left; right: parent.right; top: barHairline.bottom }
+    height: 4
+    gradient: Gradient {
+      orientation: Gradient.Vertical
+      GradientStop { position: 0.0; color: Qt.rgba(0, 0, 0, Colors.darkMode ? 0.12 : 0.05) }
+      GradientStop { position: 1.0; color: Qt.rgba(0, 0, 0, 0.0) }
+    }
+  }
   Item {
     id: leftZone
-    anchors { left: parent.left; verticalCenter: parent.verticalCenter }
-    width:  wsPill.x - 6
+    anchors { left: parent.left; verticalCenter: barSurface.verticalCenter }
+    width:  dynamicPill.x - 6
     height: 34
     Rectangle {
       id: titlePill
       anchors { left: parent.left; leftMargin: 10; verticalCenter: parent.verticalCenter }
       height: 28; radius: 14
       color: Colors.barPill
-      width:  winText.text !== "" ? winText.implicitWidth + 24 : 0
+      width:  winText.text !== "" ? Math.min(winText.implicitWidth + 24, Math.max(0, wsPill.x - 20)) : 0
       opacity: winText.text !== "" ? 1 : 0
       scale: winText.text !== "" ? 1 : 0.96
       visible: width > 0 || opacity > 0.01
@@ -39,30 +61,37 @@ PanelWindow {
         anchors.centerIn: parent
       }
     }
-    SpotifyPlayer {
-      id: spotify
-      anchors.centerIn: parent
+    Rectangle {
+      id: wsPill
+      anchors { right: parent.right; rightMargin: 0; verticalCenter: parent.verticalCenter }
+      height: 28
+      radius: 14
+      color: Colors.barPill
+      width: workspaces.width + 20
+      clip: true
+      Behavior on width { NumberAnimation { duration: barRoot.pillAnimMedium; easing.type: Easing.OutCubic } }
+
+      Workspaces {
+        id: workspaces
+        anchors.centerIn: parent
+      }
     }
   }
-  Rectangle {
-    id: wsPill
-    anchors.centerIn: parent
-    height: 28; radius: 14
-    color: Colors.barPill
-    width:  ws.width + 20
-    Behavior on width { NumberAnimation { duration: barRoot.pillAnimMedium; easing.type: Easing.OutCubic } }
-    Workspaces {
-      id: ws
-      anchors.centerIn: parent
-    }
+  DynamicPill {
+    id: dynamicPill
+    anchors.centerIn: barSurface
+    screenRecording: barRoot.screenRecording
+    screenRecordingElapsed: barRoot.screenRecordingElapsed
+    protonVpnConnected: barRoot.protonVpnConnected
+    protonVpnLabel: barRoot.protonVpnLabel
   }
   Item {
     id: rightZone
     anchors {
-      left:           wsPill.right
+      left:           dynamicPill.right
       leftMargin:     6
       right:          parent.right
-      verticalCenter: parent.verticalCenter
+      verticalCenter: barSurface.verticalCenter
     }
     height: 34
     Row {
@@ -122,50 +151,6 @@ PanelWindow {
       spacing: 6
       Behavior on x { NumberAnimation { duration: barRoot.pillAnimMedium; easing.type: Easing.OutCubic } }
       Behavior on width { NumberAnimation { duration: barRoot.pillAnimMedium; easing.type: Easing.OutCubic } }
-      Rectangle {
-        id: recordPill
-        height: 28; radius: 14
-        color: Qt.rgba(Colors.danger.r, Colors.danger.g, Colors.danger.b, 0.16)
-        width: barRoot.screenRecording ? recordLabel.implicitWidth + 24 : 0
-        opacity: barRoot.screenRecording ? 1 : 0
-        scale: barRoot.screenRecording ? 1 : 0.92
-        visible: width > 0 || opacity > 0.01
-        clip: true
-        Behavior on width { NumberAnimation { duration: barRoot.pillAnimMedium; easing.type: Easing.OutCubic } }
-        Behavior on opacity { NumberAnimation { duration: barRoot.pillAnimFast; easing.type: Easing.OutCubic } }
-        Behavior on scale { NumberAnimation { duration: barRoot.pillAnimMedium; easing.type: Easing.OutCubic } }
-
-        Text {
-          id: recordLabel
-          anchors.centerIn: parent
-          text: "󰻃 " + barRoot.screenRecordingElapsed
-          color: Colors.danger
-          font { family: "JetBrainsMono Nerd Font"; pixelSize: 13 }
-          verticalAlignment: Text.AlignVCenter
-        }
-      }
-      Rectangle {
-        id: protonVpnPill
-        height: 28; radius: 14
-        color: Colors.barPill
-        width: barRoot.protonVpnConnected ? vpnLabel.implicitWidth + 24 : 0
-        opacity: barRoot.protonVpnConnected ? 1 : 0
-        scale: barRoot.protonVpnConnected ? 1 : 0.92
-        visible: width > 0 || opacity > 0.01
-        clip: true
-        Behavior on width { NumberAnimation { duration: barRoot.pillAnimMedium; easing.type: Easing.OutCubic } }
-        Behavior on opacity { NumberAnimation { duration: barRoot.pillAnimFast; easing.type: Easing.OutCubic } }
-        Behavior on scale { NumberAnimation { duration: barRoot.pillAnimMedium; easing.type: Easing.OutCubic } }
-
-        Text {
-          id: vpnLabel
-          anchors.centerIn: parent
-          text: "󰌾 " + barRoot.protonVpnLabel
-          color: Colors.info
-          font { family: "JetBrainsMono Nerd Font"; pixelSize: 13 }
-          verticalAlignment: Text.AlignVCenter
-        }
-      }
       Tray {
         id: trayPill
         Behavior on width { NumberAnimation { duration: barRoot.pillAnimMedium; easing.type: Easing.OutCubic } }

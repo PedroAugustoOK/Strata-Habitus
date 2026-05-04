@@ -44,6 +44,7 @@ in {
     gnome-calculator file-roller gnome-clocks gnome-calendar
     gnome-control-center simple-scan system-config-printer thunderbird
     standardnotes mpv gsettings-desktop-schemas
+    appimage-run gearlever
     hplipWithPlugin glib imagemagick
     codex
     qgis fzf

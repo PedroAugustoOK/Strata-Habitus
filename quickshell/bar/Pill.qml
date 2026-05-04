@@ -11,7 +11,7 @@ Rectangle {
   height: 24
   width: inner.implicitWidth + paddingH * 2
   radius: height / 2
-  color: Colors.bg2
+  color: Colors.barPill
 
   Item {
     id: inner

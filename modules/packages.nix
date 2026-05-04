@@ -33,7 +33,7 @@ in {
       p.json p.yaml p.toml p.markdown p.html p.css p.c p.cpp
       p.rust p.go p.fish
     ]))
-    grimblast wl-clipboard cliphist brightnessctl awww matugen satty
+    grim grimblast wl-clipboard cliphist brightnessctl awww matugen satty
     nautilus gvfs pavucontrol pwvucontrol
     impala bluetui playerctl hyprlock hypridle
     pipewire wireplumber blueman libnotify mako

@@ -39,7 +39,15 @@ fi
 trap cleanup_lock EXIT
 
 get_val() {
-  grep -o "\"$1\"[[:space:]]*:[[:space:]]*\"[^\"]*\"" "$2" | grep -o '"[^"]*"$' | tr -d '"'
+  /run/current-system/sw/bin/node -e '
+    const [key, file] = process.argv.slice(1);
+    const data = JSON.parse(require("fs").readFileSync(file, "utf8"));
+    const value = key.split(".").reduce((obj, part) => obj && obj[part], data);
+    if (value === undefined || value === null) process.exit(0);
+    if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") {
+      process.stdout.write(String(value));
+    }
+  ' "$1" "$2"
 }
 
 log() {
@@ -162,7 +170,7 @@ refresh_chromium_theme() {
 
   policy_json=$(printf '{"BrowserThemeColor":"%s","BrowserColorScheme":"%s"}' "$accent" "$browser_color_scheme")
 
-  if ! printf '%s' "$policy_json" | sudo -n tee /etc/chromium/policies/managed/strata.json > /dev/null; then
+  if ! printf '%s' "$policy_json" | sudo -n tee /etc/chromium/policies/managed/strata.json > /dev/null 2>> "$LOG_FILE"; then
     log "failed to write chromium policy"
     return 0
   fi
@@ -402,8 +410,29 @@ BG2=$(get_val "bg2" "$THEME_FILE")
 TEXT0=$(get_val "text0" "$THEME_FILE")
 TEXT1=$(get_val "text1" "$THEME_FILE")
 TEXT3=$(get_val "text3" "$THEME_FILE")
+PRIMARY=$(get_val "semantic.primary" "$THEME_FILE")
+SECONDARY=$(get_val "semantic.secondary" "$THEME_FILE")
+SUCCESS=$(get_val "semantic.success" "$THEME_FILE")
+WARNING=$(get_val "semantic.warning" "$THEME_FILE")
+DANGER=$(get_val "semantic.danger" "$THEME_FILE")
+INFO=$(get_val "semantic.info" "$THEME_FILE")
+BAR_BACKGROUND=$(get_val "ui.bar.background" "$THEME_FILE")
+BAR_PILL=$(get_val "ui.bar.pill" "$THEME_FILE")
+PANEL_BACKGROUND=$(get_val "ui.panel.background" "$THEME_FILE")
+PANEL_RAISED=$(get_val "ui.panel.raised" "$THEME_FILE")
 
-[ "$MODE" = "light" ] && OPACITY="0.97" || OPACITY="0.92"
+[ -n "$PRIMARY" ] || PRIMARY="$ACCENT"
+[ -n "$SECONDARY" ] || SECONDARY="$ACCENT"
+[ -n "$SUCCESS" ] || SUCCESS="#87c181"
+[ -n "$WARNING" ] || WARNING="#d9bc8c"
+[ -n "$DANGER" ] || DANGER="#f28779"
+[ -n "$INFO" ] || INFO="$SECONDARY"
+[ -n "$BAR_BACKGROUND" ] || BAR_BACKGROUND="$BG1"
+[ -n "$BAR_PILL" ] || BAR_PILL="$BG2"
+[ -n "$PANEL_BACKGROUND" ] || PANEL_BACKGROUND="$BG1"
+[ -n "$PANEL_RAISED" ] || PANEL_RAISED="$BG2"
+
+[ "$MODE" = "light" ] && OPACITY="0.89" || OPACITY="0.84"
 
 TERM_BG="$BG0"
 TERM_SELECTION_FG="$TERM_BG"
@@ -421,26 +450,26 @@ if [ "$MODE" = "light" ]; then
   C7="#2a2a2a"
   C8="#4a4a4e"
   C15="#1a1a1a"
-  C1="#b4637a"
-  C2="#286e38"
-  C3="#8a6a00"
-  C4="#1a6a9a"
-  C6="#1a7070"
-  STAR_DIR="#1a6a9a"
-  STAR_GIT="#286e38"
+  C1="$DANGER"
+  C2="$SUCCESS"
+  C3="$WARNING"
+  C4="$INFO"
+  C6="$SECONDARY"
+  STAR_DIR="$INFO"
+  STAR_GIT="$SUCCESS"
   NVIM_THEME="rose-pine-dawn"
 else
   C0="#1a1a1e"
   C7="#cecece"
-  C1="#f28779"
-  C2="#87c181"
-  C3="#d9bc8c"
-  C4="#7bafd4"
-  C6="#80c4c4"
+  C1="$DANGER"
+  C2="$SUCCESS"
+  C3="$WARNING"
+  C4="$INFO"
+  C6="$SECONDARY"
   C8="#3a3a3e"
   C15="#f5f5f5"
-  STAR_DIR="#cf9fff"
-  STAR_GIT="#87c181"
+  STAR_DIR="$SECONDARY"
+  STAR_GIT="$SUCCESS"
   NVIM_THEME="nord"
 fi
 
@@ -455,7 +484,7 @@ case "$THEME_NAME" in
     TERM_SELECTION_FG="#2a2a2a"
     TERM_ACTIVE_TAB_FG="#faf4ed"
     TERM_INACTIVE_TAB_BG="#e1dbd3"
-    OPACITY="0.985"
+    OPACITY="0.89"
     ICON_COLOR_VARIANT="pink"
     ;;
   nord)
@@ -480,7 +509,7 @@ case "$THEME_NAME" in
     TERM_SELECTION_FG="#303446"
     TERM_ACTIVE_TAB_FG="#eff1f5"
     TERM_INACTIVE_TAB_BG="#dde2ea"
-    OPACITY="0.985"
+    OPACITY="0.89"
     ICON_COLOR_VARIANT="pink"
     ;;
   flexoki)
@@ -489,7 +518,7 @@ case "$THEME_NAME" in
     TERM_SELECTION_FG="#201f1f"
     TERM_ACTIVE_TAB_FG="#fffcf0"
     TERM_INACTIVE_TAB_BG="#ebe8dd"
-    OPACITY="0.985"
+    OPACITY="0.89"
     ICON_COLOR_VARIANT="orange"
     ;;
   oxocarbon)
@@ -501,10 +530,10 @@ esac
 cat > "$GENERATED_DIR/kitty/colors.conf" <<EOF
 background $TERM_BG
 foreground $TEXT1
-selection_background $ACCENT
+selection_background $PRIMARY
 selection_foreground $TERM_SELECTION_FG
-url_color $ACCENT
-cursor $ACCENT
+url_color $SECONDARY
+cursor $PRIMARY
 background_opacity $OPACITY
 color0  $C0
 color8  $C8
@@ -516,8 +545,8 @@ color3  $C3
 color11 $C3
 color4  $C4
 color12 $C4
-color5  $ACCENT
-color13 $ACCENT
+color5  $PRIMARY
+color13 $SECONDARY
 color6  $C6
 color14 $C6
 color7  $C7
@@ -531,7 +560,7 @@ tab_bar_min_tabs           2
 tab_bar_margin_width       4
 tab_bar_margin_height      4 0
 active_tab_foreground      $TERM_ACTIVE_TAB_FG
-active_tab_background      $ACCENT
+active_tab_background      $PRIMARY
 active_tab_font_style      bold
 inactive_tab_foreground    $TEXT3
 inactive_tab_background    $TERM_INACTIVE_TAB_BG
@@ -551,8 +580,8 @@ padding=10,12
 width=332
 border-size=1
 border-radius=14
-background-color=$BG1
-border-color=$ACCENT
+background-color=$PANEL_BACKGROUND
+border-color=$PRIMARY
 text-color=$TEXT1
 font=JetBrains Mono 9
 default-timeout=3000
@@ -563,11 +592,11 @@ text-alignment=left
 markup=1
 actions=1
 history=1
-progress-color=over $ACCENT
+progress-color=over $PRIMARY
 icons=1
 icon-path=$HOME/.local/share/icons:/run/current-system/sw/share/icons:/run/current-system/sw/share/icons/hicolor
 
-format=<span size="x-small" color="$ACCENT">%a</span>\n<b>%s</b>\n<span size="x-small" color="$TEXT3">%b</span>
+format=<span size="x-small" color="$SECONDARY">%a</span>\n<b>%s</b>\n<span size="x-small" color="$TEXT3">%b</span>
 
 [urgency=low]
 border-color=$TEXT3
@@ -575,11 +604,11 @@ text-color=$TEXT3
 default-timeout=3000
 
 [urgency=normal]
-border-color=$ACCENT
+border-color=$PRIMARY
 
 [urgency=high]
 border-size=2
-border-color=#f28779
+border-color=$DANGER
 text-color=$TEXT0
 default-timeout=0
 
@@ -587,7 +616,7 @@ default-timeout=0
 invisible=1
 
 [grouped]
-format=<span size="x-small" color="$ACCENT">%a</span>\n<b>%s</b> <span size="x-small" color="$TEXT3">(%g)</span>\n<span size="x-small" color="$TEXT3">%b</span>
+format=<span size="x-small" color="$SECONDARY">%a</span>\n<b>%s</b> <span size="x-small" color="$TEXT3">(%g)</span>\n<span size="x-small" color="$TEXT3">%b</span>
 EOF
 
 cat > "$GENERATED_DIR/starship/starship.toml" <<EOF
@@ -605,13 +634,13 @@ format           = "[\$path](\$style)[\$read_only](\$read_only_style) "
 style  = "$STAR_GIT"
 format = "[ \$branch](\$style) "
 [git_status]
-style  = "$ACCENT"
+style  = "$PRIMARY"
 format = "([\$all_status\$ahead_behind](\$style) )"
 [cmd_duration]
 style  = "dimmed $STAR_DIR"
 format = "[ \${duration}](\$style) "
 [character]
-success_symbol = "[❯](bold $ACCENT)"
+success_symbol = "[❯](bold $PRIMARY)"
 error_symbol   = "[❯](bold red)"
 EOF
 
@@ -654,26 +683,26 @@ style = "Regular"
 
 [color-palette]
 palette = [
-  "$ACCENT",
+  "$PRIMARY",
   "$TEXT1",
-  "#f28779",
-  "#d9bc8c",
-  "#87c181",
-  "#7bafd4",
+  "$DANGER",
+  "$WARNING",
+  "$SUCCESS",
+  "$INFO",
 ]
 custom = [
-  "$ACCENT",
+  "$PRIMARY",
   "$TEXT1",
   "$BG0",
   "$BG1",
-  "#f28779",
-  "#d9bc8c",
-  "#87c181",
-  "#7bafd4",
+  "$DANGER",
+  "$WARNING",
+  "$SUCCESS",
+  "$INFO",
 ]
 EOF
 
-ACCENT_HEX="$(echo "$ACCENT" | tr -d '#')"
+ACCENT_HEX="$(echo "$PRIMARY" | tr -d '#')"
 TEXT1_HEX="$(echo "$TEXT1" | tr -d '#')"
 cat > "$GENERATED_DIR/hypr/hyprlock.conf" <<EOF
 general {
@@ -734,43 +763,43 @@ mkdir -p "$HOME/.config/btop/themes" "$HOME/.config/gtk-4.0"
 cat > "$HOME/.config/btop/themes/strata.theme" <<EOF
 theme[main_bg]="$BG0"
 theme[main_fg]="$TEXT1"
-theme[title]="$ACCENT"
-theme[hi_fg]="$ACCENT"
+theme[title]="$PRIMARY"
+theme[hi_fg]="$PRIMARY"
 theme[selected_bg]="$BG2"
 theme[selected_fg]="$TEXT1"
 theme[inactive_fg]="$TEXT3"
-theme[graph_text]="$ACCENT"
+theme[graph_text]="$SECONDARY"
 theme[meter_bg]="$BG2"
-theme[proc_misc]="$ACCENT"
-theme[cpu_box]="$ACCENT"
-theme[mem_box]="$ACCENT"
-theme[net_box]="$ACCENT"
-theme[proc_box]="$ACCENT"
+theme[proc_misc]="$PRIMARY"
+theme[cpu_box]="$INFO"
+theme[mem_box]="$SUCCESS"
+theme[net_box]="$SECONDARY"
+theme[proc_box]="$PRIMARY"
 theme[div_line]="$BG2"
-theme[temp_start]="$ACCENT"
-theme[temp_mid]="$ACCENT"
-theme[temp_end]="#f28779"
-theme[cpu_start]="$ACCENT"
-theme[cpu_mid]="$ACCENT"
-theme[cpu_end]="#f28779"
-theme[free_start]="$ACCENT"
-theme[free_mid]="$ACCENT"
-theme[free_end]="#f28779"
-theme[cached_start]="$ACCENT"
-theme[cached_mid]="$ACCENT"
-theme[cached_end]="#f28779"
-theme[available_start]="$ACCENT"
-theme[available_mid]="$ACCENT"
-theme[available_end]="#f28779"
-theme[used_start]="$ACCENT"
-theme[used_mid]="$ACCENT"
-theme[used_end]="#f28779"
-theme[download_start]="$ACCENT"
-theme[download_mid]="$ACCENT"
-theme[download_end]="#f28779"
-theme[upload_start]="$ACCENT"
-theme[upload_mid]="$ACCENT"
-theme[upload_end]="#f28779"
+theme[temp_start]="$WARNING"
+theme[temp_mid]="$WARNING"
+theme[temp_end]="$DANGER"
+theme[cpu_start]="$INFO"
+theme[cpu_mid]="$WARNING"
+theme[cpu_end]="$DANGER"
+theme[free_start]="$SUCCESS"
+theme[free_mid]="$SUCCESS"
+theme[free_end]="$DANGER"
+theme[cached_start]="$SECONDARY"
+theme[cached_mid]="$SECONDARY"
+theme[cached_end]="$DANGER"
+theme[available_start]="$SUCCESS"
+theme[available_mid]="$SUCCESS"
+theme[available_end]="$DANGER"
+theme[used_start]="$PRIMARY"
+theme[used_mid]="$WARNING"
+theme[used_end]="$DANGER"
+theme[download_start]="$INFO"
+theme[download_mid]="$SECONDARY"
+theme[download_end]="$DANGER"
+theme[upload_start]="$SECONDARY"
+theme[upload_mid]="$WARNING"
+theme[upload_end]="$DANGER"
 EOF
 
 mkdir -p "$GENERATED_DIR/gtk/gtk-4.0" "$GENERATED_DIR/gtk/gtk-3.0" "$HOME/.config/environment.d"
@@ -778,20 +807,20 @@ mkdir -p "$GENERATED_DIR/gtk/gtk-4.0" "$GENERATED_DIR/gtk/gtk-3.0" "$HOME/.confi
 stop_nautilus_for_theme
 
 write_atomic "$GENERATED_DIR/gtk/gtk-4.0/gtk.css" <<EOF
-@define-color accent_color $ACCENT;
-@define-color accent_bg_color $ACCENT;
+@define-color accent_color $PRIMARY;
+@define-color accent_bg_color $PRIMARY;
 @define-color accent_fg_color $TEXT0;
 
 row:selected,
 .navigation-sidebar row:selected,
 sidebar row:selected {
-  background-color: alpha($ACCENT, 0.16);
+  background-color: alpha($PRIMARY, 0.16);
   border-radius: 10px;
 }
 EOF
 
 write_atomic "$GENERATED_DIR/gtk/gtk-3.0/gtk.css" <<EOF
-@define-color theme_selected_bg_color $ACCENT;
+@define-color theme_selected_bg_color $PRIMARY;
 @define-color theme_selected_fg_color $TEXT1;
 EOF
 
@@ -850,12 +879,12 @@ restart_nautilus_for_theme
 
 reload_kitty_theme
 
-bash "$DOTFILES/quickshell/scripts/update-sddm-accent.sh" "$ACCENT" 2>/dev/null || true
+bash "$DOTFILES/quickshell/scripts/update-sddm-accent.sh" "$PRIMARY" 2>/dev/null || true
 if [ -n "$WALLPAPER" ]; then
   magick "$WALLPAPER" -scale 10% -scale 1920x1080! /tmp/strata-bg.jpg 2>/dev/null \
     && sudo -n /run/current-system/sw/bin/cp /tmp/strata-bg.jpg /var/lib/strata/background.jpg 2>/dev/null || true
 fi
-echo "accent=$ACCENT" > /tmp/strata-accent
+echo "accent=$PRIMARY" > /tmp/strata-accent
 sudo -n /run/current-system/sw/bin/tee /var/lib/strata/theme.conf < /tmp/strata-accent > /dev/null 2>/dev/null || true
 
 apply_hyprland_border "$ACCENT_HEX"

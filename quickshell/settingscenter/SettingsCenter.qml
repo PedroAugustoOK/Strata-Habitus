@@ -49,7 +49,7 @@ PanelWindow {
   readonly property color rowFill: Colors.darkMode
     ? Qt.rgba(Colors.bg2.r, Colors.bg2.g, Colors.bg2.b, 0.34)
     : Qt.rgba(Colors.bg2.r, Colors.bg2.g, Colors.bg2.b, 0.78)
-  readonly property color rowSelected: Qt.rgba(Colors.accent.r, Colors.accent.g, Colors.accent.b, Colors.darkMode ? 0.16 : 0.12)
+  readonly property color rowSelected: Qt.rgba(Colors.primary.r, Colors.primary.g, Colors.primary.b, Colors.darkMode ? 0.16 : 0.12)
 
   function toggle() {
     if (visible) {
@@ -252,7 +252,7 @@ PanelWindow {
               color: selected ? root.rowSelected : root.rowFill
               border.width: 1
               border.color: selected
-                ? Qt.rgba(Colors.accent.r, Colors.accent.g, Colors.accent.b, 0.28)
+                ? Qt.rgba(Colors.primary.r, Colors.primary.g, Colors.primary.b, 0.28)
                 : Qt.rgba(Colors.text1.r, Colors.text1.g, Colors.text1.b, Colors.darkMode ? 0.05 : 0.08)
 
               RowLayout {
@@ -265,7 +265,7 @@ PanelWindow {
                   Layout.preferredHeight: 44
                   radius: 14
                   color: selected
-                    ? Qt.rgba(Colors.accent.r, Colors.accent.g, Colors.accent.b, 0.22)
+                    ? Qt.rgba(Colors.primary.r, Colors.primary.g, Colors.primary.b, 0.22)
                     : Qt.rgba(Colors.text1.r, Colors.text1.g, Colors.text1.b, Colors.darkMode ? 0.08 : 0.06)
                   border.width: 1
                   border.color: Qt.rgba(Colors.text1.r, Colors.text1.g, Colors.text1.b, Colors.darkMode ? 0.05 : 0.08)

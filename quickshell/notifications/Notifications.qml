@@ -30,7 +30,7 @@ PanelWindow {
         radius:  14
         color:   Colors.bg1
         opacity: 1
-        border.color: Qt.rgba(Colors.accent.r, Colors.accent.g, Colors.accent.b, 0.15)
+        border.color: Qt.rgba(Colors.primary.r, Colors.primary.g, Colors.primary.b, 0.15)
         border.width: 1
 
         Component.onCompleted: enterAnim.start()
@@ -55,7 +55,7 @@ PanelWindow {
         // barra lateral accent
         Rectangle {
           anchors { left: parent.left; top: parent.top; bottom: parent.bottom; topMargin: 8; bottomMargin: 8 }
-          width: 3; radius: 2; color: Colors.accent; opacity: 0.7
+          width: 3; radius: 2; color: Colors.primary; opacity: 0.7
         }
 
         RowLayout {
@@ -68,12 +68,12 @@ PanelWindow {
           // ícone
           Rectangle {
             width: 28; height: 28; radius: 7
-            color: Qt.rgba(Colors.accent.r, Colors.accent.g, Colors.accent.b, 0.1)
+            color: Qt.rgba(Colors.primary.r, Colors.primary.g, Colors.primary.b, 0.1)
             Layout.alignment: Qt.AlignTop
             Text {
               anchors.centerIn: parent
               text: "󰇮"
-              color: Colors.accent
+              color: Colors.primary
               font { pixelSize: 14; family: "JetBrainsMono Nerd Font" }
             }
           }
@@ -84,7 +84,7 @@ PanelWindow {
 
             Text {
               text: modelData.appName
-              color: Colors.accent
+              color: Colors.primary
               font { pixelSize: 10; family: "Roboto"; weight: Font.Medium }
               Layout.fillWidth: true
               elide: Text.ElideRight
@@ -120,12 +120,12 @@ PanelWindow {
                   required property NotificationAction modelData
                   height: 22; radius: 6
                   width: actionText.implicitWidth + 16
-                  color: Qt.rgba(Colors.accent.r, Colors.accent.g, Colors.accent.b, 0.1)
+                  color: Qt.rgba(Colors.primary.r, Colors.primary.g, Colors.primary.b, 0.1)
                   Text {
                     id: actionText
                     anchors.centerIn: parent
                     text: modelData.identifier === "default" ? "Abrir" : modelData.text
-                    color: Colors.accent
+                    color: Colors.primary
                     font { pixelSize: 10; family: "Roboto" }
                   }
                   MouseArea {

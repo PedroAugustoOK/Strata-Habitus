@@ -63,6 +63,110 @@ error_notify() {
   notify-send -a "Strata Screenshot" -u critical "Falha ao capturar" "$1" >/dev/null 2>&1 || true
 }
 
+find_grim_bin() {
+  if command -v grim >/dev/null 2>&1; then
+    command -v grim
+    return 0
+  fi
+
+  if command -v grimblast >/dev/null 2>&1; then
+    local wrapper grim_dir
+    wrapper="$(command -v grimblast)"
+    grim_dir="$(grep -o "/nix/store/[^']*-grim-[^']*/bin" "$wrapper" 2>/dev/null | head -n1 || true)"
+    if [ -n "$grim_dir" ] && [ -x "$grim_dir/grim" ]; then
+      printf '%s\n' "$grim_dir/grim"
+      return 0
+    fi
+  fi
+
+  return 1
+}
+
+wait_overlay_geometry() {
+  command -v quickshell >/dev/null 2>&1 || return 1
+
+  local request state_dir result_file line
+  request="shot-$$-$RANDOM-$(date '+%s%N')"
+  state_dir="${XDG_RUNTIME_DIR:-/tmp}/strata-screenshot"
+  result_file="$state_dir/$request.geom"
+  rm -f "$result_file"
+  mkdir -p "$state_dir"
+
+  if ! quickshell ipc call screenshot select "$request" >/dev/null 2>&1; then
+    return 1
+  fi
+
+  for _ in $(seq 1 350); do
+    if [ -s "$result_file" ]; then
+      line="$(cat "$result_file" 2>/dev/null || true)"
+      rm -f "$result_file"
+      if [ "$line" = "cancel" ]; then
+        return 130
+      fi
+      printf '%s\n' "$line"
+      return 0
+    fi
+    sleep 0.02
+  done
+
+  rm -f "$result_file"
+  return 1
+}
+
+capture_area_with_overlay() {
+  local file="$1"
+  local action="$2"
+  local geom capture_file grim_bin
+
+  grim_bin="$(find_grim_bin)" || return 1
+
+  geom="$(wait_overlay_geometry)"
+  local code=$?
+  if [ "$code" -ne 0 ]; then
+    [ "$code" -eq 130 ] && return 130
+    return 1
+  fi
+
+  case "$geom" in
+    *,*" "*x*) ;;
+    *) return 1 ;;
+  esac
+
+  capture_file="$file"
+  if [ "$action" = "copy" ]; then
+    capture_file="${XDG_RUNTIME_DIR:-/tmp}/strata-screenshot/shot-$$-$RANDOM.png"
+  fi
+
+  mkdir -p "$(dirname "$capture_file")"
+
+  if ! "$grim_bin" -g "$geom" "$capture_file" >/dev/null 2>&1; then
+    error_notify "grim falhou na geometria $geom"
+    return 2
+  fi
+
+  case "$action" in
+    copy)
+      wl-copy < "$capture_file" >/dev/null 2>&1 || true
+      rm -f "$capture_file"
+      notify-send -a "Strata Screenshot" "Captura copiada" "Regiao selecionada" >/dev/null 2>&1 || true
+      ;;
+    save)
+      notify_async "$capture_file" "Captura salva" "$(basename "$capture_file")"
+      ;;
+    copysave)
+      wl-copy < "$capture_file" >/dev/null 2>&1 || true
+      notify_async "$capture_file" "Captura salva" "$(basename "$capture_file")
+Copiada para a area de transferencia"
+      ;;
+    edit)
+      launch_editor "$capture_file" || return 2
+      notify-send -a "Strata Screenshot" "Captura aberta no editor" "$(basename "$capture_file")" >/dev/null 2>&1 || true
+      ;;
+  esac
+
+  return 0
+}
+
 build_slurp_args() {
   local accent bg0 bg1
   accent="$(get_val "accent" "$THEME_FILE")"
@@ -107,6 +211,16 @@ mkdir -p "$SCREENSHOT_DIR"
 
 STAMP="$(date '+%Y-%m-%d_%H-%M-%S')"
 FILE="$SCREENSHOT_DIR/Strata_${STAMP}.png"
+
+if [ "$TARGET" = "area" ]; then
+  if capture_area_with_overlay "$FILE" "$ACTION"; then
+    exit 0
+  fi
+  overlay_status=$?
+  if [ "$overlay_status" -eq 130 ]; then
+    exit 0
+  fi
+fi
 
 export SLURP_ARGS
 SLURP_ARGS="$(build_slurp_args)"

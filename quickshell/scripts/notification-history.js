@@ -99,6 +99,7 @@ function normalizeNotification(node) {
   const actions = Array.isArray(node.actions)
     ? node.actions.length
     : (node.actions && typeof node.actions === "object" ? Object.keys(node.actions).length : 0);
+  const urgency = asString(node.urgency || node["urgency-level"] || node.urgencyLevel || "normal").toLowerCase();
   const body = sanitizeBody(rawBody, appName, summary);
   const groupKey = classifyGroupKey(appName, desktopEntry, summary);
   const iconName = firstNonEmpty([
@@ -124,7 +125,8 @@ function normalizeNotification(node) {
     summary,
     body,
     actionsCount: actions,
-    iconPath
+    iconPath,
+    urgency: urgency || "normal"
   };
 }
 

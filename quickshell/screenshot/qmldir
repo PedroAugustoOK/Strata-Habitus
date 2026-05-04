@@ -1,0 +1,3 @@
+module screenshot
+ScreenshotSelector 1.0 ScreenshotSelector.qml
+Rope 1.0 Rope.qml

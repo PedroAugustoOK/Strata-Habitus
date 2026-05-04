@@ -13,34 +13,34 @@ Row {
   Text {
     anchors.verticalCenter: parent.verticalCenter
     text: "󰍛"
-    color: Colors.accent
+    color: Colors.info
     font { pixelSize: 13; family: "JetBrainsMono Nerd Font" }
   }
 
   Text {
     anchors.verticalCenter: parent.verticalCenter
     text: root.cpu
-    color: Colors.accent
+    color: Colors.info
     font { pixelSize: 12; family: "Roboto"; weight: Font.Bold }
   }
 
   Rectangle {
     width: 1; height: 12
-    color: Qt.rgba(1,1,1,0.08)
+    color: Colors.panelBorder
     anchors.verticalCenter: parent.verticalCenter
   }
 
   Text {
     anchors.verticalCenter: parent.verticalCenter
     text: "󰘚"
-    color: Colors.accent
+    color: Colors.success
     font { pixelSize: 13; family: "JetBrainsMono Nerd Font" }
   }
 
   Text {
     anchors.verticalCenter: parent.verticalCenter
     text: root.ram
-    color: Colors.accent
+    color: Colors.success
     font { pixelSize: 12; family: "Roboto"; weight: Font.Bold }
   }
 

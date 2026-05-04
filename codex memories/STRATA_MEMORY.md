@@ -428,6 +428,102 @@ sudo nixos-generate-config --show-hardware-config > ~/dotfiles/hosts/desktop/har
   - explicit `[mode=do-not-disturb] invisible=1`
 
 ### Notification content shaping
+- `quickshell/scripts/notification-history.js` normalizes `mako` payloads into inbox cards
+- notification cards now prefer app name, summary, body, and timestamp in a compact mobile-like layout
+
+## Session update - 2026-05-03 (codex update + nix rebuild path)
+
+### Root cause of the long rebuild stall
+- The earlier hypothesis that `codex` itself was causing the huge local build was incorrect.
+- Dependency tracing on `desktop` showed the problematic chain was:
+  - `mpv`
+  - `mpv-with-scripts`
+  - `yt-dlp`
+  - `deno`
+  - `rusty-v8`
+- Practical outcome:
+  - removing `mpv` from `modules/packages.nix` allowed both:
+    - `sudo nixos-rebuild test --flake path:$HOME/dotfiles#desktop -L`
+    - `sudo nixos-rebuild switch --flake path:$HOME/dotfiles#desktop`
+  - to finish successfully
+
+### Branch / memory handling note
+- During the same session, `codex memories/STRATA_CONTEXT.md` and `codex memories/STRATA_MEMORY.md` were real modified files in git.
+- The user explicitly wants memory files committed/pushed when needed so they can resume context on another machine later.
+
+### Full flake update outcome
+- `nix flake update` was run successfully on `main`.
+- `home-manager` and `nixpkgs` both advanced in `flake.lock`.
+- First full rebuild after the update did not fail on compilation logic.
+- It failed on binary substitute/network instability from `cache.nixos.org`.
+- Repeated signals in the failed run:
+  - `HTTP error 206`
+  - `Failed sending data to the peer`
+  - `OpenSSL SSL_read: SSL_ERROR_SYSCALL`
+- Packages affected by substitute failures included:
+  - `chromium`
+  - `deno`
+  - `gdal`
+  - `hyprland`
+  - `kitty`
+  - `libreoffice`
+  - `linux`
+  - `yt-dlp`
+
+### Working rebuild retry strategy
+- The rebuild passed after reducing cache download concurrency.
+- Working command:
+  - `sudo nixos-rebuild switch --flake path:$HOME/dotfiles#desktop -L --option http-connections 2 --option max-substitution-jobs 2 --option connect-timeout 15 --option stalled-download-timeout 30`
+- Important operational note:
+  - the current blocker for large updates on this machine is unstable substitute downloads, not evaluation or the `codex` package itself
+  - `--fallback` is still a bad default here because it could trigger very large local builds
+
+### Codex package state after successful rebuild
+- After the successful reduced-concurrency rebuild, the system `codex` version was still:
+  - `codex-cli 0.125.0`
+- Local validation confirmed this matched the package exposed by the current `nixpkgs` snapshot:
+  - `nix eval 'path:/home/ankh/dotfiles#nixosConfigurations.desktop.pkgs.codex.version' -> 0.125.0`
+- Binary path at that point:
+  - `/run/current-system/sw/bin/codex`
+  - real store path under `/nix/store/...-codex-0.125.0/bin/codex`
+
+### Upstream Codex version validation
+- Official/current published npm package was verified during the session:
+  - `npm view @openai/codex version -> 0.128.0`
+- This established the exact gap:
+  - upstream npm release: `0.128.0`
+  - current `nixpkgs` package in this flake: `0.125.0`
+
+### Codex override implemented in repo
+- A local Nix overlay was added so `pkgs.codex` no longer depends on the lagging `nixpkgs` package definition.
+- Files added/changed:
+  - `flake.nix`
+  - `pkgs/codex.nix`
+- Implementation choice:
+  - do not rebuild the Rust package from source
+  - instead package the official Linux x64 npm release tarball:
+    - `https://registry.npmjs.org/@openai/codex/-/codex-0.128.0-linux-x64.tgz`
+- The packaged tarball contains:
+  - vendored `codex` binary
+  - vendored `rg`
+- The local wrapper keeps `bubblewrap` on `PATH`, preserving expected Linux runtime behavior.
+
+### Codex override validation
+- The override evaluated successfully:
+  - `nix eval 'path:/home/ankh/dotfiles#nixosConfigurations.desktop.pkgs.codex.version' -> 0.128.0`
+- The package built successfully via:
+  - `nix build 'path:/home/ankh/dotfiles#nixosConfigurations.desktop.pkgs.codex' -L --no-link`
+- Built binary validation succeeded:
+  - `/nix/store/...-codex-0.128.0/bin/codex --version -> codex-cli 0.128.0`
+
+### Resume point for next session
+- Current repo state after this work includes:
+  - updated `flake.lock`
+  - `flake.nix` overlay change
+  - new `pkgs/codex.nix`
+- Next practical step on the real machine:
+  - run `sudo nixos-rebuild switch --flake path:$HOME/dotfiles#desktop -L --option http-connections 2 --option max-substitution-jobs 2 --option connect-timeout 15 --option stalled-download-timeout 30`
+  - then confirm `codex --version`
 - Website notifications now suppress raw site/domain lines when they are only noise:
   - examples like `claude.ai`
   - `web.whatsapp.com`
@@ -446,3 +542,119 @@ sudo nixos-generate-config --show-hardware-config > ~/dotfiles/hosts/desktop/har
   - temporary web icons are copied into `~/.cache/strata/notifications`
 - Result:
   - Chromium notifications in the Control Center can preserve the site icon instead of falling back to the browser icon
+
+## Session update - 2026-05-03 (theme system direction)
+
+### Theme model
+- Strata themes now carry two explicit layers:
+  - `semantic`: primary, secondary, success, warning, danger, info
+  - `ui`: bar style/colors, panel colors, radius scale, accent strength
+- `Colors.qml` treats theme `ui` values as the default source of interface personality.
+- `theme-preferences.json` is now an explicit override file only when it contains `"enabled": true`; otherwise it does not freeze all themes into the same bar/panel style.
+
+### Applied visual semantics
+- Top bar indicators use role colors instead of a single accent.
+- App Center uses:
+  - success for installed apps
+  - warning for queued/pending rebuild state
+  - danger for errors
+  - primary for main actions
+- Update Center derives a status tone:
+  - success for clean/success
+  - warning for blocked local state
+  - info for running
+  - danger for error
+- Control Center uses semantic tones for VPN, Wi-Fi, Bluetooth, DND, caffeine, recording, power profile, volume muted state, and notification cards.
+
+### Theme Picker
+- The Theme Picker no longer hardcodes themes.
+- It loads normalized theme data from `quickshell/scripts/theme-list.js`.
+- Theme cards now preview a miniature Strata UI:
+  - bar
+  - workspace/status pills
+  - semantic color row
+  - notification-like card
+- Applying a theme triggers a short dry color pulse before closing.
+
+## Session update - 2026-05-04 (wallpaper picker + animation test)
+
+### WallPickr direction
+- `WallPickr` was changed from a large carousel into a compact centered grid.
+- Current shape:
+  - centered, minimal panel
+  - 3-column wallpaper grid for the active theme
+  - vertical scrolling when a theme has more options
+  - selected wallpaper has a primary border
+  - currently applied wallpaper has a success check marker
+  - thumbnails are clipped through an inner rounded mask so image corners match the card
+- This was inspired by the grid screenshot the user provided.
+
+### Animation state
+- Hyprland is currently using a Zephyr-inspired animation preset:
+  - `strataZephyr = 0.23, 1, 0.61, 1`
+  - window open uses quick `popin 92%`
+  - workspace/special workspace uses longer `slide`
+  - window close uses faster `strataClose` with `popin 86%` to avoid ghost-like lingering
+- Quickshell workspace slider now uses the same Zephyr-like QML bezier curve:
+  - `Easing.BezierSpline`
+  - curve `[0.23, 1, 0.61, 1, 1, 1]`
+  - duration `570ms`
+- `hyprctl reload` succeeded after the config change.
+- Quickshell was restarted and loaded the new WallPickr.
+
+## Session update - 2026-05-04 (Zephyr screenshot selector)
+
+### Screenshot selector
+- Strata now has a Quickshell-native screenshot area selector inspired by `flickowoa/dotfiles` branch `hyprland-zephyr`.
+- Main files:
+  - `quickshell/screenshot/ScreenshotSelector.qml`
+  - `quickshell/screenshot/Rope.qml`
+  - `quickshell/screenshot/qmldir`
+  - `quickshell/scripts/screenshot-geometry.sh`
+  - `quickshell/scripts/screenshot.sh`
+  - `quickshell/shell.qml`
+- Visual behavior:
+  - fullscreen dimmed overlay
+  - drag selection rectangle
+  - primary-colored border
+  - circular corner handles
+  - animated rope lines from screen corners to the selected rectangle
+- Integration:
+  - `quickshell ipc call screenshot select <requestId>`
+  - `screenshot.sh area ...` tries this overlay first
+  - previous `grimblast --freeze` / `slurp` area capture remains the fallback
+- Supported screenshot actions retained:
+  - `copy`
+  - `save`
+  - `copysave`
+  - `edit`
+
+### Screenshot capture implementation notes
+- Area captures through the new overlay use `grim -g "$geometry"`.
+- `modules/packages.nix` now includes `grim` explicitly.
+- Until a rebuild exposes `grim` directly on PATH, `screenshot.sh` can find the `grim` binary referenced inside the current `grimblast` wrapper.
+- Geometry results are passed through runtime files under:
+  - `${XDG_RUNTIME_DIR:-/tmp}/strata-screenshot`
+- Canceling the selector writes `cancel` and exits cleanly without falling through to a capture.
+
+### Validation state
+- Script syntax validation passed:
+  - `bash -n quickshell/scripts/screenshot.sh`
+  - `bash -n quickshell/scripts/screenshot-geometry.sh`
+- Nix package list evaluation for `desktop` passed after adding `grim`.
+- Quickshell was restarted and loaded the config successfully.
+- Remaining manual validation:
+  - press `Print` or `Super+Shift+S`
+  - drag a region
+  - confirm the saved/copied image matches the selected geometry
+
+### Current publish bundle
+- The user asked to save all context/memory and push to GitHub.
+- This publish should include the current complete repo state, including:
+  - Codex package override files under `pkgs/`
+  - flake updates
+  - theme model updates
+  - notification/icon daemon updates
+  - WallPickr grid changes
+  - Zephyr animation changes
+  - screenshot selector implementation

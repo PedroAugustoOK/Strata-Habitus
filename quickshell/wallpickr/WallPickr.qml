@@ -20,6 +20,7 @@ PanelWindow {
   property string currentWall: ""
   property int selectedIdx: 0
   property real cardYOffset: 18
+  readonly property int gridColumns: 3
   readonly property var selectedWallpaper: wallpapers.length > 0
     ? wallpapers[Math.max(0, Math.min(selectedIdx, wallpapers.length - 1))]
     : ""
@@ -61,6 +62,7 @@ PanelWindow {
 
   function moveSelection(delta) {
     selectIndex(selectedIdx + delta)
+    wallpaperGrid.positionViewAtIndex(selectedIdx, GridView.Contain)
   }
 
   function applyWallpaper(path) {
@@ -74,9 +76,9 @@ PanelWindow {
   SequentialAnimation {
     id: openAnim
     ParallelAnimation {
-      NumberAnimation { target: root; property: "cardYOffset"; from: 16; to: 0; duration: 190; easing.type: Easing.OutCubic }
-      NumberAnimation { target: card; property: "opacity"; from: 0; to: 1; duration: 140; easing.type: Easing.OutQuad }
-      NumberAnimation { target: card; property: "scale"; from: 0.985; to: 1; duration: 190; easing.type: Easing.OutCubic }
+      NumberAnimation { target: root; property: "cardYOffset"; from: 16; to: 0; duration: 170; easing.type: Easing.OutCubic }
+      NumberAnimation { target: card; property: "opacity"; from: 0; to: 1; duration: 120; easing.type: Easing.OutQuad }
+      NumberAnimation { target: card; property: "scale"; from: 0.985; to: 1; duration: 170; easing.type: Easing.OutCubic }
     }
     ScriptAction { script: keyGrabber.forceActiveFocus() }
   }
@@ -84,9 +86,9 @@ PanelWindow {
   SequentialAnimation {
     id: closeAnim
     ParallelAnimation {
-      NumberAnimation { target: root; property: "cardYOffset"; to: 10; duration: 120; easing.type: Easing.InCubic }
-      NumberAnimation { target: card; property: "scale"; to: 0.992; duration: 120; easing.type: Easing.InCubic }
-      NumberAnimation { target: card; property: "opacity"; to: 0; duration: 95; easing.type: Easing.InQuad }
+      NumberAnimation { target: root; property: "cardYOffset"; to: 10; duration: 100; easing.type: Easing.InCubic }
+      NumberAnimation { target: card; property: "scale"; to: 0.992; duration: 100; easing.type: Easing.InCubic }
+      NumberAnimation { target: card; property: "opacity"; to: 0; duration: 80; easing.type: Easing.InQuad }
     }
     ScriptAction { script: root.visible = false }
   }
@@ -100,13 +102,13 @@ PanelWindow {
     id: card
     anchors.centerIn: parent
     anchors.verticalCenterOffset: cardYOffset
-    width: 1180
-    height: 700
-    radius: 28
+    width: 740
+    height: Math.min(460, root.height - 90)
+    radius: 18
     antialiasing: true
     color: Colors.bg1
     border.width: 1
-    border.color: Qt.rgba(Colors.text1.r, Colors.text1.g, Colors.text1.b, Colors.darkMode ? 0.18 : 0.22)
+    border.color: Qt.rgba(Colors.text1.r, Colors.text1.g, Colors.text1.b, Colors.darkMode ? 0.10 : 0.14)
     clip: true
     opacity: 0
 
@@ -126,7 +128,15 @@ PanelWindow {
       radius: parent.radius - 1
       color: "transparent"
       border.width: 1
-      border.color: Qt.rgba(Colors.accent.r, Colors.accent.g, Colors.accent.b, 0.10)
+      border.color: Qt.rgba(Colors.primary.r, Colors.primary.g, Colors.primary.b, 0.10)
+    }
+
+    MouseArea {
+      anchors.fill: parent
+      acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
+      onPressed: function(mouse) { mouse.accepted = true }
+      onClicked: function(mouse) { mouse.accepted = true }
+      onWheel: function(wheel) { wheel.accepted = true }
     }
 
     Item {
@@ -143,6 +153,12 @@ PanelWindow {
         } else if (e.key === Qt.Key_Right) {
           root.moveSelection(1)
           e.accepted = true
+        } else if (e.key === Qt.Key_Up) {
+          root.moveSelection(-root.gridColumns)
+          e.accepted = true
+        } else if (e.key === Qt.Key_Down) {
+          root.moveSelection(root.gridColumns)
+          e.accepted = true
         } else if (e.key === Qt.Key_Return || e.key === Qt.Key_Enter) {
           root.applyWallpaper(root.selectedWallpaper.path)
           e.accepted = true
@@ -152,192 +168,141 @@ PanelWindow {
 
     ColumnLayout {
       anchors.fill: parent
-      anchors.margins: 22
-      spacing: 16
+      anchors.margins: 18
+      spacing: 12
 
       RowLayout {
         Layout.fillWidth: true
-        Text {
-          text: "Palco de Wallpapers"
-          color: Colors.text1
-          font { pixelSize: 28; family: "Inter"; weight: Font.DemiBold }
-        }
-        Text {
-          text: currentTheme
-          color: Colors.text3
-          font { pixelSize: 11; family: "JetBrains Mono" }
-        }
-        Item { Layout.fillWidth: true }
-        Text {
-          text: wallpapers.length > 0 ? ((selectedIdx + 1) + " / " + wallpapers.length) : "—"
-          color: Colors.text3
-          font { pixelSize: 11; family: "JetBrains Mono" }
-        }
-      }
+        spacing: 12
 
-      Item {
-        Layout.fillWidth: true
-        Layout.fillHeight: true
-
-        Rectangle {
-          anchors.centerIn: parent
-          width: 920
-          height: 540
-          radius: 28
-          antialiasing: true
-          color: Qt.rgba(Colors.bg2.r, Colors.bg2.g, Colors.bg2.b, Colors.darkMode ? 0.64 : 0.84)
-          border.width: 1
-          border.color: Qt.rgba(Colors.text1.r, Colors.text1.g, Colors.text1.b, Colors.darkMode ? 0.08 : 0.12)
-          clip: true
-
-          Image {
-            anchors.fill: parent
-            source: root.selectedWallpaper && root.selectedWallpaper.preview ? "file://" + root.selectedWallpaper.preview : ""
-            fillMode: Image.PreserveAspectCrop
-            asynchronous: true
-            smooth: true
-            cache: true
+        ColumnLayout {
+          spacing: 3
+          Text {
+            text: "Wallpapers"
+            color: Colors.text1
+            font { pixelSize: 18; family: "Inter"; weight: Font.DemiBold }
           }
-
-          Rectangle {
-            anchors.fill: parent
-            gradient: Gradient {
-              GradientStop { position: 0.0; color: Qt.rgba(0, 0, 0, Colors.darkMode ? 0.03 : 0.01) }
-              GradientStop { position: 1.0; color: Qt.rgba(0, 0, 0, Colors.darkMode ? 0.14 : 0.05) }
-            }
+          Text {
+            text: currentTheme
+            color: Colors.text3
+            font { pixelSize: 9; family: "JetBrains Mono" }
           }
-
-          MouseArea {
-            anchors.fill: parent
-            onClicked: root.applyWallpaper(root.selectedWallpaper.path)
-          }
-        }
-
-        Rectangle {
-          anchors.left: parent.left
-          anchors.leftMargin: 28
-          anchors.verticalCenter: parent.verticalCenter
-          width: 116
-          height: 410
-          radius: 24
-          antialiasing: true
-          color: Colors.bg2
-          border.width: 1
-          border.color: Qt.rgba(Colors.text1.r, Colors.text1.g, Colors.text1.b, Colors.darkMode ? 0.08 : 0.12)
-          clip: true
-          visible: root.selectedIdx > 0
-          opacity: 0.78
-
-          Image {
-            anchors.fill: parent
-            source: root.selectedIdx > 0 ? "file://" + root.previewAt(root.selectedIdx - 1) : ""
-            fillMode: Image.PreserveAspectCrop
-            asynchronous: true
-            smooth: true
-            cache: true
-          }
-
-          Rectangle {
-            anchors.fill: parent
-            color: Qt.rgba(0, 0, 0, Colors.darkMode ? 0.32 : 0.14)
-          }
-
-          MouseArea {
-            anchors.fill: parent
-            onClicked: root.moveSelection(-1)
-          }
-        }
-
-        Rectangle {
-          anchors.right: parent.right
-          anchors.rightMargin: 28
-          anchors.verticalCenter: parent.verticalCenter
-          width: 116
-          height: 410
-          radius: 24
-          antialiasing: true
-          color: Colors.bg2
-          border.width: 1
-          border.color: Qt.rgba(Colors.text1.r, Colors.text1.g, Colors.text1.b, Colors.darkMode ? 0.08 : 0.12)
-          clip: true
-          visible: root.selectedIdx < root.wallpapers.length - 1
-          opacity: 0.78
-
-          Image {
-            anchors.fill: parent
-            source: root.selectedIdx < root.wallpapers.length - 1 ? "file://" + root.previewAt(root.selectedIdx + 1) : ""
-            fillMode: Image.PreserveAspectCrop
-            asynchronous: true
-            smooth: true
-            cache: true
-          }
-
-          Rectangle {
-            anchors.fill: parent
-            color: Qt.rgba(0, 0, 0, Colors.darkMode ? 0.32 : 0.14)
-          }
-
-          MouseArea {
-            anchors.fill: parent
-            onClicked: root.moveSelection(1)
-          }
-        }
-
-        Row {
-          anchors.horizontalCenter: parent.horizontalCenter
-          anchors.bottom: parent.bottom
-          anchors.bottomMargin: 14
-          spacing: 10
-
-          Repeater {
-            model: root.wallpapers
-            delegate: Rectangle {
-              required property string modelData
-              required property int index
-
-              width: root.selectedIdx === index ? 34 : 10
-              height: 10
-              radius: 5
-              antialiasing: true
-              color: root.selectedIdx === index
-                ? Colors.accent
-                : Qt.rgba(Colors.text1.r, Colors.text1.g, Colors.text1.b, Colors.darkMode ? 0.18 : 0.22)
-
-              Behavior on width { NumberAnimation { duration: 140; easing.type: Easing.OutCubic } }
-              Behavior on color { ColorAnimation { duration: 140 } }
-            }
-          }
-        }
-      }
-
-      RowLayout {
-        Layout.fillWidth: true
-
-        Text {
-          text: "← → navegar  •  Enter aplicar  •  Esc fechar"
-          color: Colors.text3
-          font { pixelSize: 10; family: "JetBrains Mono" }
         }
 
         Item { Layout.fillWidth: true }
 
         Rectangle {
-          radius: 18
+          radius: 12
           antialiasing: true
-          implicitWidth: 136
-          implicitHeight: 40
-          color: Qt.rgba(Colors.accent.r, Colors.accent.g, Colors.accent.b, 0.92)
+          implicitWidth: countText.implicitWidth + 18
+          implicitHeight: 28
+          color: Qt.rgba(Colors.primary.r, Colors.primary.g, Colors.primary.b, Colors.darkMode ? 0.13 : 0.10)
 
           Text {
+            id: countText
             anchors.centerIn: parent
-            text: "Aplicar"
-            color: Colors.bg0
-            font { pixelSize: 11; family: "JetBrains Mono"; weight: Font.Medium }
+            text: wallpapers.length > 0 ? ((selectedIdx + 1) + " / " + wallpapers.length) : "--"
+            color: Colors.primary
+            font { pixelSize: 10; family: "JetBrains Mono"; weight: Font.DemiBold }
           }
+        }
+      }
 
-          MouseArea {
-            anchors.fill: parent
-            onClicked: root.applyWallpaper(root.selectedWallpaper.path)
+      GridView {
+        id: wallpaperGrid
+        Layout.fillWidth: true
+        Layout.fillHeight: true
+        cellWidth: Math.floor(width / root.gridColumns)
+        cellHeight: 118
+        model: root.wallpapers
+        clip: true
+        boundsBehavior: Flickable.StopAtBounds
+
+        delegate: Item {
+          required property var modelData
+          required property int index
+
+          width: wallpaperGrid.cellWidth
+          height: wallpaperGrid.cellHeight
+
+          readonly property bool selected: root.selectedIdx === index
+          readonly property bool active: modelData.path === root.currentWall
+
+          Rectangle {
+            anchors.centerIn: parent
+            width: parent.width - 10
+            height: 106
+            radius: 13
+            antialiasing: true
+            color: Colors.panelRaised
+            border.width: selected || active ? 2 : 0
+            border.color: selected
+              ? Colors.primary
+              : active
+                ? Colors.success
+                : "transparent"
+            clip: true
+            scale: selected ? 1 : 0.975
+
+            Behavior on scale { NumberAnimation { duration: 170; easing.type: Easing.OutCubic } }
+            Behavior on border.color { ColorAnimation { duration: 140 } }
+
+            Rectangle {
+              id: imageMask
+              anchors.fill: parent
+              anchors.margins: selected || active ? 3 : 0
+              radius: parent.radius - (selected || active ? 3 : 0)
+              color: Colors.bg2
+              clip: true
+
+              Image {
+                anchors.fill: parent
+                source: modelData.preview ? "file://" + modelData.preview : ""
+                fillMode: Image.PreserveAspectCrop
+                asynchronous: true
+                smooth: true
+                cache: true
+              }
+            }
+
+            Rectangle {
+              anchors.fill: imageMask
+              radius: imageMask.radius
+              color: mouse.containsMouse
+                ? Qt.rgba(0, 0, 0, Colors.darkMode ? 0.08 : 0.03)
+                : "transparent"
+              Behavior on color { ColorAnimation { duration: 120 } }
+            }
+
+            Rectangle {
+              anchors.right: parent.right
+              anchors.top: parent.top
+              anchors.margins: 8
+              width: 22
+              height: 22
+              radius: 11
+              visible: active
+              color: Qt.rgba(Colors.success.r, Colors.success.g, Colors.success.b, 0.92)
+
+              Text {
+                anchors.centerIn: parent
+                text: "✓"
+                color: Colors.bg0
+                font { pixelSize: 11; family: "Inter"; weight: Font.DemiBold }
+              }
+            }
+
+            MouseArea {
+              id: mouse
+              anchors.fill: parent
+              hoverEnabled: true
+              cursorShape: Qt.PointingHandCursor
+              onEntered: root.selectIndex(index)
+              onClicked: {
+                root.selectIndex(index)
+                root.applyWallpaper(modelData.path)
+              }
+            }
           }
         }
       }

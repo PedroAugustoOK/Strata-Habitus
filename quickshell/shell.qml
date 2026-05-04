@@ -15,6 +15,7 @@ import "wallpickr"
 import "appcenter"
 import "updatecenter"
 import "settingscenter"
+import "screenshot"
 
 ShellRoot {
   Bar {}
@@ -31,6 +32,7 @@ ShellRoot {
   Clipboard { id: clipboard }
   AppCenter { id: appCenter }
   UpdateCenter { id: updateCenter }
+  ScreenshotSelector { id: screenshotSelector }
   SettingsCenter {
     id: settingsCenter
     onOpenControlCenter: controlCenter.toggle()
@@ -276,6 +278,10 @@ ShellRoot {
   IpcHandler {
     target: "settingscenter"
     function toggle(): void { settingsCenter.toggle() }
+  }
+  IpcHandler {
+    target: "screenshot"
+    function select(requestId: string): void { screenshotSelector.select(requestId) }
   }
 
   Process {

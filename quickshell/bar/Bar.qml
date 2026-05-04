@@ -9,7 +9,7 @@ PanelWindow {
   anchors { top: true; left: true; right: true }
   implicitHeight: 34
   exclusiveZone:  34
-  color: Colors.bg1
+  color: Colors.barBackground
   property bool screenRecording: false
   property string screenRecordingElapsed: "--:--"
   property bool protonVpnConnected: false
@@ -25,7 +25,7 @@ PanelWindow {
       id: titlePill
       anchors { left: parent.left; leftMargin: 10; verticalCenter: parent.verticalCenter }
       height: 28; radius: 14
-      color:  Colors.bg2
+      color: Colors.barPill
       width:  winText.text !== "" ? winText.implicitWidth + 24 : 0
       opacity: winText.text !== "" ? 1 : 0
       scale: winText.text !== "" ? 1 : 0.96
@@ -48,7 +48,7 @@ PanelWindow {
     id: wsPill
     anchors.centerIn: parent
     height: 28; radius: 14
-    color:  Colors.bg2
+    color: Colors.barPill
     width:  ws.width + 20
     Behavior on width { NumberAnimation { duration: barRoot.pillAnimMedium; easing.type: Easing.OutCubic } }
     Workspaces {
@@ -79,7 +79,7 @@ PanelWindow {
       Rectangle {
         id: statsPill
         height: 28; radius: 14
-        color:  Colors.bg2
+        color: Colors.barPill
         width:  stats.implicitWidth + 24
         Behavior on width { NumberAnimation { duration: barRoot.pillAnimMedium; easing.type: Easing.OutCubic } }
         MouseArea {
@@ -99,7 +99,7 @@ PanelWindow {
       Rectangle {
         id: clockPill
         height: 28; radius: 14
-        color:  Colors.bg2
+        color: Colors.barPill
         width:  clk.implicitWidth + 24
         Behavior on width { NumberAnimation { duration: barRoot.pillAnimMedium; easing.type: Easing.OutCubic } }
         MouseArea {
@@ -125,9 +125,7 @@ PanelWindow {
       Rectangle {
         id: recordPill
         height: 28; radius: 14
-        color: Qt.rgba(228 / 255, 104 / 255, 118 / 255, 0.16)
-        border.width: 1
-        border.color: Qt.rgba(228 / 255, 104 / 255, 118 / 255, 0.42)
+        color: Qt.rgba(Colors.danger.r, Colors.danger.g, Colors.danger.b, 0.16)
         width: barRoot.screenRecording ? recordLabel.implicitWidth + 24 : 0
         opacity: barRoot.screenRecording ? 1 : 0
         scale: barRoot.screenRecording ? 1 : 0.92
@@ -141,7 +139,7 @@ PanelWindow {
           id: recordLabel
           anchors.centerIn: parent
           text: "󰻃 " + barRoot.screenRecordingElapsed
-          color: "#e46876"
+          color: Colors.danger
           font { family: "JetBrainsMono Nerd Font"; pixelSize: 13 }
           verticalAlignment: Text.AlignVCenter
         }
@@ -149,9 +147,7 @@ PanelWindow {
       Rectangle {
         id: protonVpnPill
         height: 28; radius: 14
-        color: Colors.bg2
-        border.width: 1
-        border.color: Qt.rgba(Colors.accent.r, Colors.accent.g, Colors.accent.b, 0.22)
+        color: Colors.barPill
         width: barRoot.protonVpnConnected ? vpnLabel.implicitWidth + 24 : 0
         opacity: barRoot.protonVpnConnected ? 1 : 0
         scale: barRoot.protonVpnConnected ? 1 : 0.92
@@ -165,7 +161,7 @@ PanelWindow {
           id: vpnLabel
           anchors.centerIn: parent
           text: "󰌾 " + barRoot.protonVpnLabel
-          color: Colors.accent
+          color: Colors.info
           font { family: "JetBrainsMono Nerd Font"; pixelSize: 13 }
           verticalAlignment: Text.AlignVCenter
         }
@@ -177,7 +173,7 @@ PanelWindow {
       Rectangle {
         id: statusPill
         height: 28; radius: 14
-        color:  Colors.bg2
+        color: Colors.barPill
         readonly property bool hasTransientIndicators: SystemState.dnd || SystemState.caffeine
         width:  sr.implicitWidth + 24 + (hasTransientIndicators ? transientRow.implicitWidth + 10 : 0)
         Behavior on width { NumberAnimation { duration: barRoot.pillAnimMedium; easing.type: Easing.OutCubic } }
@@ -195,7 +191,7 @@ PanelWindow {
           Text {
             visible: SystemState.dnd
             text: "󰂛"
-            color: Colors.accent
+            color: Colors.secondary
             font { family: "JetBrainsMono Nerd Font"; pixelSize: 13 }
             verticalAlignment: Text.AlignVCenter
           }
@@ -208,7 +204,7 @@ PanelWindow {
               anchors.centerIn: parent
               anchors.verticalCenterOffset: 1
               text: "󰅶"
-              color: Colors.accent
+              color: Colors.warning
               font { family: "JetBrainsMono Nerd Font"; pixelSize: 13 }
             }
           }

@@ -7,6 +7,68 @@ let
     schemeVariants = [ "default" ];
     colorVariants = [ "default" "pink" "green" "grey" "purple" "orange" ];
   };
+  archiveMimeTypes = [
+    "application/bzip2"
+    "application/gzip"
+    "application/vnd.android.package-archive"
+    "application/vnd.debian.binary-package"
+    "application/vnd.ms-cab-compressed"
+    "application/vnd.rar"
+    "application/x-7z-compressed"
+    "application/x-7z-compressed-tar"
+    "application/x-archive"
+    "application/x-arj"
+    "application/x-bzip"
+    "application/x-bzip-compressed-tar"
+    "application/x-compressed-tar"
+    "application/x-cpio"
+    "application/x-deb"
+    "application/x-gzip"
+    "application/x-java-archive"
+    "application/x-lha"
+    "application/x-lhz"
+    "application/x-lrzip"
+    "application/x-lrzip-compressed-tar"
+    "application/x-lz4"
+    "application/x-lzip"
+    "application/x-lzip-compressed-tar"
+    "application/x-lzma"
+    "application/x-lzma-compressed-tar"
+    "application/x-lzop"
+    "application/x-rar"
+    "application/x-rar-compressed"
+    "application/x-rpm"
+    "application/x-source-rpm"
+    "application/x-tar"
+    "application/x-tarz"
+    "application/x-tzo"
+    "application/x-war"
+    "application/x-xz"
+    "application/x-xz-compressed-tar"
+    "application/x-zip"
+    "application/x-zip-compressed"
+    "application/x-zstd-compressed-tar"
+    "application/zip"
+    "application/zstd"
+  ];
+  archiveExtractHere = pkgs.writeShellScriptBin "strata-extract-here" ''
+    set -u
+
+    status=0
+    for archive in "$@"; do
+      [ -f "$archive" ] || continue
+
+      archive_dir="$(${pkgs.coreutils}/bin/dirname "$archive")"
+      archive_name="$(${pkgs.coreutils}/bin/basename "$archive")"
+
+      (
+        cd "$archive_dir" || exit 1
+        ${pkgs.file-roller}/bin/file-roller --extract-here "$archive_name"
+      ) || status=$?
+    done
+
+    exit "$status"
+  '';
 in {
   home.enableNixpkgsReleaseCheck = false;
   home.username      = username;
@@ -23,6 +85,10 @@ in {
 
     if [ ! -f "$STATE_DIR/current-theme.json" ]; then
       cp "$DOTFILES/quickshell/themes/current.json" "$STATE_DIR/current-theme.json"
+    fi
+
+    if [ ! -f "$STATE_DIR/theme-preferences.json" ]; then
+      printf '%s\n' '{}' > "$STATE_DIR/theme-preferences.json"
     fi
 
     if [ ! -f "$STATE_DIR/current-wallpaper" ]; then
@@ -91,6 +157,17 @@ in {
     mimeType   = [ "text/plain" "text/markdown" "text/x-shellscript" ];
   };
 
+  xdg.desktopEntries.strata-extract-here = {
+    name = "Extrair aqui";
+    genericName = "Extrator de arquivos";
+    exec = "${archiveExtractHere}/bin/strata-extract-here %F";
+    terminal = false;
+    noDisplay = true;
+    icon = "org.gnome.FileRoller";
+    categories = [ "Utility" "Archiving" ];
+    mimeType = archiveMimeTypes;
+  };
+
   # Associações de arquivo (docs, txt, PDF, imagens, mídia)
   xdg.mimeApps = {
     enable = true;
@@ -122,7 +199,10 @@ in {
       "application/vnd.oasis.opendocument.spreadsheet"  = "calc.desktop";
       "application/vnd.oasis.opendocument.presentation" = "impress.desktop";
       "x-scheme-handler/proton-authenticator" = "proton-authenticator-handler.desktop";
-    };
+    } // builtins.listToAttrs (map (mimeType: {
+      name = mimeType;
+      value = "strata-extract-here.desktop";
+    }) archiveMimeTypes);
   };
 
   xdg.userDirs = {

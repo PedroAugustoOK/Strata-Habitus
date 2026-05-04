@@ -8,7 +8,7 @@ Rectangle {
   id: trayPill
   height: 28
   radius: 14
-  color:  Colors.bg2
+  color:  Colors.barPill
   width:  trayRow.implicitWidth + 20
   visible: SystemTray.items.values.length > 0
 

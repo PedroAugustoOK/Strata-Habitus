@@ -258,6 +258,90 @@ cd ~/dotfiles && ./strata-apply-channel.sh
   - Proton WireGuard through `wg-quick`
 - Main module:
   - `modules/protonvpn-wireguard.nix`
+
+## Session continuation point - 2026-05-03
+
+### Nix rebuild / Codex update context
+- User wanted the latest available `codex` on `desktop`.
+- Full sequence that matters for continuation:
+  1. The long-running local build was traced away from `codex`.
+  2. The expensive build chain came from `mpv -> mpv-with-scripts -> yt-dlp -> deno -> rusty-v8`.
+  3. Temporarily removing `mpv` from `modules/packages.nix` allowed rebuilds to pass.
+  4. After `nix flake update`, the next major failure was network/substitute instability, not compilation logic.
+  5. Rebuild finally passed when `http-connections` and `max-substitution-jobs` were both reduced to `2`.
+
+### Important verified state
+- Successful rebuild command:
+  - `sudo nixos-rebuild switch --flake path:$HOME/dotfiles#desktop -L --option http-connections 2 --option max-substitution-jobs 2 --option connect-timeout 15 --option stalled-download-timeout 30`
+- Even after that successful rebuild, system `codex` remained:
+  - `codex-cli 0.125.0`
+- Current `nixpkgs` snapshot in the flake was verified to expose:
+  - `pkgs.codex.version = 0.125.0`
+- Upstream published npm package was separately verified to be:
+  - `@openai/codex 0.128.0`
+
+### Repo change made for future resume
+- A local override was added so this repo can install `codex 0.128.0` immediately without waiting for `nixpkgs`.
+- Relevant files:
+  - `flake.nix`
+  - `pkgs/codex.nix`
+- Design choice:
+  - package the official Linux x64 npm tarball inside Nix
+  - avoid reintroducing a heavy Rust source build path for `codex`
+- Validation already completed:
+  - Nix evaluation returns `0.128.0`
+  - the package builds successfully
+  - the built binary prints `codex-cli 0.128.0`
+
+### Next action when resuming
+- Re-run the system switch with the same reduced-cache-concurrency options.
+- Then verify:
+  - `codex --version`
+- If another rebuild fails, assume substitute/network instability first, not a bad `codex` override.
+
+## Session continuation point - 2026-05-03 (themes)
+
+### Theme direction
+- User asked for a more impactful theme system, excluding wallpaper coupling and icon-theme changes.
+- Implemented direction:
+  - semantic theme roles across overlays
+  - per-theme `ui` personality values
+  - dynamic Theme Picker previews
+  - short theme-apply transition
+- Important behavior:
+  - `theme-preferences.json` only overrides theme UI when it contains `"enabled": true`
+  - otherwise the selected theme controls bar/panel style
+- Validation completed:
+  - all theme JSON files parse
+  - `theme-list.js` returns 9 normalized themes with bar styles:
+    - solid, tinted, contrast, soft
+  - running a new Quickshell instance was skipped because the same config is already active
+
+## Session continuation point - 2026-05-04
+
+### Wallpaper picker
+- `quickshell/wallpickr/WallPickr.qml` now uses a compact centered grid instead of the old carousel.
+- Behavior:
+  - minimal centered panel
+  - shows wallpapers for the active theme in 3 columns
+  - scrolls vertically for themes with many options
+  - selected item uses primary border
+  - active/current wallpaper uses success marker
+  - image thumbnails are clipped by an inner rounded mask
+
+### Animation test state
+- Hyprland has been switched to a Zephyr-inspired test preset.
+- Important values:
+  - `bezier = strataZephyr, 0.23, 1, 0.61, 1`
+  - windows use `popin 92%` with speed `2`
+  - workspaces use `slide` with speed `6`
+- Close path was adjusted after user feedback:
+  - `bezier = strataClose, 0.33, 0, 0.12, 1`
+  - `windowsOut` uses speed `2`, `popin 86%`
+- Quickshell workspace indicator uses the same visual curve with a `570ms` duration.
+- Live application:
+  - `hyprctl reload` returned `ok`
+  - Quickshell was restarted successfully
 - Main helpers:
   - `protonvpn-wg-up`
   - `protonvpn-wg-down`
@@ -336,3 +420,73 @@ cd ~/dotfiles && ./strata-apply-channel.sh
   - `origin/stable`
 - Intended notebook action:
   - run the normal channel apply flow on the notebook host
+
+## Session continuation point - 2026-05-04 (Zephyr screenshot selector + publish)
+
+### User request
+- User provided a screenshot of the Zephyr selection overlay and referenced:
+  - `https://github.com/flickowoa/dotfiles/tree/hyprland-zephyr`
+- Goal:
+  - implement that screenshot selection screen in the current Strata repo.
+
+### Reference inspected
+- The remote Zephyr branch was inspected directly from GitHub.
+- Important files from the reference:
+  - `ss.sh`
+  - `quickshell/Main.qml`
+  - `quickshell/windows/Geom.qml`
+  - `quickshell/windows/Rope.qml`
+- Reference behavior:
+  - a script sends `geom` to a Quickshell socket
+  - Quickshell shows a fullscreen selector
+  - the user drags a rectangle
+  - the selector returns geometry like `x,y WxH`
+  - the overlay draws:
+    - dimmed background
+    - highlighted rectangle
+    - round corner handles
+    - animated rope lines from screen corners
+
+### Strata implementation
+- Implemented a Strata-native adaptation instead of copying the Zephyr shell architecture.
+- New Quickshell module:
+  - `quickshell/screenshot/ScreenshotSelector.qml`
+  - `quickshell/screenshot/Rope.qml`
+  - `quickshell/screenshot/qmldir`
+- New IPC entry:
+  - target: `screenshot`
+  - method: `select(requestId)`
+  - registered in `quickshell/shell.qml`
+- New geometry bridge script:
+  - `quickshell/scripts/screenshot-geometry.sh`
+  - writes selection result under:
+    - `${XDG_RUNTIME_DIR:-/tmp}/strata-screenshot/<request>.geom`
+- Existing screenshot flow updated:
+  - `quickshell/scripts/screenshot.sh`
+  - area captures now try the new Quickshell overlay first
+  - fallback remains the previous `grimblast` / `slurp` path
+  - `copy`, `save`, `copysave`, and `edit` actions are preserved
+
+### Package/runtime notes
+- `modules/packages.nix` now lists `grim` explicitly.
+- Before rebuild, the script can still locate the `grim` binary vendored into the current `grimblast` wrapper.
+- This allows the new overlay path to work immediately on the current generation if `grimblast` is present.
+
+### Validation done
+- `bash -n` passed for:
+  - `quickshell/scripts/screenshot.sh`
+  - `quickshell/scripts/screenshot-geometry.sh`
+- Nix evaluation of desktop system packages succeeded:
+  - `nix eval path:/home/ankh/dotfiles#nixosConfigurations.desktop.config.environment.systemPackages --apply 'pkgs: builtins.length pkgs'`
+- Quickshell was restarted from:
+  - `/home/ankh/dotfiles/quickshell/shell.qml`
+- Quickshell logs showed:
+  - `Configuration Loaded`
+  - no new screenshot selector load error
+- The final interactive drag/capture behavior still needs real user validation by pressing `Print` or the configured screenshot area shortcut.
+
+### Publish intent
+- User then requested:
+  - save everything in context/memory files
+  - push to GitHub
+- The current publish should include the complete working tree snapshot, not only the screenshot selector, because the repo already contained many real local edits.

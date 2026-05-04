@@ -11,6 +11,9 @@
   let
     lib = nixpkgs.lib;
     defaultSystem = "x86_64-linux";
+    codexOverlay = final: prev: {
+      codex = final.callPackage ./pkgs/codex.nix { };
+    };
     hostDirs = lib.filterAttrs (name: type:
       type == "directory"
       && builtins.pathExists (./hosts + "/${name}/meta.nix")
@@ -42,6 +45,9 @@
           [
             ./configuration.nix
             (./hosts + "/${hostname}/hardware.nix")
+            {
+              nixpkgs.overlays = [ codexOverlay ];
+            }
           ]
           ++ lib.optional (builtins.pathExists hostConfigPath) hostConfigPath
           ++ [

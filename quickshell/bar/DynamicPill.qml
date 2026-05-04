@@ -14,6 +14,9 @@ Item {
   property string mediaTitle: ""
   property string mediaArtist: ""
   property real mediaProgress: 0
+  property string mediaArtPath: ""
+  property string mediaPositionText: "--:--"
+  property string mediaDurationText: "--:--"
 
   property int lastNotificationId: 0
   property string lastNotificationKey: ""
@@ -23,11 +26,15 @@ Item {
   property string notificationIconPath: ""
   property string notificationUrgency: "normal"
   property bool notificationFresh: false
+  property bool hovered: false
 
   readonly property bool mediaActive: mediaStatus !== "Stopped" && mediaTitle !== ""
   readonly property string notificationIconSource: notificationIconPath === ""
     ? ""
     : notificationIconPath.indexOf("file://") === 0 ? notificationIconPath : "file://" + notificationIconPath
+  readonly property string mediaArtSource: mediaArtPath === ""
+    ? ""
+    : mediaArtPath.indexOf("file://") === 0 ? mediaArtPath : "file://" + mediaArtPath
   readonly property string mode: OverlayState.activeOverlay !== "" ? "overlay"
     : notificationFresh ? "notification"
     : screenRecording ? "recording"
@@ -52,15 +59,15 @@ Item {
     return Colors.barActive
   }
   readonly property int targetWidth: {
-    if (mode === "overlay") return Math.min(360, Math.max(190, overlayLabel.implicitWidth + 56))
+    if (mode === "overlay") return Math.min(330, Math.max(168, overlayLabel.implicitWidth + 58))
     if (mode === "notification") return Math.min(470, Math.max(250, notificationTextCol.implicitWidth + 74))
     if (mode === "recording") return Math.max(170, recordLabel.implicitWidth + 44)
-    if (mode === "media") return Math.min(420, Math.max(260, mediaTitleLabel.implicitWidth + 74))
-    return idleLabel.implicitWidth + 52
+    if (mode === "media") return Math.min(430, Math.max(286, mediaTitleLabel.implicitWidth + 116))
+    return idleLabel.implicitWidth + 66
   }
 
   width: targetWidth
-  height: 28
+  height: 30
 
   Behavior on width { NumberAnimation { duration: 260; easing.type: Easing.OutCubic } }
 
@@ -74,6 +81,9 @@ Item {
     DynamicIslandState.mediaTitle = mediaTitle
     DynamicIslandState.mediaArtist = mediaArtist
     DynamicIslandState.mediaProgress = mediaProgress
+    DynamicIslandState.mediaArtPath = mediaArtPath
+    DynamicIslandState.mediaPositionText = mediaPositionText
+    DynamicIslandState.mediaDurationText = mediaDurationText
     DynamicIslandState.recording = screenRecording
     DynamicIslandState.recordingElapsed = screenRecordingElapsed
     DynamicIslandState.notificationId = lastNotificationId
@@ -84,6 +94,18 @@ Item {
     DynamicIslandState.notificationUrgency = notificationUrgency
   }
 
+  function activeOverlayIpcTarget() {
+    if (OverlayState.activeOverlay === "wallpickr") return "wallPickr"
+    return OverlayState.activeOverlay
+  }
+
+  function toggleActiveOverlay() {
+    const target = activeOverlayIpcTarget()
+    if (target === "") return
+    overlayToggleProc.command = ["quickshell", "ipc", "call", target, "toggle"]
+    overlayToggleProc.running = true
+  }
+
   onXChanged: publishGeometry()
   onYChanged: publishGeometry()
   onWidthChanged: publishGeometry()
@@ -92,6 +114,9 @@ Item {
   onMediaTitleChanged: publishIslandState()
   onMediaArtistChanged: publishIslandState()
   onMediaProgressChanged: publishIslandState()
+  onMediaArtPathChanged: publishIslandState()
+  onMediaPositionTextChanged: publishIslandState()
+  onMediaDurationTextChanged: publishIslandState()
   onScreenRecordingChanged: publishIslandState()
   onScreenRecordingElapsedChanged: publishIslandState()
   onNotificationAppChanged: publishIslandState()
@@ -112,8 +137,10 @@ Item {
   Rectangle {
     id: surface
     anchors.fill: parent
-    radius: 14
-    color: mode === "idle" ? Colors.barPill : Qt.rgba(root.modeColor.r, root.modeColor.g, root.modeColor.b, Colors.darkMode ? 0.16 : 0.13)
+    radius: 15
+    color: mode === "idle"
+      ? (root.hovered ? Qt.rgba(Colors.barActive.r, Colors.barActive.g, Colors.barActive.b, Colors.darkMode ? 0.12 : 0.10) : Colors.barPill)
+      : Qt.rgba(root.modeColor.r, root.modeColor.g, root.modeColor.b, root.hovered ? (Colors.darkMode ? 0.22 : 0.18) : (Colors.darkMode ? 0.16 : 0.13))
     border.width: mode === "idle" ? 0 : 1
     border.color: Qt.rgba(root.modeColor.r, root.modeColor.g, root.modeColor.b, Colors.darkMode ? 0.34 : 0.28)
     clip: true
@@ -140,6 +167,12 @@ Item {
         text: "Strata"
         color: Colors.text0
         font { family: "Inter"; pixelSize: 12; weight: Font.DemiBold }
+      }
+      Text {
+        anchors.verticalCenter: parent.verticalCenter
+        text: "󰅀"
+        color: Colors.text3
+        font { family: "JetBrainsMono Nerd Font"; pixelSize: 10 }
       }
     }
 
@@ -255,17 +288,37 @@ Item {
 
     Row {
       anchors.centerIn: parent
-      spacing: 8
+      spacing: 9
       opacity: root.mode === "media" ? 1 : 0
       visible: opacity > 0.01
       Behavior on opacity { NumberAnimation { duration: 120; easing.type: Easing.OutCubic } }
 
-      Text {
+      Rectangle {
         anchors.verticalCenter: parent.verticalCenter
-        text: root.mediaStatus === "Playing" ? "󰏤" : "󰐊"
-        color: Colors.primary
-        font { family: "JetBrainsMono Nerd Font"; pixelSize: 13 }
+        width: 22
+        height: 22
+        radius: 7
+        color: Qt.rgba(Colors.primary.r, Colors.primary.g, Colors.primary.b, 0.16)
+        clip: true
+
+        Image {
+          id: mediaArt
+          anchors.fill: parent
+          source: root.mediaArtSource
+          fillMode: Image.PreserveAspectCrop
+          smooth: true
+          visible: status === Image.Ready
+        }
+
+        Text {
+          anchors.centerIn: parent
+          visible: mediaArt.status !== Image.Ready
+          text: "󰓇"
+          color: Colors.primary
+          font { family: "JetBrainsMono Nerd Font"; pixelSize: 12 }
+        }
       }
+
       Column {
         anchors.verticalCenter: parent.verticalCenter
         spacing: -1
@@ -284,6 +337,20 @@ Item {
           elide: Text.ElideRight
           color: Colors.text2
           font { family: "Inter"; pixelSize: 9 }
+        }
+      }
+
+      Rectangle {
+        anchors.verticalCenter: parent.verticalCenter
+        width: 22
+        height: 22
+        radius: 11
+        color: root.hovered ? Qt.rgba(Colors.primary.r, Colors.primary.g, Colors.primary.b, 0.22) : Qt.rgba(Colors.text1.r, Colors.text1.g, Colors.text1.b, 0.08)
+        Text {
+          anchors.centerIn: parent
+          text: root.mediaStatus === "Playing" ? "󰏤" : "󰐊"
+          color: Colors.text0
+          font { family: "JetBrainsMono Nerd Font"; pixelSize: 11 }
         }
       }
     }
@@ -319,10 +386,22 @@ Item {
     }
 
     MouseArea {
+      id: islandMouse
       anchors.fill: parent
       cursorShape: Qt.PointingHandCursor
+      hoverEnabled: true
       acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
+      onEntered: root.hovered = true
+      onExited: root.hovered = false
       onClicked: function(mouse) {
+        if (mouse.button === Qt.MiddleButton) {
+          settingsCenterProc.running = true
+          return
+        }
+        if (root.mode === "overlay" && mouse.button === Qt.LeftButton) {
+          toggleActiveOverlay()
+          return
+        }
         if (root.mode === "media" && mouse.button === Qt.RightButton) {
           mediaPauseProc.running = true
           return
@@ -333,6 +412,10 @@ Item {
             notificationDismissProc.command = ["makoctl", "dismiss", "-n", String(root.lastNotificationId), "--no-history"]
             notificationDismissProc.running = true
           }
+          return
+        }
+        if (mouse.button === Qt.RightButton) {
+          controlCenterProc.running = true
           return
         }
         if (root.mode === "media") {
@@ -350,7 +433,7 @@ Item {
           DynamicIslandState.open("recording")
           return
         }
-        controlCenterProc.running = true
+        launcherProc.running = true
       }
       onWheel: function(wheel) {
         if (root.mode !== "media") return
@@ -362,7 +445,7 @@ Item {
 
   Process {
     id: mediaProc
-    command: ["bash", "-c", "status=\"$(playerctl -p spotify status 2>/dev/null || true)\"; title=\"$(playerctl -p spotify metadata xesam:title 2>/dev/null || true)\"; artist=\"$(playerctl -p spotify metadata xesam:artist 2>/dev/null || true)\"; pos=\"$(playerctl -p spotify position 2>/dev/null || true)\"; len=\"$(playerctl -p spotify metadata mpris:length 2>/dev/null || true)\"; printf '%s\\t%s\\t%s\\t%s\\t%s\\n' \"$status\" \"$title\" \"$artist\" \"$pos\" \"$len\""]
+    command: ["bash", "-c", "status=\"$(playerctl -p spotify status 2>/dev/null || true)\"; title=\"$(playerctl -p spotify metadata xesam:title 2>/dev/null || true)\"; artist=\"$(playerctl -p spotify metadata xesam:artist 2>/dev/null || true)\"; pos=\"$(playerctl -p spotify position 2>/dev/null || true)\"; len=\"$(playerctl -p spotify metadata mpris:length 2>/dev/null || true)\"; art=\"$(playerctl -p spotify metadata mpris:artUrl 2>/dev/null || true)\"; art_path=\"\"; if [[ \"$art\" == file://* && -f \"${art#file://}\" ]]; then art_path=\"${art#file://}\"; elif [[ \"$art\" =~ ^https?:// ]]; then ext=\"$(printf '%s' \"$art\" | sed -E 's/[?#].*$//' | sed -En 's/.*(\\.(jpg|jpeg|png|webp))$/\\1/p' | tr '[:upper:]' '[:lower:]')\"; [ -n \"$ext\" ] || ext=.jpg; candidate=\"${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/strata/spotify-art/$(printf '%s' \"$art\" | sha1sum | cut -d' ' -f1)$ext\"; [ -f \"$candidate\" ] && art_path=\"$candidate\"; fi; printf '%s\\t%s\\t%s\\t%s\\t%s\\t%s\\n' \"$status\" \"$title\" \"$artist\" \"$pos\" \"$len\" \"$art_path\""]
     stdout: StdioCollector {
       onStreamFinished: {
         const parts = this.text.trim().split("\t")
@@ -372,8 +455,18 @@ Item {
         const pos = Number(parts[3] || 0)
         const len = Number(parts[4] || 0) / 1000000
         root.mediaProgress = len > 0 ? Math.max(0, Math.min(1, pos / len)) : 0
+        root.mediaArtPath = parts[5] || ""
+        root.mediaPositionText = root.formatSeconds(pos)
+        root.mediaDurationText = root.formatSeconds(len)
       }
     }
+  }
+
+  function formatSeconds(value) {
+    const total = Math.max(0, Math.floor(Number(value || 0)))
+    const minutes = Math.floor(total / 60)
+    const seconds = total % 60
+    return minutes + ":" + ("0" + seconds).slice(-2)
   }
 
   Process {
@@ -408,6 +501,9 @@ Item {
   }
 
   Process { id: controlCenterProc; command: ["quickshell", "ipc", "call", "controlcenter", "toggle"] }
+  Process { id: launcherProc; command: ["quickshell", "ipc", "call", "launcher", "toggle"] }
+  Process { id: settingsCenterProc; command: ["quickshell", "ipc", "call", "settingscenter", "toggle"] }
+  Process { id: overlayToggleProc; command: [] }
   Process { id: mediaPauseProc; command: ["playerctl", "-p", "spotify", "play-pause"] }
   Process { id: mediaNextProc; command: ["playerctl", "-p", "spotify", "next"] }
   Process { id: mediaPrevProc; command: ["playerctl", "-p", "spotify", "previous"] }

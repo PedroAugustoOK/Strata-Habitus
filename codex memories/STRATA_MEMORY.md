@@ -855,3 +855,99 @@ bash -n quickshell/scripts/apply-theme-state.sh
 ```
 - Known remaining warnings:
   - pre-existing `Keys` attachment warnings on some overlay `PanelWindow`s.
+
+## Session update - 2026-05-04 (Dynamic Island fixes + music refinement)
+
+### ActivSpot direction
+- User clarified that the Strata island is based conceptually on:
+  - `https://github.com/Devvvmn/ActivSpot`
+- Relevant ActivSpot idea retained:
+  - island/launcher illusion is driven by shared top-center positioning and state changes
+  - Strata should use its existing `OverlayState`/IPC instead of copying ActivSpot's `/tmp/qs_*` file IPC model
+
+### Notifications fixed
+- Root cause:
+  - `mako` backend/history was present on DBus, but `notification-history.js` did not recognize the current `makoctl` JSON keys:
+    - `app_name`
+    - `desktop_entry`
+  - older parser only looked for forms like `app-name` / `desktop-entry`
+- Fix:
+  - `quickshell/scripts/notification-history.js` now recognizes both snake_case and dashed notification fields
+- Product correction:
+  - `max-visible=0` is no longer used because it prevented the expected backend/history flow from behaving reliably
+  - generated `mako` config now keeps a transparent `1x1` notification surface:
+    - `max-visible=1`
+    - transparent background/border/text
+    - `width=1`
+    - `height=1`
+  - this preserves DBus/history without showing visible banners; the island is the visible notification surface
+- Startup hardening:
+  - `hyprland.conf` and `quickshell/shell.qml` now check for `org.freedesktop.Notifications` before starting `mako`
+  - fallback still starts `mako --config ~/dotfiles/generated/mako/config`
+  - `home.nix` now defines a declarative user service:
+    - `systemd.user.services.mako`
+
+### Island actions
+- `DynamicPill.qml` actions now include:
+  - left click idle -> launcher
+  - right click -> Control Center
+  - middle click -> Settings Center
+  - left click while overlay mode is active -> toggles/closes the active overlay
+  - media/notification/recording states still open their expanded card on left click
+  - media right click still play/pauses
+  - notification right click dismisses through `makoctl`
+
+### Overlay morph
+- `OverlayState.qml` now exposes helper functions for island-origin morph animation:
+  - `morphStartYOffset()`
+  - `morphStartXScale()`
+  - `morphStartYScale()`
+- Major overlays now open/close from the island position instead of only doing a subtle center scale:
+  - Launcher
+  - Clipboard
+  - App Center
+  - Update Center
+  - Theme Picker
+  - WallPickr
+  - Control Center
+  - Settings Center
+- This is the current Strata-native ActivSpot-style morph implementation.
+
+### Music island refinement
+- `DynamicIslandState.qml` now carries richer media state:
+  - `mediaArtPath`
+  - `mediaPositionText`
+  - `mediaDurationText`
+- `DynamicPill.qml` now resolves Spotify/MPRIS album art from:
+  - `mpris:artUrl`
+  - cached files under `${XDG_RUNTIME_DIR}/strata/spotify-art`
+- Compact island media state now shows:
+  - album art when available
+  - title
+  - artist
+  - play/pause affordance
+  - progress bar
+- `DynamicIslandCard.qml` media mode was redesigned:
+  - wider/taller card
+  - prominent album art
+  - title can use two lines
+  - artist/status chip
+  - progress bar with current time/duration
+  - larger previous/play-pause/next controls
+  - clicking album art attempts to focus Spotify through Hyprland
+
+### Validation
+- Quickshell QML load passed:
+```bash
+timeout 5 quickshell -p /home/ankh/dotfiles/quickshell/shell.qml --no-color
+```
+- Theme script syntax passed:
+```bash
+bash -n quickshell/scripts/apply-theme-state.sh
+```
+- `nix eval` confirmed the declarative `mako` service shape.
+- Real notification tests via `notify-send` were parsed correctly by:
+```bash
+node /home/ankh/dotfiles/quickshell/scripts/notification-history.js
+```
+- Quickshell was restarted after the changes and loaded successfully.

@@ -241,6 +241,19 @@ in {
   xdg.configFile."quickshell".source = link "quickshell";
   xdg.configFile."mako/config".source = link "generated/mako/config";
   xdg.configFile."satty/config.toml".source = link "generated/satty/config.toml";
+  systemd.user.services.mako = {
+    Unit = {
+      Description = "Strata notification backend";
+      After = [ "graphical-session.target" ];
+      PartOf = [ "graphical-session.target" ];
+    };
+    Service = {
+      ExecStart = "${pkgs.mako}/bin/mako --config ${config.home.homeDirectory}/dotfiles/generated/mako/config";
+      Restart = "on-failure";
+      RestartSec = 1;
+    };
+    Install.WantedBy = [ "graphical-session.target" ];
+  };
   xdg.configFile."gtk-3.0/gtk.css" = {
     source = link "generated/gtk/gtk-3.0/gtk.css";
     force = true;

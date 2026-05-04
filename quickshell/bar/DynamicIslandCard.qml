@@ -14,7 +14,7 @@ PanelWindow {
   focusable: true
   visible: DynamicIslandState.visible
 
-  readonly property real cardWidth: 380
+  readonly property real cardWidth: DynamicIslandState.mode === "media" ? 430 : 380
   readonly property real cardX: Math.max(12, Math.min(width - cardWidth - 12, OverlayState.islandCenterX - cardWidth / 2))
   readonly property real cardY: Math.max(44, OverlayState.islandY + OverlayState.islandHeight + 9)
   property bool opening: false
@@ -52,7 +52,7 @@ PanelWindow {
     x: root.cardX
     y: root.cardY
     width: root.cardWidth
-    height: DynamicIslandState.mode === "media" ? 164
+    height: DynamicIslandState.mode === "media" ? 232
       : DynamicIslandState.mode === "notification" ? 154
       : 124
     radius: 22
@@ -106,40 +106,64 @@ PanelWindow {
 
       Row {
         width: parent.width
-        spacing: 12
+        height: DynamicIslandState.mode === "media" ? 96 : 40
+        spacing: 14
 
         Rectangle {
-          width: 40
-          height: 40
-          radius: 20
+          id: artBox
+          width: DynamicIslandState.mode === "media" ? 96 : 40
+          height: width
+          radius: DynamicIslandState.mode === "media" ? 20 : 20
           color: Qt.rgba(card.modeTone.r, card.modeTone.g, card.modeTone.b, 0.16)
           clip: true
 
           Image {
-            id: notifImage
+            id: artworkImage
             anchors.fill: parent
-            anchors.margins: 6
-            source: DynamicIslandState.mode === "notification" ? DynamicIslandState.notificationIconSource : ""
-            fillMode: Image.PreserveAspectFit
+            anchors.margins: DynamicIslandState.mode === "media" ? 0 : 6
+            source: DynamicIslandState.mode === "media"
+              ? DynamicIslandState.mediaArtSource
+              : DynamicIslandState.mode === "notification"
+                ? DynamicIslandState.notificationIconSource
+                : ""
+            fillMode: DynamicIslandState.mode === "media" ? Image.PreserveAspectCrop : Image.PreserveAspectFit
             smooth: true
             visible: status === Image.Ready
           }
+          Rectangle {
+            anchors.fill: parent
+            visible: DynamicIslandState.mode === "media" && artworkImage.status === Image.Ready
+            gradient: Gradient {
+              orientation: Gradient.Vertical
+              GradientStop { position: 0.0; color: Qt.rgba(0, 0, 0, 0.0) }
+              GradientStop { position: 1.0; color: Qt.rgba(0, 0, 0, 0.30) }
+            }
+          }
           Text {
             anchors.centerIn: parent
-            visible: DynamicIslandState.mode !== "notification" || notifImage.status !== Image.Ready
+            visible: DynamicIslandState.mode === "media"
+              ? artworkImage.status !== Image.Ready
+              : DynamicIslandState.mode !== "notification" || artworkImage.status !== Image.Ready
             text: DynamicIslandState.mode === "media"
-              ? (DynamicIslandState.mediaStatus === "Playing" ? "󰏤" : "󰐊")
+              ? "󰓇"
               : DynamicIslandState.mode === "notification"
                 ? (DynamicIslandState.notificationUrgency === "high" ? "󰀪" : "󰂚")
                 : "󰻃"
             color: card.modeTone
-            font { family: "JetBrainsMono Nerd Font"; pixelSize: 18 }
+            font { family: "JetBrainsMono Nerd Font"; pixelSize: DynamicIslandState.mode === "media" ? 28 : 18 }
+          }
+          MouseArea {
+            anchors.fill: parent
+            enabled: DynamicIslandState.mode === "media"
+            cursorShape: Qt.PointingHandCursor
+            onClicked: focusSpotifyProc.running = true
           }
         }
 
         Column {
-          width: parent.width - 52
-          spacing: 2
+          width: parent.width - artBox.width - 14
+          height: parent.height
+          spacing: DynamicIslandState.mode === "media" ? 6 : 2
 
           Text {
             width: parent.width
@@ -150,7 +174,9 @@ PanelWindow {
                 : "Gravação de tela"
             color: Colors.text0
             elide: Text.ElideRight
-            font { family: "Inter"; pixelSize: 14; weight: Font.DemiBold }
+            maximumLineCount: DynamicIslandState.mode === "media" ? 2 : 1
+            wrapMode: DynamicIslandState.mode === "media" ? Text.WordWrap : Text.NoWrap
+            font { family: "Inter"; pixelSize: DynamicIslandState.mode === "media" ? 18 : 14; weight: Font.DemiBold }
           }
           Text {
             width: parent.width
@@ -161,7 +187,32 @@ PanelWindow {
                 : ("Tempo decorrido: " + DynamicIslandState.recordingElapsed)
             color: Colors.text2
             elide: Text.ElideRight
-            font { family: "Inter"; pixelSize: 11 }
+            font { family: "Inter"; pixelSize: DynamicIslandState.mode === "media" ? 12 : 11 }
+          }
+          Rectangle {
+            visible: DynamicIslandState.mode === "media"
+            width: statusRow.implicitWidth + 18
+            height: 26
+            radius: 13
+            color: Qt.rgba(card.modeTone.r, card.modeTone.g, card.modeTone.b, 0.14)
+            Row {
+              id: statusRow
+              anchors.centerIn: parent
+              spacing: 7
+              Rectangle {
+                anchors.verticalCenter: parent.verticalCenter
+                width: 7
+                height: 7
+                radius: 4
+                color: DynamicIslandState.mediaStatus === "Playing" ? Colors.success : Colors.warning
+              }
+              Text {
+                anchors.verticalCenter: parent.verticalCenter
+                text: DynamicIslandState.mediaStatus === "Playing" ? "Tocando" : "Pausado"
+                color: Colors.text0
+                font { family: "Inter"; pixelSize: 11; weight: Font.DemiBold }
+              }
+            }
           }
         }
       }
@@ -183,8 +234,27 @@ PanelWindow {
 
       Row {
         width: parent.width
-        height: 36
-        spacing: 8
+        height: 14
+        visible: DynamicIslandState.mode === "media"
+        Text {
+          width: parent.width / 2
+          text: DynamicIslandState.mediaPositionText
+          color: Colors.text3
+          font { family: "Inter"; pixelSize: 10; weight: Font.DemiBold }
+        }
+        Text {
+          width: parent.width / 2
+          horizontalAlignment: Text.AlignRight
+          text: DynamicIslandState.mediaDurationText
+          color: Colors.text3
+          font { family: "Inter"; pixelSize: 10; weight: Font.DemiBold }
+        }
+      }
+
+      Row {
+        width: parent.width
+        height: 42
+        spacing: 10
         visible: DynamicIslandState.mode === "media"
 
         Repeater {
@@ -195,15 +265,18 @@ PanelWindow {
           ]
           delegate: Rectangle {
             required property var modelData
-            width: (parent.width - 16) / 3
-            height: 36
-            radius: 14
-            color: actionMouse.containsMouse ? Qt.rgba(Colors.primary.r, Colors.primary.g, Colors.primary.b, 0.18) : Qt.rgba(Colors.text1.r, Colors.text1.g, Colors.text1.b, 0.06)
+            readonly property bool primary: modelData.action === "play-pause"
+            width: (parent.width - 20) / 3
+            height: 42
+            radius: 16
+            color: primary
+              ? (actionMouse.containsMouse ? Qt.rgba(Colors.primary.r, Colors.primary.g, Colors.primary.b, 0.34) : Qt.rgba(Colors.primary.r, Colors.primary.g, Colors.primary.b, 0.24))
+              : (actionMouse.containsMouse ? Qt.rgba(Colors.text1.r, Colors.text1.g, Colors.text1.b, 0.12) : Qt.rgba(Colors.text1.r, Colors.text1.g, Colors.text1.b, 0.06))
             Text {
               anchors.centerIn: parent
               text: modelData.icon
               color: Colors.text0
-              font { family: "JetBrainsMono Nerd Font"; pixelSize: 15 }
+              font { family: "JetBrainsMono Nerd Font"; pixelSize: parent.primary ? 18 : 15 }
             }
             MouseArea {
               id: actionMouse
@@ -252,5 +325,6 @@ PanelWindow {
   }
 
   Process { id: mediaActionProc; command: [] }
+  Process { id: focusSpotifyProc; command: ["hyprctl", "dispatch", "focuswindow", "spotify"] }
   Process { id: controlCenterProc; command: ["quickshell", "ipc", "call", "controlcenter", "toggle"] }
 }

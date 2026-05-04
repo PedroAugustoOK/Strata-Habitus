@@ -62,23 +62,19 @@ PanelWindow {
 
   SequentialAnimation {
     id: openAnim
-    NumberAnimation { target: panel; property: "opacity"; to: 1; duration: 80 }
     ParallelAnimation {
-      NumberAnimation { target: panelScale; property: "xScale"; from: 0.92; to: 1.02; duration: 220; easing.type: Easing.OutCubic }
-      NumberAnimation { target: panelScale; property: "yScale"; from: 0.92; to: 1.02; duration: 220; easing.type: Easing.OutCubic }
-    }
-    ParallelAnimation {
-      NumberAnimation { target: panelScale; property: "xScale"; to: 1.0; duration: 80; easing.type: Easing.InOutQuad }
-      NumberAnimation { target: panelScale; property: "yScale"; to: 1.0; duration: 80; easing.type: Easing.InOutQuad }
+      NumberAnimation { target: panel; property: "opacity"; from: 0; to: 1; duration: 120; easing.type: Easing.OutQuad }
+      NumberAnimation { target: panelScale; property: "xScale"; from: OverlayState.morphStartXScale(panel.width); to: 1; duration: 260; easing.type: Easing.OutCubic }
+      NumberAnimation { target: panelScale; property: "yScale"; from: OverlayState.morphStartYScale(panel.height); to: 1; duration: 260; easing.type: Easing.OutCubic }
     }
   }
   SequentialAnimation {
     id: closeAnim
     ParallelAnimation {
-      NumberAnimation { target: panelScale; property: "xScale"; to: 0.92; duration: 160; easing.type: Easing.InCubic }
-      NumberAnimation { target: panelScale; property: "yScale"; to: 0.92; duration: 160; easing.type: Easing.InCubic }
+      NumberAnimation { target: panelScale; property: "xScale"; to: OverlayState.morphStartXScale(panel.width); duration: 150; easing.type: Easing.InCubic }
+      NumberAnimation { target: panelScale; property: "yScale"; to: OverlayState.morphStartYScale(panel.height); duration: 150; easing.type: Easing.InCubic }
+      NumberAnimation { target: panel; property: "opacity"; to: 0; duration: 110; easing.type: Easing.InQuad }
     }
-    NumberAnimation { target: panel; property: "opacity"; to: 0; duration: 60 }
     ScriptAction { script: root.visible = false }
   }
 

@@ -595,44 +595,45 @@ layer=overlay
 anchor=top-right
 on-button-left=dismiss
 on-button-right=none
-outer-margin=6,10,0,0
-margin=10,14
-padding=10,12
-width=332
-border-size=1
-border-radius=14
-background-color=$PANEL_BACKGROUND
-border-color=$PRIMARY
-text-color=$TEXT1
+outer-margin=0
+margin=0
+padding=0
+width=1
+height=1
+border-size=0
+border-radius=0
+background-color=#00000000
+border-color=#00000000
+text-color=#00000000
 font=JetBrains Mono 9
 default-timeout=3000
-max-visible=0
+max-visible=1
 max-history=100
-max-icon-size=32
+max-icon-size=1
 icon-location=left
-icon-border-radius=8
+icon-border-radius=0
 text-alignment=left
 markup=1
 actions=1
 history=1
-progress-color=over $PRIMARY
+progress-color=over #00000000
 icons=1
 icon-path=$HOME/.local/share/icons:/run/current-system/sw/share/icons:/run/current-system/sw/share/icons/hicolor
 
 format=<span size="x-small" color="$SECONDARY">%a</span>\n<b>%s</b>\n<span size="x-small" color="$TEXT3">%b</span>
 
 [urgency=low]
-border-color=$TEXT3
-text-color=$TEXT3
+border-color=#00000000
+text-color=#00000000
 default-timeout=3000
 
 [urgency=normal]
-border-color=$PRIMARY
+border-color=#00000000
 
 [urgency=high]
-border-size=2
-border-color=$DANGER
-text-color=$TEXT0
+border-size=0
+border-color=#00000000
+text-color=#00000000
 default-timeout=9000
 
 [mode=do-not-disturb]

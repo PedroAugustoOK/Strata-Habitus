@@ -9,6 +9,9 @@ QtObject {
   property string mediaTitle: ""
   property string mediaArtist: ""
   property real mediaProgress: 0
+  property string mediaArtPath: ""
+  property string mediaPositionText: "--:--"
+  property string mediaDurationText: "--:--"
 
   property int notificationId: 0
   property string notificationApp: ""
@@ -23,6 +26,9 @@ QtObject {
   readonly property string notificationIconSource: notificationIconPath === ""
     ? ""
     : notificationIconPath.indexOf("file://") === 0 ? notificationIconPath : "file://" + notificationIconPath
+  readonly property string mediaArtSource: mediaArtPath === ""
+    ? ""
+    : mediaArtPath.indexOf("file://") === 0 ? mediaArtPath : "file://" + mediaArtPath
 
   function open(nextMode) {
     mode = nextMode || mode

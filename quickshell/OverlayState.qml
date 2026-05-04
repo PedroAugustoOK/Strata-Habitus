@@ -30,4 +30,22 @@ QtObject {
     islandWidth = width
     islandHeight = height
   }
+
+  function morphStartYOffset(windowHeight) {
+    if (windowHeight <= 0 || islandCenterY <= 0)
+      return -260
+    return Math.max(-windowHeight * 0.48, Math.min(windowHeight * 0.48, islandCenterY - windowHeight / 2))
+  }
+
+  function morphStartXScale(targetWidth) {
+    if (targetWidth <= 0 || islandWidth <= 0)
+      return 0.22
+    return Math.max(0.16, Math.min(0.36, islandWidth / targetWidth))
+  }
+
+  function morphStartYScale(targetHeight) {
+    if (targetHeight <= 0 || islandHeight <= 0)
+      return 0.08
+    return Math.max(0.05, Math.min(0.16, islandHeight / targetHeight))
+  }
 }

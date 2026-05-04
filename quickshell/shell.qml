@@ -48,6 +48,8 @@ ShellRoot {
   readonly property string spotifyNotifyScript: Qt.resolvedUrl("./scripts/spotify-notify.sh").toString().replace("file://", "")
 
   Component.onCompleted: {
+    makoBackend.command = ["/run/current-system/sw/bin/bash", "-lc", "busctl --user --quiet status org.freedesktop.Notifications >/dev/null 2>&1 || systemctl --user start mako 2>/dev/null || exec /run/current-system/sw/bin/mako --config /home/ankh/dotfiles/generated/mako/config"]
+    makoBackend.running = true
     clipboardDaemon.command = ["/run/current-system/sw/bin/bash", clipboardDaemonScript, "start"]
     clipboardDaemon.running = true
     notificationIconDaemon.command = ["/run/current-system/sw/bin/bash", notificationIconDaemonScript, "start"]
@@ -77,6 +79,10 @@ ShellRoot {
     }
   }
 
+  Process {
+    id: makoBackend
+    command: []
+  }
   Process {
     id: spotifyNotify
     command: []

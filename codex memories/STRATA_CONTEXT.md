@@ -684,3 +684,114 @@ timeout 5 quickshell -p /home/ankh/dotfiles/quickshell/shell.qml --no-color
 ```bash
 bash -n quickshell/scripts/apply-theme-state.sh
 ```
+
+## Session continuation point - 2026-05-04 (Dynamic Island fixes + music card)
+
+### Conceptual source
+- User clarified the island should continue in the direction of:
+  - `https://github.com/Devvvmn/ActivSpot`
+- The useful ActivSpot concept is the morph illusion:
+  - island and overlay share top-center origin/state
+  - island gives way as launcher/overlay appears
+- Strata implementation should stay native:
+  - use `OverlayState`
+  - use existing Quickshell IPC handlers
+  - do not switch to ActivSpot's `/tmp/qs_*` file IPC model
+
+### Current Dynamic Island files
+- Main island files:
+  - `quickshell/bar/DynamicPill.qml`
+  - `quickshell/bar/DynamicIslandCard.qml`
+  - `quickshell/DynamicIslandState.qml`
+  - `quickshell/OverlayState.qml`
+- Important behavior:
+  - idle left click opens launcher
+  - right click opens Control Center
+  - middle click opens Settings Center
+  - media/notification/recording left click opens expanded card
+  - overlay mode left click toggles the active overlay
+
+### Notification state
+- Mako remains the DBus/history backend.
+- The visible notification surface is the island, not `mako`.
+- Important correction:
+  - do not use `max-visible=0`
+  - generated mako config now uses a transparent `1x1` notification surface with:
+    - `max-visible=1`
+    - `width=1`
+    - `height=1`
+    - transparent background/border/text
+- Reason:
+  - `makoctl history -j` and active/history behavior need a real visible slot even if it is visually hidden.
+- Parser fix:
+  - `notification-history.js` must recognize current `makoctl` keys:
+    - `app_name`
+    - `desktop_entry`
+  - as well as older/dashed variants.
+- Startup:
+  - `home.nix` now declares `systemd.user.services.mako`
+  - `hyprland.conf` and `shell.qml` check `org.freedesktop.Notifications` before attempting to start mako
+
+### Overlay morph state
+- `OverlayState.qml` now has morph helper functions:
+  - `morphStartYOffset(windowHeight)`
+  - `morphStartXScale(targetWidth)`
+  - `morphStartYScale(targetHeight)`
+- Major overlays animate from the island geometry:
+  - Launcher
+  - Clipboard
+  - App Center
+  - Update Center
+  - Theme Picker
+  - WallPickr
+  - Control Center
+  - Settings Center
+
+### Music player state
+- `DynamicIslandState.qml` media payload now includes:
+  - `mediaArtPath`
+  - `mediaPositionText`
+  - `mediaDurationText`
+- `DynamicPill.qml` media polling now reads Spotify via `playerctl`:
+  - status
+  - title
+  - artist
+  - position
+  - length
+  - `mpris:artUrl`
+- Album art resolution:
+  - direct `file://` art paths when present
+  - cached remote art under:
+    - `${XDG_RUNTIME_DIR}/strata/spotify-art`
+- Compact island player:
+  - album art
+  - title/artist
+  - play-pause affordance
+  - progress bar
+- Expanded media card:
+  - wider/taller card
+  - prominent album art
+  - title with up to two lines
+  - artist and status chip
+  - progress with current time/duration
+  - previous/play-pause/next controls
+  - album-art click focuses Spotify
+
+### Validation performed
+- Quickshell config load:
+```bash
+timeout 5 quickshell -p /home/ankh/dotfiles/quickshell/shell.qml --no-color
+```
+- Theme script syntax:
+```bash
+bash -n quickshell/scripts/apply-theme-state.sh
+```
+- Notification parser was validated against real `notify-send` entries.
+- Active Quickshell instance was restarted and loaded successfully after the music-card changes.
+
+### Next likely refinement
+- Visually inspect the expanded music card with real playback and tune:
+  - card height/spacing
+  - progress bar position
+  - title wrapping
+  - whether album art should also double-click or right-click to launch/focus Spotify.

@@ -81,8 +81,10 @@ function looksLikeNotification(node) {
       "summary" in node ||
       "body" in node ||
       "app-name" in node ||
+      "app_name" in node ||
       "appName" in node ||
-      "desktop-entry" in node
+      "desktop-entry" in node ||
+      "desktop_entry" in node
     )
   );
 }

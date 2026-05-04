@@ -7,11 +7,41 @@ bin_dir="/run/current-system/sw/bin"
 cache_dir="${XDG_CACHE_HOME:-$HOME/.cache}/strata/clipboard"
 mkdir -p "$cache_dir"
 
+detect_image_mime() {
+  local path="$1"
+  local signature
+  signature="$("$bin_dir/od" -An -tx1 -N 12 "$path" | tr -d ' \n')"
+
+  case "$signature" in
+    89504e470d0a1a0a*) echo "image/png" ;;
+    ffd8ff*) echo "image/jpeg" ;;
+    474946383761*|474946383961*) echo "image/gif" ;;
+    424d*) echo "image/bmp" ;;
+    52494646????????57454250*) echo "image/webp" ;;
+    *)
+      if "$bin_dir/grep" -aq "<svg" "$path"; then
+        echo "image/svg+xml"
+      else
+        echo "application/octet-stream"
+      fi
+      ;;
+  esac
+}
+
+clipboard_offers_image() {
+  "$bin_dir/wl-paste" --list-types 2>/dev/null \
+    | "$bin_dir/grep" -Eiq '^image/(png|jpeg|jpg|webp|gif|bmp|svg\+xml|svg)'
+}
+
 tmp="$(mktemp)"
 trap 'rm -f "$tmp"' EXIT
 cat > "$tmp"
 
 if [ ! -s "$tmp" ]; then
+  exit 0
+fi
+
+if [ "$kind" = "text" ] && clipboard_offers_image; then
   exit 0
 fi
 
@@ -52,24 +82,3 @@ else
 fi
 
 echo $! > "$pid_file"
-
-detect_image_mime() {
-  local path="$1"
-  local signature
-  signature="$("$bin_dir/od" -An -tx1 -N 12 "$path" | tr -d ' \n')"
-
-  case "$signature" in
-    89504e470d0a1a0a*) echo "image/png" ;;
-    ffd8ff*) echo "image/jpeg" ;;
-    474946383761*|474946383961*) echo "image/gif" ;;
-    424d*) echo "image/bmp" ;;
-    52494646????????57454250*) echo "image/webp" ;;
-    *)
-      if "$bin_dir/grep" -aq "<svg" "$path"; then
-        echo "image/svg+xml"
-      else
-        echo "application/octet-stream"
-      fi
-      ;;
-  esac
-}

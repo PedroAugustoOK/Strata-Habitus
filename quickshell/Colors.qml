@@ -36,6 +36,36 @@ QtObject {
   property real accentStrength: 1.0
   property real panelOpacity: 0.98
   property real radiusScale: 1.0
+  property int themeTransitionDuration: 220
+
+  Behavior on bg0 { ColorAnimation { duration: root.themeTransitionDuration; easing.type: Easing.OutCubic } }
+  Behavior on bg1 { ColorAnimation { duration: root.themeTransitionDuration; easing.type: Easing.OutCubic } }
+  Behavior on bg2 { ColorAnimation { duration: root.themeTransitionDuration; easing.type: Easing.OutCubic } }
+  Behavior on bg3 { ColorAnimation { duration: root.themeTransitionDuration; easing.type: Easing.OutCubic } }
+  Behavior on text0 { ColorAnimation { duration: root.themeTransitionDuration; easing.type: Easing.OutCubic } }
+  Behavior on text1 { ColorAnimation { duration: root.themeTransitionDuration; easing.type: Easing.OutCubic } }
+  Behavior on text2 { ColorAnimation { duration: root.themeTransitionDuration; easing.type: Easing.OutCubic } }
+  Behavior on text3 { ColorAnimation { duration: root.themeTransitionDuration; easing.type: Easing.OutCubic } }
+  Behavior on border { ColorAnimation { duration: root.themeTransitionDuration; easing.type: Easing.OutCubic } }
+  Behavior on accent { ColorAnimation { duration: root.themeTransitionDuration; easing.type: Easing.OutCubic } }
+  Behavior on accentDim { ColorAnimation { duration: root.themeTransitionDuration; easing.type: Easing.OutCubic } }
+  Behavior on primary { ColorAnimation { duration: root.themeTransitionDuration; easing.type: Easing.OutCubic } }
+  Behavior on secondary { ColorAnimation { duration: root.themeTransitionDuration; easing.type: Easing.OutCubic } }
+  Behavior on success { ColorAnimation { duration: root.themeTransitionDuration; easing.type: Easing.OutCubic } }
+  Behavior on warning { ColorAnimation { duration: root.themeTransitionDuration; easing.type: Easing.OutCubic } }
+  Behavior on danger { ColorAnimation { duration: root.themeTransitionDuration; easing.type: Easing.OutCubic } }
+  Behavior on info { ColorAnimation { duration: root.themeTransitionDuration; easing.type: Easing.OutCubic } }
+  Behavior on barBackground { ColorAnimation { duration: root.themeTransitionDuration; easing.type: Easing.OutCubic } }
+  Behavior on barPill { ColorAnimation { duration: root.themeTransitionDuration; easing.type: Easing.OutCubic } }
+  Behavior on barBorder { ColorAnimation { duration: root.themeTransitionDuration; easing.type: Easing.OutCubic } }
+  Behavior on barActive { ColorAnimation { duration: root.themeTransitionDuration; easing.type: Easing.OutCubic } }
+  Behavior on panelBackground { ColorAnimation { duration: root.themeTransitionDuration; easing.type: Easing.OutCubic } }
+  Behavior on panelRaised { ColorAnimation { duration: root.themeTransitionDuration; easing.type: Easing.OutCubic } }
+  Behavior on panelBorder { ColorAnimation { duration: root.themeTransitionDuration; easing.type: Easing.OutCubic } }
+  Behavior on selection { ColorAnimation { duration: root.themeTransitionDuration; easing.type: Easing.OutCubic } }
+  Behavior on accentStrength { NumberAnimation { duration: root.themeTransitionDuration; easing.type: Easing.OutCubic } }
+  Behavior on panelOpacity { NumberAnimation { duration: root.themeTransitionDuration; easing.type: Easing.OutCubic } }
+  Behavior on radiusScale { NumberAnimation { duration: root.themeTransitionDuration; easing.type: Easing.OutCubic } }
 
   property var _theme: ({})
   property var _preferences: ({})

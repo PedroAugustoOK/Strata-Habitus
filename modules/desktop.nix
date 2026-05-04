@@ -41,6 +41,7 @@ in {
     theme          = "strata";
     settings.Theme.ThemeDir    = "/var/lib";
     settings.Theme.CursorTheme = "Bibata-Modern-Classic";
+    settings.Theme.CursorSize  = "24";
     settings.Users.RememberLastSession = false;
     settings.Users.RememberLastUser    = false;
     package = pkgs.kdePackages.sddm.override {
@@ -84,6 +85,7 @@ in {
     XCURSOR_SIZE                        = "24";
     STARSHIP_CONFIG                     = "/home/${username}/dotfiles/generated/starship/starship.toml";
   };
+  environment.pathsToLink = [ "/share/icons" ];
 
   qt = {
     enable        = true;
@@ -99,6 +101,21 @@ in {
     cp -f ${./sddm-theme/Main.qml} /var/lib/strata/Main.qml
     cp -f ${./sddm-theme/metadata.desktop} /var/lib/strata/metadata.desktop
     cp -f ${./sddm-theme/theme.conf} /var/lib/strata/theme.conf
-    cp -f ${../wallpaper.jpg} /var/lib/strata/background.jpg
+    wallpaper=${../wallpaper.jpg}
+    current_wallpaper="/home/${username}/dotfiles/state/current-wallpaper"
+    if [ -r "$current_wallpaper" ]; then
+      candidate="$(${pkgs.coreutils}/bin/head -n1 "$current_wallpaper" 2>/dev/null || true)"
+      if [ -n "$candidate" ] && [ -r "$candidate" ]; then
+        wallpaper="$candidate"
+      fi
+    fi
+    ${pkgs.imagemagick}/bin/magick "$wallpaper" \
+      -auto-orient \
+      -resize 20% \
+      -blur 0x10 \
+      -resize 1920x1080^ \
+      -gravity center \
+      -extent 1920x1080 \
+      /var/lib/strata/background.jpg 2>/dev/null || cp -f ${../wallpaper.jpg} /var/lib/strata/background.jpg
   '';
 }

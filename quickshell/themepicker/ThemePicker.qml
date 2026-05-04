@@ -56,13 +56,7 @@ PanelWindow {
     themeListProc.running = true
   }
 
-  function toggle() {
-    if (visible) {
-      closeAnim.start()
-      return
-    }
-
-    loadThemes()
+  function selectCurrentTheme() {
     selectedIdx = 0
     for (let i = 0; i < themes.length; i += 1) {
       if (themes[i].name === currentTheme) {
@@ -70,6 +64,17 @@ PanelWindow {
         break
       }
     }
+    if (visible && themeStrip) themeStrip.positionViewAtIndex(selectedIdx, ListView.Center)
+  }
+
+  function toggle() {
+    if (visible) {
+      closeAnim.start()
+      return
+    }
+
+    loadThemes()
+    selectCurrentTheme()
 
     visible = true
     transitionOpacity = 0
@@ -484,22 +489,6 @@ PanelWindow {
                 }
               }
             }
-
-            MouseArea {
-              anchors.fill: parent
-              hoverEnabled: true
-              onEntered: {
-                root.selectedIdx = index
-                themeStrip.positionViewAtIndex(index, ListView.Center)
-              }
-              onClicked: {
-                if (root.selectedIdx === index) root.applyThemeSelection(modelData)
-                else {
-                  root.selectedIdx = index
-                  themeStrip.positionViewAtIndex(index, ListView.Center)
-                }
-              }
-            }
           }
         }
       }
@@ -547,12 +536,7 @@ PanelWindow {
         if (line === "") return
         try {
           root.themes = JSON.parse(line)
-          for (let i = 0; i < root.themes.length; i += 1) {
-            if (root.themes[i].name === root.currentTheme) {
-              root.selectedIdx = i
-              break
-            }
-          }
+          root.selectCurrentTheme()
         } catch (e) {
           console.log("theme list parse error:", e.message)
         }

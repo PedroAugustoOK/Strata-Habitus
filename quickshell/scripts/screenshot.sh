@@ -86,13 +86,14 @@ wait_overlay_geometry() {
   command -v quickshell >/dev/null 2>&1 || return 1
 
   local request state_dir result_file line
+  OVERLAY_GEOM=""
   request="shot-$$-$RANDOM-$(date '+%s%N')"
   state_dir="${XDG_RUNTIME_DIR:-/tmp}/strata-screenshot"
   result_file="$state_dir/$request.geom"
   rm -f "$result_file"
   mkdir -p "$state_dir"
 
-  if ! quickshell ipc call screenshot select "$request" >/dev/null 2>&1; then
+  if ! quickshell ipc call screenshot select "$request"; then
     return 1
   fi
 
@@ -103,14 +104,14 @@ wait_overlay_geometry() {
       if [ "$line" = "cancel" ]; then
         return 130
       fi
-      printf '%s\n' "$line"
+      OVERLAY_GEOM="$line"
       return 0
     fi
     sleep 0.02
   done
 
   rm -f "$result_file"
-  return 1
+  return 130
 }
 
 capture_area_with_overlay() {
@@ -120,12 +121,13 @@ capture_area_with_overlay() {
 
   grim_bin="$(find_grim_bin)" || return 1
 
-  geom="$(wait_overlay_geometry)"
+  wait_overlay_geometry
   local code=$?
   if [ "$code" -ne 0 ]; then
     [ "$code" -eq 130 ] && return 130
     return 1
   fi
+  geom="$OVERLAY_GEOM"
 
   case "$geom" in
     *,*" "*x*) ;;
@@ -213,13 +215,16 @@ STAMP="$(date '+%Y-%m-%d_%H-%M-%S')"
 FILE="$SCREENSHOT_DIR/Strata_${STAMP}.png"
 
 if [ "$TARGET" = "area" ]; then
-  if capture_area_with_overlay "$FILE" "$ACTION"; then
-    exit 0
-  fi
+  set +e
+  capture_area_with_overlay "$FILE" "$ACTION"
   overlay_status=$?
-  if [ "$overlay_status" -eq 130 ]; then
-    exit 0
-  fi
+  set -e
+
+  case "$overlay_status" in
+    0|130)
+      exit 0
+      ;;
+  esac
 fi
 
 export SLURP_ARGS

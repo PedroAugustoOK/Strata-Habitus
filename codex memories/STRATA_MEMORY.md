@@ -658,3 +658,114 @@ sudo nixos-generate-config --show-hardware-config > ~/dotfiles/hosts/desktop/har
   - WallPickr grid changes
   - Zephyr animation changes
   - screenshot selector implementation
+
+## Session update - 2026-05-04 (login polish + Codex close guard + theme transitions)
+
+### SDDM/login
+- User reported the previous session was interrupted and asked to inspect/fix login behavior.
+- Implemented current wallpaper propagation to SDDM:
+  - `modules/desktop.nix`
+    - activation now reads `/home/ankh/dotfiles/state/current-wallpaper`
+    - generates `/var/lib/strata/background.jpg` with strong ImageMagick blur
+    - fallback remains repo `wallpaper.jpg`
+  - `quickshell/scripts/apply-theme-state.sh`
+    - added `render_sddm_background()`
+    - updates `/var/lib/strata/background.jpg` when wallpaper/theme changes
+- Implemented likely cursor fix for SDDM:
+  - `services.displayManager.sddm.settings.Theme.CursorSize = "24"`
+  - `environment.pathsToLink = [ "/share/icons" ]`
+- Reason:
+  - live `/run/current-system/sw/share/icons` exposed only generic icon dirs, so SDDM likely could not see Bibata cursor assets.
+
+### Codex close guard
+- Initial broad guard blocking all terminal close was removed after user clarified the requirement.
+- Final behavior:
+  - `Super+W` closes windows normally
+  - if the active terminal process tree includes `codex`, first press warns and does not close
+  - second press within 5 seconds confirms close
+- Files:
+  - `hyprland.conf`
+  - `quickshell/scripts/codex-close-guard.sh`
+- Validation:
+  - `bash -n quickshell/scripts/codex-close-guard.sh`
+  - `hyprctl reload`
+
+### Smooth theme transitions
+- User wanted theme changes to feel modern, smooth, and fast.
+- Implemented:
+  - `quickshell/Colors.qml`
+    - global color/number property animations for theme properties
+    - `themeTransitionDuration = 220`
+    - `Easing.OutCubic`
+  - `quickshell/scripts/apply-theme-state.sh`
+    - awww wallpaper transition changed to fast centered grow:
+      - `grow`
+      - `0.34s`
+      - `144fps`
+      - `step=90`
+      - bezier `0.23,1,0.61,1`
+    - wallpaper application moved to the beginning of `--apply-wallpaper`
+    - prevents delayed wallpaper change after GTK/kitty/mako work
+- Validation:
+  - `bash -n quickshell/scripts/apply-theme-state.sh`
+  - Quickshell loaded with the updated `Colors.qml`
+  - tested real switches:
+    - `rosepine -> nord -> rosepine`
+  - restored wallpaper:
+    - `/home/ankh/dotfiles/wallpapers/rosepine/Rosepine3.jpg`
+  - confirmed only one Quickshell instance remained in Hyprland layers.
+
+## Session update - 2026-05-04 (Caelestia shell research + future Strata frame)
+
+### User direction
+- User asked to research how Caelestia Shell makes windows/panels and borders feel like they expand from corners and integrate with the system instead of floating.
+- User approved pursuing that direction for Strata.
+
+### Research summary
+- Caelestia Shell:
+  - Quickshell-based desktop shell for Hyprland
+  - QML/Qt6 UI with C++ plugins for deeper integration/deformation
+  - main repo: `caelestia-dots/shell`
+- Relevant source inspected:
+  - `shell.qml`
+  - `modules/drawers/Drawers.qml`
+  - `modules/drawers/ContentWindow.qml`
+  - `modules/drawers/Panels.qml`
+  - `modules/drawers/Backgrounds.qml`
+  - `modules/drawers/Interactions.qml`
+  - `modules/drawers/Exclusions.qml`
+  - `modules/launcher/Wrapper.qml`
+  - `modules/launcher/Background.qml`
+  - `modules/sidebar/Wrapper.qml`
+  - `modules/sidebar/Background.qml`
+- Key architecture:
+  - fullscreen transparent Quickshell `PanelWindow` per monitor
+  - persistent bar/border/drawer frame belongs to that window
+  - drawer contents are anchored `Item`s, not separate floating windows
+  - drawers animate through `offsetScale`
+  - backgrounds are drawn as connected shapes through `ShapePath`
+  - Caelestia also uses `Caelestia.Blobs` for organic deformation/smoothing
+  - interactions are edge/corner driven through hover and drag thresholds
+
+### Future implementation plan for Strata
+- Do not copy Caelestia wholesale.
+- Build a Strata-native integrated shell frame:
+  1. Add a fullscreen transparent `ShellFrame` layer.
+  2. Move current border pieces into that layer.
+  3. Add edge-attached drawer wrappers with shared animation tokens.
+  4. Start with QML `Shape` / `ShapePath` connected backgrounds.
+  5. Convert overlays gradually:
+     - launcher from bottom
+     - settings/update/app center from right/top
+     - theme picker and wallpickr as integrated drawers
+  6. Preserve Strata visual identity and current theme system.
+  7. Consider plugin/blob deformation only after QML-only implementation is proven.
+- Target feel:
+  - panels expand from the screen frame/corners
+  - borders and panels are one cohesive shell surface
+  - fewer floating-card overlays
+
+### Publish intent
+- User requested:
+  - record everything in memory/context
+  - push complete current repo state to GitHub

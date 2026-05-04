@@ -490,3 +490,113 @@ cd ~/dotfiles && ./strata-apply-channel.sh
   - save everything in context/memory files
   - push to GitHub
 - The current publish should include the complete working tree snapshot, not only the screenshot selector, because the repo already contained many real local edits.
+
+## Session continuation point - 2026-05-04 (login polish, theme transitions, Caelestia direction)
+
+### Safety and terminal close behavior
+- User clarified the desired safety behavior:
+  - `Super+W` may close terminals normally
+  - but should protect a terminal only when it is running Codex
+  - "encerrar" referred to accidental Codex/session interruption, not Hyprland `Super+P`
+- Implemented scoped guard:
+  - `hyprland.conf`
+    - `Super+W` now calls `quickshell/scripts/codex-close-guard.sh`
+  - `quickshell/scripts/codex-close-guard.sh`
+    - reads active Hyprland window PID
+    - walks child process tree through `/proc` / `pgrep -P`
+    - if no `codex` process is found, dispatches `killactive`
+    - if `codex` is found, first `Super+W` warns via notification
+    - second `Super+W` within 5 seconds confirms close
+- `Super+P` remains `exit`; the earlier broad guard was removed.
+
+### SDDM/login polish
+- User requested:
+  - SDDM wallpaper should follow the current active theme wallpaper
+  - SDDM wallpaper should be strongly blurred
+  - mouse cursor should appear/work on the login screen
+- Relevant implementation:
+  - `modules/desktop.nix`
+    - SDDM activation reads `/home/ankh/dotfiles/state/current-wallpaper`
+    - generates `/var/lib/strata/background.jpg` through ImageMagick with:
+      - `-auto-orient`
+      - `-resize 20%`
+      - `-blur 0x10`
+      - crop/extent to `1920x1080`
+    - `settings.Theme.CursorSize = "24"`
+    - `environment.pathsToLink = [ "/share/icons" ]`
+  - `quickshell/scripts/apply-theme-state.sh`
+    - `render_sddm_background()` updates `/var/lib/strata/background.jpg` from the current wallpaper during theme/wallpaper changes
+- Rationale for cursor fix:
+  - live `/run/current-system/sw/share/icons` only showed `hicolor`/`icons`, so SDDM likely could not resolve the configured Bibata cursor theme from the system profile.
+
+### Theme transition behavior
+- User wanted theme switching to feel modern, smooth, and fast from wallpaper through colors.
+- Implemented:
+  - `quickshell/Colors.qml`
+    - added global `Behavior` animations for all primary theme color properties
+    - duration: `220ms`
+    - easing: `Easing.OutCubic`
+  - `quickshell/scripts/apply-theme-state.sh`
+    - wallpaper transition changed to:
+      - `transition-type=grow`
+      - `transition-duration=0.34`
+      - `transition-fps=144`
+      - `transition-step=90`
+      - `transition-pos=0.5,0.5`
+      - `transition-bezier=0.23,1,0.61,1`
+    - wallpaper is now applied early in `--apply-wallpaper`, immediately after reading `current-wallpaper`
+    - final wallpaper application is skipped if already applied early
+- Result:
+  - wallpaper now starts changing together with Quickshell color interpolation instead of after the heavier GTK/kitty/mako/portal work.
+- Validation:
+  - `bash -n quickshell/scripts/apply-theme-state.sh`
+  - real theme switch tests:
+    - `rosepine -> nord -> rosepine`
+    - restored wallpaper to `wallpapers/rosepine/Rosepine3.jpg`
+  - Quickshell was reloaded and duplicate old instance was removed.
+
+### Caelestia Shell research and future implementation direction
+- User likes Caelestia's shell because panels feel integrated into the screen frame instead of floating as separate cards.
+- Research sources inspected:
+  - `caelestia-dots/shell` GitHub repo
+  - DeepWiki pages for Caelestia architecture and Hyprland integration
+  - raw source files:
+    - `shell.qml`
+    - `modules/drawers/Drawers.qml`
+    - `modules/drawers/ContentWindow.qml`
+    - `modules/drawers/Panels.qml`
+    - `modules/drawers/Backgrounds.qml`
+    - `modules/drawers/Interactions.qml`
+    - `modules/drawers/Exclusions.qml`
+    - `modules/launcher/Wrapper.qml`
+    - `modules/launcher/Background.qml`
+    - `modules/sidebar/Wrapper.qml`
+    - `modules/sidebar/Background.qml`
+- Main finding:
+  - Caelestia's effect is architectural, not just an animation preset.
+  - It uses a fullscreen transparent Quickshell `PanelWindow` per monitor.
+  - A unified drawer/background surface is drawn inside that window.
+  - Panels are `Item`s anchored to screen edges and animated by an `offsetScale`.
+  - Backgrounds are drawn with `ShapePath` and, in Caelestia, enhanced through `Caelestia.Blobs` plugin deformation/smoothing.
+  - Interaction zones on edges/corners decide when drawers open via hover/drag/shortcuts.
+- Future Strata implementation plan:
+  1. Build a Strata `ShellFrame` fullscreen transparent Quickshell layer.
+  2. Move existing screen border pieces into that unified frame.
+  3. Introduce drawer wrappers anchored to edges:
+     - launcher from bottom
+     - settings/update/app center from right or top
+     - theme picker / wallpickr as integrated drawers instead of floating cards
+  4. Use QML `Shape`/`ShapePath` first for connected rounded backgrounds.
+  5. Keep Strata's current visual language; do not clone Caelestia wholesale.
+  6. Only consider plugin-level blob deformation later if QML shapes are not enough.
+- Important design goal:
+  - panels should feel like they expand out of the Strata screen frame/corners, not like separate floating overlays.
+
+### Publish intent
+- User asked to record everything in memory/context and push the complete repo state to GitHub.
+- Current publish should include:
+  - screenshot selector work still pending from previous memory
+  - SDDM/login wallpaper/cursor fixes
+  - Codex close guard
+  - smooth theme/wallpaper transition work
+  - Caelestia research notes and future implementation direction

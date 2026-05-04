@@ -351,11 +351,11 @@ ensure_wayland_env() {
 
 apply_wallpaper() {
   local wallpaper="$1"
-  local transition_type="center"
-  local transition_duration="0.42"
+  local transition_type="grow"
+  local transition_duration="0.34"
   local transition_fps="144"
-  local transition_step="28"
-  local transition_bezier="0.16,1,0.30,1"
+  local transition_step="90"
+  local transition_bezier="0.23,1,0.61,1"
 
   ensure_wayland_env
   log "apply-theme-state wallpaper=$wallpaper xdg_runtime_dir=${XDG_RUNTIME_DIR:-<unset>} wayland_display=${WAYLAND_DISPLAY:-<unset>}"
@@ -370,6 +370,7 @@ apply_wallpaper() {
     --transition-duration "$transition_duration" \
     --transition-fps "$transition_fps" \
     --transition-step "$transition_step" \
+    --transition-pos "0.5,0.5" \
     --transition-bezier "$transition_bezier" >> "$LOG_FILE" 2>&1
 }
 
@@ -383,10 +384,23 @@ update_wallpaper_targets() {
     sed -i "s|^[[:space:]]*path[[:space:]]*=.*$|  path    = $wallpaper|" "$hyprlock_conf" 2>/dev/null || true
   fi
 
+  render_sddm_background "$wallpaper"
+}
+
+render_sddm_background() {
+  local wallpaper="$1"
+
   (
     if [ -n "$wallpaper" ] && [ -f "$wallpaper" ]; then
-      magick "$wallpaper" -scale 10% -scale 1920x1080! /tmp/strata-bg.jpg 2>/dev/null \
-        && sudo -n /run/current-system/sw/bin/cp /tmp/strata-bg.jpg /var/lib/strata/background.jpg 2>/dev/null || true
+      magick "$wallpaper" \
+        -auto-orient \
+        -resize 20% \
+        -blur 0x10 \
+        -resize 1920x1080^ \
+        -gravity center \
+        -extent 1920x1080 \
+        /tmp/strata-sddm-bg.jpg 2>/dev/null \
+        && sudo -n /run/current-system/sw/bin/cp /tmp/strata-sddm-bg.jpg /var/lib/strata/background.jpg 2>/dev/null || true
     fi
   ) >/dev/null 2>&1 &
 }
@@ -394,11 +408,18 @@ update_wallpaper_targets() {
 [ -f "$THEME_FILE" ] || exit 1
 
 WALLPAPER="$(cat "$WALLPAPER_FILE" 2>/dev/null || true)"
+WALLPAPER_APPLIED_EARLY=0
 
 if [ "$APPLY_MODE" = "--wallpaper-only" ] && [ -n "$WALLPAPER" ] && [ -f "$WALLPAPER" ]; then
   update_wallpaper_targets "$WALLPAPER"
   apply_wallpaper "$WALLPAPER"
   exit 0
+fi
+
+if [ "$APPLY_MODE" = "--apply-wallpaper" ] && [ -n "$WALLPAPER" ] && [ -f "$WALLPAPER" ]; then
+  update_wallpaper_targets "$WALLPAPER"
+  apply_wallpaper "$WALLPAPER"
+  WALLPAPER_APPLIED_EARLY=1
 fi
 
 THEME_NAME=$(get_val "name" "$THEME_FILE")
@@ -880,17 +901,14 @@ restart_nautilus_for_theme
 reload_kitty_theme
 
 bash "$DOTFILES/quickshell/scripts/update-sddm-accent.sh" "$PRIMARY" 2>/dev/null || true
-if [ -n "$WALLPAPER" ]; then
-  magick "$WALLPAPER" -scale 10% -scale 1920x1080! /tmp/strata-bg.jpg 2>/dev/null \
-    && sudo -n /run/current-system/sw/bin/cp /tmp/strata-bg.jpg /var/lib/strata/background.jpg 2>/dev/null || true
-fi
+render_sddm_background "$WALLPAPER"
 echo "accent=$PRIMARY" > /tmp/strata-accent
 sudo -n /run/current-system/sw/bin/tee /var/lib/strata/theme.conf < /tmp/strata-accent > /dev/null 2>/dev/null || true
 
 apply_hyprland_border "$ACCENT_HEX"
 makoctl reload 2>/dev/null || true
 
-if [ "$APPLY_MODE" = "--apply-wallpaper" ] && [ -n "$WALLPAPER" ] && [ -f "$WALLPAPER" ]; then
+if [ "$APPLY_MODE" = "--apply-wallpaper" ] && [ "$WALLPAPER_APPLIED_EARLY" != "1" ] && [ -n "$WALLPAPER" ] && [ -f "$WALLPAPER" ]; then
   update_wallpaper_targets "$WALLPAPER"
   apply_wallpaper "$WALLPAPER"
 fi

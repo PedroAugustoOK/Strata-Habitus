@@ -23,6 +23,7 @@ PanelWindow {
   property real endX: width / 2
   property real endY: height / 2
   property bool dragging: false
+  property bool completed: false
   property real overlayOpacity: 0
 
   readonly property real x1: Math.min(startX, endX)
@@ -31,9 +32,17 @@ PanelWindow {
   readonly property real y2: Math.max(startY, endY)
   readonly property real selectionW: Math.max(0, x2 - x1)
   readonly property real selectionH: Math.max(0, y2 - y1)
+  readonly property bool hasSelection: selectionW >= 8 && selectionH >= 8
   readonly property string geometry: Math.round(x1) + "," + Math.round(y1) + " " + Math.round(selectionW) + "x" + Math.round(selectionH)
 
   function select(id) {
+    if (visible && requestId !== "" && !completed) {
+      cancelProc.command = ["/run/current-system/sw/bin/bash", Paths.scripts + "/screenshot-geometry.sh", "cancel", requestId]
+      cancelProc.running = true
+    }
+
+    fadeIn.stop()
+    fadeOut.stop()
     requestId = id || String(Date.now())
     startX = width / 2
     startY = height / 2
@@ -42,24 +51,30 @@ PanelWindow {
     originX = startX
     originY = startY
     dragging = false
+    completed = false
     visible = true
     overlayOpacity = 0
+    selectionCanvas.requestPaint()
     fadeIn.start()
     keyGrabber.forceActiveFocus()
   }
 
   function finish() {
+    if (completed) return
     if (selectionW < 8 || selectionH < 8) {
       cancel()
       return
     }
 
+    completed = true
     resultProc.command = ["/run/current-system/sw/bin/bash", Paths.scripts + "/screenshot-geometry.sh", "finish", requestId, geometry]
     resultProc.running = true
     close()
   }
 
   function cancel() {
+    if (completed) return
+    completed = true
     if (requestId !== "") {
       resultProc.command = ["/run/current-system/sw/bin/bash", Paths.scripts + "/screenshot-geometry.sh", "cancel", requestId]
       resultProc.running = true
@@ -68,6 +83,7 @@ PanelWindow {
   }
 
   function close() {
+    fadeIn.stop()
     fadeOut.start()
   }
 
@@ -95,6 +111,7 @@ PanelWindow {
         root.visible = false
         root.dragging = false
         root.requestId = ""
+        root.completed = false
       }
     }
   }
@@ -111,12 +128,6 @@ PanelWindow {
     }
   }
 
-  Rectangle {
-    anchors.fill: parent
-    color: Qt.rgba(Colors.bg0.r, Colors.bg0.g, Colors.bg0.b, Colors.darkMode ? 0.74 : 0.58)
-    opacity: root.overlayOpacity
-  }
-
   Canvas {
     id: selectionCanvas
     anchors.fill: parent
@@ -130,12 +141,20 @@ PanelWindow {
       const bw = 4
       const r = 15
       const accent = Colors.primary.toString()
+      const bg = Colors.bg0
       const w = root.selectionW
       const h = root.selectionH
       const x = root.x1
       const y = root.y1
 
-      if (w <= 0 || h <= 0) return
+      ctx.fillStyle = Qt.rgba(bg.r, bg.g, bg.b, Colors.darkMode ? 0.74 : 0.58).toString()
+      ctx.fillRect(0, 0, width, height)
+
+      if (!root.hasSelection) return
+
+      ctx.globalCompositeOperation = "destination-out"
+      ctx.fillRect(x, y, w, h)
+      ctx.globalCompositeOperation = "source-over"
 
       ctx.fillStyle = accent
       ctx.fillRect(x - bw, y - bw, w + bw * 2, h + bw * 2)
@@ -161,7 +180,7 @@ PanelWindow {
   }
 
   Rope {
-    visible: root.visible
+    visible: root.visible && root.hasSelection
     opacity: root.overlayOpacity
     lineColor: Colors.primary
     anchorX: 0
@@ -171,7 +190,7 @@ PanelWindow {
   }
 
   Rope {
-    visible: root.visible
+    visible: root.visible && root.hasSelection
     opacity: root.overlayOpacity
     lineColor: Colors.primary
     anchorX: parent.width
@@ -181,7 +200,7 @@ PanelWindow {
   }
 
   Rope {
-    visible: root.visible
+    visible: root.visible && root.hasSelection
     opacity: root.overlayOpacity
     lineColor: Colors.primary
     anchorX: 0
@@ -191,7 +210,7 @@ PanelWindow {
   }
 
   Rope {
-    visible: root.visible
+    visible: root.visible && root.hasSelection
     opacity: root.overlayOpacity
     lineColor: Colors.primary
     anchorX: parent.width
@@ -209,7 +228,7 @@ PanelWindow {
     border.width: 1
     border.color: Qt.rgba(Colors.text0.r, Colors.text0.g, Colors.text0.b, 0.28)
     opacity: root.overlayOpacity
-    visible: root.selectionW > 0 && root.selectionH > 0
+    visible: root.hasSelection
   }
 
   MouseArea {
@@ -264,6 +283,11 @@ PanelWindow {
 
   Process {
     id: resultProc
+    command: []
+  }
+
+  Process {
+    id: cancelProc
     command: []
   }
 }

@@ -227,51 +227,133 @@ PanelWindow {
 
           readonly property bool selected: root.selectedIdx === index
           readonly property bool active: modelData.path === root.currentWall
+          readonly property int tileRadius: 13
 
-          Rectangle {
+          Item {
             anchors.centerIn: parent
             width: parent.width - 10
             height: 106
-            radius: 13
-            antialiasing: true
-            color: Colors.panelRaised
-            border.width: selected || active ? 2 : 0
-            border.color: selected
-              ? Colors.primary
-              : active
-                ? Colors.success
-                : "transparent"
-            clip: true
             scale: selected ? 1 : 0.975
 
             Behavior on scale { NumberAnimation { duration: 170; easing.type: Easing.OutCubic } }
-            Behavior on border.color { ColorAnimation { duration: 140 } }
 
             Rectangle {
-              id: imageMask
               anchors.fill: parent
-              anchors.margins: selected || active ? 3 : 0
-              radius: parent.radius - (selected || active ? 3 : 0)
-              color: Colors.bg2
-              clip: true
-
-              Image {
-                anchors.fill: parent
-                source: modelData.preview ? "file://" + modelData.preview : ""
-                fillMode: Image.PreserveAspectCrop
-                asynchronous: true
-                smooth: true
-                cache: true
-              }
+              radius: tileRadius
+              antialiasing: true
+              color: Colors.panelRaised
             }
 
             Rectangle {
-              anchors.fill: imageMask
-              radius: imageMask.radius
+              id: roundedMask
+              anchors.fill: parent
+              anchors.margins: selected || active ? 3 : 0
+              radius: Math.max(0, tileRadius - (selected || active ? 3 : 0))
+              antialiasing: true
+              color: "white"
+              z: -1
+            }
+
+            Rectangle {
+              anchors.fill: parent
+              anchors.margins: selected || active ? 3 : 0
+              radius: roundedMask.radius
+              antialiasing: true
+              color: Colors.bg2
+            }
+
+            Image {
+              id: wallpaperPreview
+              anchors.fill: parent
+              anchors.margins: selected || active ? 3 : 0
+              source: modelData.preview ? "file://" + modelData.preview : ""
+              fillMode: Image.PreserveAspectCrop
+              asynchronous: true
+              smooth: true
+              cache: true
+            }
+
+            Canvas {
+              anchors.fill: wallpaperPreview
+              z: 1
+              property real cornerRadius: roundedMask.radius
+              property color coverColor: Colors.bg2
+              onPaint: {
+                const ctx = getContext("2d")
+                const r = Math.max(0, cornerRadius)
+                const w = width
+                const h = height
+                ctx.clearRect(0, 0, w, h)
+                ctx.fillStyle = coverColor
+
+                ctx.beginPath()
+                ctx.moveTo(0, 0)
+                ctx.lineTo(r, 0)
+                ctx.arc(r, r, r, -Math.PI / 2, Math.PI, true)
+                ctx.closePath()
+                ctx.fill()
+
+                ctx.beginPath()
+                ctx.moveTo(w, 0)
+                ctx.lineTo(w - r, 0)
+                ctx.arc(w - r, r, r, -Math.PI / 2, 0, false)
+                ctx.closePath()
+                ctx.fill()
+
+                ctx.beginPath()
+                ctx.moveTo(0, h)
+                ctx.lineTo(0, h - r)
+                ctx.arc(r, h - r, r, Math.PI, Math.PI / 2, true)
+                ctx.closePath()
+                ctx.fill()
+
+                ctx.beginPath()
+                ctx.moveTo(w, h)
+                ctx.lineTo(w - r, h)
+                ctx.arc(w - r, h - r, r, Math.PI / 2, 0, true)
+                ctx.closePath()
+                ctx.fill()
+              }
+              onCornerRadiusChanged: requestPaint()
+              onCoverColorChanged: requestPaint()
+              onWidthChanged: requestPaint()
+              onHeightChanged: requestPaint()
+            }
+
+            Rectangle {
+              anchors.fill: wallpaperPreview
+              radius: roundedMask.radius
+              antialiasing: true
               color: mouse.containsMouse
                 ? Qt.rgba(0, 0, 0, Colors.darkMode ? 0.08 : 0.03)
                 : "transparent"
               Behavior on color { ColorAnimation { duration: 120 } }
+            }
+
+            Rectangle {
+              anchors.fill: parent
+              radius: tileRadius
+              antialiasing: true
+              color: "transparent"
+              border.width: selected || active ? 2 : 0
+              border.color: selected
+                ? Colors.primary
+                : active
+                  ? Colors.success
+                  : "transparent"
+              z: 2
+              Behavior on border.color { ColorAnimation { duration: 140 } }
+            }
+
+            Rectangle {
+              anchors.fill: parent
+              anchors.margins: selected || active ? 2 : 0
+              radius: Math.max(0, tileRadius - (selected || active ? 2 : 0))
+              antialiasing: true
+              color: "transparent"
+              border.width: selected || active ? 1 : 0
+              border.color: Qt.rgba(Colors.bg0.r, Colors.bg0.g, Colors.bg0.b, Colors.darkMode ? 0.34 : 0.22)
+              z: 2
             }
 
             Rectangle {
@@ -283,6 +365,7 @@ PanelWindow {
               radius: 11
               visible: active
               color: Qt.rgba(Colors.success.r, Colors.success.g, Colors.success.b, 0.92)
+              z: 3
 
               Text {
                 anchors.centerIn: parent
@@ -297,6 +380,7 @@ PanelWindow {
               anchors.fill: parent
               hoverEnabled: true
               cursorShape: Qt.PointingHandCursor
+              z: 4
               onEntered: root.selectIndex(index)
               onClicked: {
                 root.selectIndex(index)

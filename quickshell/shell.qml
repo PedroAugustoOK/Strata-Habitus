@@ -282,6 +282,7 @@ ShellRoot {
   IpcHandler {
     target: "screenshot"
     function select(requestId: string): void { screenshotSelector.select(requestId) }
+    function cancel(): void { screenshotSelector.cancel() }
   }
 
   Process {

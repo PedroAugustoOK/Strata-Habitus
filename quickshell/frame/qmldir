@@ -1,2 +1,13 @@
 module frame
 Frame 1.0 Frame.qml
+ShellFrame 1.0 ShellFrame.qml
+BottomDrawer 1.0 BottomDrawer.qml
+RightDrawer 1.0 RightDrawer.qml
+FrameLauncher 1.0 FrameLauncher.qml
+FrameSettingsCenter 1.0 FrameSettingsCenter.qml
+FrameUpdateCenter 1.0 FrameUpdateCenter.qml
+FrameThemePicker 1.0 FrameThemePicker.qml
+FrameWallPickr 1.0 FrameWallPickr.qml
+FrameAppCenter 1.0 FrameAppCenter.qml
+FrameClipboard 1.0 FrameClipboard.qml
+FramePowerMenu 1.0 FramePowerMenu.qml

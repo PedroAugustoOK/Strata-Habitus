@@ -892,3 +892,113 @@ timeout 5 quickshell -p /home/ankh/dotfiles/quickshell/shell.qml --no-color
 - Result:
   - loads successfully
   - only known pre-existing `Keys` warnings remain
+
+## Session update - 2026-05-05 (integrated ShellFrame default)
+
+### Integrated shell frame
+- The Caelestia-inspired Strata `ShellFrame` migration is now implemented and enabled by default in code.
+- Main files:
+  - `quickshell/frame/ShellFrame.qml`
+  - `quickshell/frame/BottomDrawer.qml`
+  - `quickshell/frame/RightDrawer.qml`
+  - `quickshell/frame/FrameLauncher.qml`
+  - `quickshell/frame/FrameSettingsCenter.qml`
+  - `quickshell/frame/FrameUpdateCenter.qml`
+  - `quickshell/frame/FrameThemePicker.qml`
+  - `quickshell/frame/FrameWallPickr.qml`
+  - `quickshell/frame/FrameAppCenter.qml`
+  - `quickshell/frame/FrameClipboard.qml`
+  - `quickshell/frame/FramePowerMenu.qml`
+- `quickshell/shell.qml` now defaults:
+  - `integratedFrameEnabled: true`
+- Runtime override still exists:
+  - `state/shell-frame-enabled`
+  - `true` uses integrated drawers
+  - `false` falls back to legacy standalone overlays
+
+### Current integrated IPC routing
+- Integrated through `ShellFrame` when enabled:
+  - `launcher`
+  - `settingscenter`
+  - `updatecenter`
+  - `themepicker`
+  - `wallPickr`
+  - `appcenter`
+  - `clipboard`
+  - `powermenu`
+- Kept as standalone/specialized windows:
+  - `controlcenter`
+  - `screenshot`
+  - bar tray/calendar menus
+  - OSDs and Dynamic Island
+
+### Validation state
+- QML load validation passes with integrated mode enabled:
+```bash
+timeout 5 quickshell -p /home/ankh/dotfiles/quickshell/shell.qml --no-color
+```
+- Live session was started through:
+```bash
+hyprctl dispatch exec "quickshell -p /home/ankh/dotfiles/quickshell/shell.qml --no-color"
+```
+- Duplicate old Quickshell process `1937` was killed.
+- Hyprland layers now show one active Quickshell instance:
+  - pid `3162204`
+- Basic IPC smoke tests were run for:
+  - `launcher`
+  - `settingscenter`
+  - `themepicker`
+  - `clipboard`
+- Strict log scan found no QML `ReferenceError`, unavailable type, invalid property, or failed-load errors.
+
+### Mouse/input fix
+- After enabling the fullscreen `ShellFrame`, the mouse appeared broken because the transparent fullscreen `PanelWindow` could still own the Wayland input region.
+- Fix applied:
+  - `ShellFrame.qml` now uses a dynamic `mask`
+  - when any drawer is open, the mask covers the fullscreen `inputRegion`
+  - when no drawer is open, the mask points to a zero-size `emptyInputRegion`
+- Result:
+  - click-outside still works while a drawer is open
+  - normal mouse input should pass through to apps/bar when drawers are closed
+
+### IPC smoke validation
+- Real IPC smoke tests completed successfully outside the sandbox for:
+  - `launcher`
+  - `settingscenter`
+  - `updatecenter`
+  - `themepicker`
+  - `wallPickr`
+  - `appcenter`
+  - `clipboard`
+  - `powermenu`
+- Each target was toggled open and closed.
+- Follow-up layer check showed one Quickshell instance:
+  - pid `3344506`
+- Strict log scan after smoke tests found no QML type/reference/property/load errors and no IPC socket errors.
+
+### Autostart hardening
+- Added `quickshell/scripts/quickshell-start.sh`.
+- `hyprland.conf` now starts Quickshell through:
+```bash
+bash ~/.config/quickshell/scripts/quickshell-start.sh
+```
+- The wrapper uses the explicit shell entry:
+```bash
+~/dotfiles/quickshell/shell.qml
+```
+- It exits if a `quickshell` process is already running, reducing accidental duplicate shells at login.
+- Validation:
+  - `bash -n quickshell/scripts/quickshell-start.sh` passed
+  - `timeout 5 quickshell -p /home/ankh/dotfiles/quickshell/shell.qml --no-color` loaded successfully
+  - `hyprctl reload` returned `ok`
+  - `hyprctl layers` still showed one live Quickshell instance, pid `3344506`
+
+### GitHub sync request
+- User asked to save all context/memory files and push the completed ShellFrame work to GitHub.
+- Branch: `main`
+- Remote: `git@github.com:PedroAugustoOK/Strata-Habitus.git`
+- Expected commit scope:
+  - integrated `quickshell/frame` drawers and frame primitives
+  - default `ShellFrame` routing in `quickshell/shell.qml`
+  - autostart wrapper and `hyprland.conf` startup change
+  - updated Strata context/memory notes

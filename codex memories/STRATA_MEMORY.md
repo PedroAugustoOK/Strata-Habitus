@@ -1049,3 +1049,105 @@ timeout 5 quickshell -p /home/ankh/dotfiles/quickshell/shell.qml --no-color
 ```bash
 ${XDG_RUNTIME_DIR}/strata/spotify-art/*.disc.png
 ```
+
+## Session update - 2026-05-05 (ShellFrame migration completed)
+
+### Integrated shell default
+- The Strata integrated `ShellFrame` is now the default path:
+  - `quickshell/shell.qml`
+  - `integratedFrameEnabled: true`
+- A runtime override remains available:
+  - `state/shell-frame-enabled`
+  - current local value: `true`
+  - set to `false` to fall back to legacy overlays without editing QML.
+
+### Migrated drawers
+- Integrated drawers now implemented:
+  - launcher: `FrameLauncher.qml`
+  - settings: `FrameSettingsCenter.qml`
+  - updates: `FrameUpdateCenter.qml`
+  - themes: `FrameThemePicker.qml`
+  - wallpapers: `FrameWallPickr.qml`
+  - app center: `FrameAppCenter.qml`
+  - clipboard: `FrameClipboard.qml`
+  - power menu: `FramePowerMenu.qml`
+- Shared drawer primitives:
+  - `BottomDrawer.qml`
+  - `RightDrawer.qml`
+- `ShellFrame.qml` now centralizes:
+  - frame borders
+  - drawer focus
+  - `Esc` handling
+  - click-outside dismissal
+  - `closeDrawers(except)`
+  - `anyDrawerOpen()`
+
+### Scope intentionally not migrated
+- `ControlCenter` remains standalone for now because it is large and tightly coupled to current panel layout, notifications, system toggles, and live status scripts.
+- `ScreenshotSelector` remains standalone because it is a fullscreen capture interaction.
+- Tray/calendar menus remain bar-attached popups.
+- OSDs and Dynamic Island remain separate shell surfaces.
+
+### Live validation
+- Integrated mode was validated with:
+```bash
+timeout 5 quickshell -p /home/ankh/dotfiles/quickshell/shell.qml --no-color
+```
+- Live Quickshell was started through Hyprland.
+- Duplicate older Quickshell instance was removed.
+- Hyprland layers show one Quickshell instance after cleanup.
+- IPC smoke tests succeeded for several integrated drawers.
+- Strict log scan showed no QML load/type/reference/property errors.
+
+### Mouse/input correction after enabling frame
+- Important implementation note:
+  - a transparent fullscreen `PanelWindow` can still block pointer input on Wayland
+  - disabling the fullscreen `MouseArea` is not enough
+- `ShellFrame.qml` now masks input dynamically:
+  - drawer open -> fullscreen `inputRegion`
+  - no drawer open -> zero-size `emptyInputRegion`
+- This preserves click-outside dismissal while preventing the frame from eating mouse input when idle.
+
+### Completed IPC smoke test
+- A real IPC smoke loop opened and closed every integrated drawer:
+  - launcher
+  - settingscenter
+  - updatecenter
+  - themepicker
+  - wallPickr
+  - appcenter
+  - clipboard
+  - powermenu
+- The command had to run outside the sandbox because Quickshell IPC socket access is blocked inside it.
+- Post-test state:
+  - one Quickshell instance in Hyprland layers
+  - no overlay layer left open
+  - no strict QML/log errors found
+
+### Autostart hardening
+- Added `quickshell/scripts/quickshell-start.sh`.
+- `hyprland.conf` now uses:
+```bash
+exec-once = bash ~/.config/quickshell/scripts/quickshell-start.sh
+```
+- The wrapper starts the explicit Strata entrypoint:
+```bash
+quickshell -p ~/dotfiles/quickshell/shell.qml --no-color
+```
+- The wrapper exits when a `quickshell` process already exists, so login should not create duplicate shells.
+- Validation completed:
+  - shell script syntax passed with `bash -n`
+  - QML load test passed with `timeout 5 quickshell -p /home/ankh/dotfiles/quickshell/shell.qml --no-color`
+  - `hyprctl reload` returned `ok`
+  - live layer check still showed a single Quickshell instance, pid `3344506`
+
+### GitHub sync request
+- User asked to save the final state in memory/context files and push to GitHub.
+- Branch: `main`
+- Remote: `git@github.com:PedroAugustoOK/Strata-Habitus.git`
+- Commit should include:
+  - the integrated frame/drawer QML files
+  - the `shell.qml` integrated routing and runtime toggle
+  - `quickshell/scripts/quickshell-start.sh`
+  - the `hyprland.conf` autostart update
+  - current memory/context notes

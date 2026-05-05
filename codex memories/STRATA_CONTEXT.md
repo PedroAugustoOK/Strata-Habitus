@@ -1002,3 +1002,93 @@ bash ~/.config/quickshell/scripts/quickshell-start.sh
   - default `ShellFrame` routing in `quickshell/shell.qml`
   - autostart wrapper and `hyprland.conf` startup change
   - updated Strata context/memory notes
+
+## 2026-05-05 - ShellFrame stabilization after visual/input review
+
+### User-visible problems confirmed
+- User shared screenshots of the current shell and listed four severe issues:
+  - weird screen border / black or accent edge around the wallpaper and windows
+  - launcher, theme picker, power menu and related drawers did not visually integrate with the frame
+  - drawers sometimes ignored mouse/keyboard until the pointer moved
+  - clicks/keyboard could stop working after a notification arrived
+- These observations were treated as valid. The current fullscreen integrated frame approach was not production-ready.
+
+### Architecture finding
+- The Caelestia direction is still the intended design language, but the first ShellFrame implementation used a persistent fullscreen `PanelWindow` as a fake frame/input coordinator.
+- On Wayland/Hyprland this is fragile:
+  - a transparent fullscreen surface can still own input
+  - masks can reduce the problem but are not enough as the base architecture
+  - notification and drawer focus races can still block interaction
+- Correct next architecture:
+  - no always-on fullscreen input layer
+  - use separate edge-attached `PanelWindow`s with exact masks for each drawer/panel
+  - only use fullscreen click-catcher surfaces for explicit modal states
+  - prove focus/input behavior before reintroducing frame visuals
+
+### Stabilization applied
+- `quickshell/shell.qml`
+  - `integratedFrameEnabled` now defaults to `false`
+  - legacy fake screen borders are hidden with `screenFrameVisible: false`
+- Runtime state:
+  - `state/shell-frame-enabled` was set to `false`
+- Hyprland base:
+  - `hyprland.conf` now uses `border_size = 0`
+  - `hyprland.conf` now uses `gaps_out = 0`
+  - this removes the false red/black edge around maximized/tiled windows
+- Theme scripts:
+  - `quickshell/scripts/init-border.sh` applies transparent active/inactive borders
+  - `quickshell/scripts/apply-theme-state.sh` no longer reapplies accent-colored Hyprland borders
+- Notification input:
+  - `quickshell/bar/DynamicIslandCard.qml` now masks notification mode to the card region instead of keeping a broad fullscreen input region
+
+### Experimental code kept
+- `quickshell/frame/FrameSurface.qml` was added as the reusable visual surface for the Caelestia-like drawers.
+- Drawer wrappers in `quickshell/frame/Frame*.qml`, `BottomDrawer.qml`, `RightDrawer.qml`, and `ShellFrame.qml` were updated during the experiment.
+- These files remain useful reference/experimental code, but the integrated ShellFrame is disabled by default until the smaller-window architecture is rebuilt.
+- `ControlCenter.qml` was visually moved closer to the right-panel `FrameSurface` style, but remains standalone.
+
+### Validation completed
+- QML load validation passed:
+```bash
+timeout 5 quickshell -p /home/ankh/dotfiles/quickshell/shell.qml --no-color
+```
+- `git diff --check` passed.
+- Live Hyprland keywords were applied for the current session:
+```bash
+hyprctl keyword general:border_size 0
+hyprctl keyword general:col.active_border 'rgba(00000000)'
+hyprctl keyword general:col.inactive_border 'rgba(00000000)'
+hyprctl keyword general:gaps_out 0
+```
+- Quickshell was restarted live with:
+```bash
+hyprctl dispatch exec "quickshell -p /home/ankh/dotfiles/quickshell/shell.qml --no-color"
+```
+- Screenshots used for checking the stabilized result:
+  - `/tmp/strata-stabilized-final.png`
+  - `/tmp/strata-stabilized-no-gaps.png`
+  - `/tmp/strata-stabilized-overlay.png`
+
+### Release / notebook flow
+- Commit current work on `main`.
+- Push `main` to GitHub.
+- Promote the same commit to the notebook channel with:
+```bash
+./strata-promote-release.sh stable HEAD
+```
+- On the notebook, update from the channel with:
+```bash
+cd ~/dotfiles && ./strata-apply-channel.sh stable
+```
+- If using the installed unattended update script/service instead, the direct system update command is:
+```bash
+sudo ~/dotfiles/strata-update.sh
+```
+
+### Next development plan
+- Keep the stabilized standalone overlays active.
+- Rebuild Caelestia-style integration behind an explicit flag/branch:
+  - replace fullscreen ShellFrame with exact-size panel windows
+  - migrate one drawer at a time
+  - validate mouse/keyboard after each drawer
+  - only then reconnect visual borders and animations

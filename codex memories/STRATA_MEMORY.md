@@ -1151,3 +1151,74 @@ quickshell -p ~/dotfiles/quickshell/shell.qml --no-color
   - `quickshell/scripts/quickshell-start.sh`
   - the `hyprland.conf` autostart update
   - current memory/context notes
+
+## 2026-05-05 - Current shell state for next session
+
+### What happened
+- User reviewed the Caelestia-style shell attempt with screenshots and identified persistent issues:
+  - screen/window border looked wrong and mismatched the top bar
+  - launcher/theme picker/power menu did not feel connected to the border/frame
+  - drawers sometimes needed mouse movement before clicks/keyboard worked
+  - notifications could stop clicks/keyboard from working
+- Treat these reports as correct. Do not assume the old fullscreen ShellFrame approach is fixed.
+
+### Current decision
+- The always-on fullscreen `ShellFrame PanelWindow` approach is disabled for stability.
+- Caelestia remains the target inspiration, but the implementation needs to be rebuilt using smaller, exact-size panel windows instead of a fullscreen fake frame.
+- `FrameSurface.qml` and the updated frame drawer files are retained as experimental/reference code.
+
+### Stabilized defaults
+- `quickshell/shell.qml`
+  - `integratedFrameEnabled: false`
+  - `screenFrameVisible: false`
+- Runtime state:
+  - `state/shell-frame-enabled` contains `false`
+- Hyprland:
+  - `border_size = 0`
+  - `gaps_out = 0`
+  - active/inactive borders transparent
+- Theme scripts:
+  - `quickshell/scripts/init-border.sh` sets transparent Hyprland borders
+  - `quickshell/scripts/apply-theme-state.sh` does not reapply accent borders
+- Dynamic Island / notifications:
+  - notification mode uses a smaller input mask around the card instead of a broad input region
+
+### Validation
+- QML validation passed with:
+```bash
+timeout 5 quickshell -p /home/ankh/dotfiles/quickshell/shell.qml --no-color
+```
+- Diff whitespace validation passed with:
+```bash
+git diff --check
+```
+- Live session was updated with Hyprland keywords for border/gap cleanup and Quickshell restart.
+
+### Git / release target
+- Repo: `/home/ankh/dotfiles`
+- Remote: `git@github.com:PedroAugustoOK/Strata-Habitus.git`
+- Development branch: `main`
+- Notebook rollout channel: `stable`
+- After committing on `main`, publish current state for notebooks with:
+```bash
+./strata-promote-release.sh stable HEAD
+```
+
+### Notebook continuation command
+- Preferred command on the notebook when continuing this work and applying the updated system:
+```bash
+cd ~/dotfiles && ./strata-apply-channel.sh stable
+```
+- Alternative direct update path if the notebook already has the installed update script configured:
+```bash
+sudo ~/dotfiles/strata-update.sh
+```
+
+### Next implementation guidance
+- Do not continue trying to fix input by adding more fullscreen ShellFrame masks.
+- Rebuild the integrated shell in this order:
+  - keep standalone overlays active as the stable baseline
+  - create one exact-size panel window for one drawer
+  - validate click, keyboard, Esc, notification behavior
+  - migrate the next drawer only after the previous one is proven
+  - reconnect visual borders/animations last

@@ -154,23 +154,14 @@ Item {
     gutter: 10
     open: root.open
 
-    Rectangle {
+    FrameSurface {
       anchors.fill: parent
       radius: 18
-      antialiasing: true
-      color: Colors.panelBackground
-      border.width: 1
-      border.color: Qt.rgba(Colors.primary.r, Colors.primary.g, Colors.primary.b, 0.22)
-      clip: true
-
-      Rectangle {
-        anchors.fill: parent
-        radius: parent.radius
-        gradient: Gradient {
-          GradientStop { position: 0.0; color: Colors.darkMode ? Qt.rgba(Colors.bg2.r, Colors.bg2.g, Colors.bg2.b, 0.98) : Qt.rgba(Colors.bg2.r, Colors.bg2.g, Colors.bg2.b, 0.94) }
-          GradientStop { position: 1.0; color: Colors.darkMode ? Qt.rgba(Colors.bg0.r, Colors.bg0.g, Colors.bg0.b, 0.98) : Qt.rgba(Colors.bg1.r, Colors.bg1.g, Colors.bg1.b, 0.96) }
-        }
-      }
+      attachedEdge: "right"
+      fillColor: Colors.panelBackground
+      borderColor: Qt.rgba(Colors.primary.r, Colors.primary.g, Colors.primary.b, 0.22)
+      topToneOpacity: Colors.darkMode ? 0.98 : 0.94
+      bottomToneOpacity: Colors.darkMode ? 0.98 : 0.96
 
       Item {
         id: keyGrabber

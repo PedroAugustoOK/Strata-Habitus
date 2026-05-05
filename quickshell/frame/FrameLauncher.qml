@@ -97,13 +97,12 @@ Item {
     height: 62 + root.listH + root.actionsH + 36 + (store.launchError !== "" ? 26 : 0)
     open: root.open
 
-    Rectangle {
+    FrameSurface {
       anchors.fill: parent
       radius: 18
-      color: Colors.bg1
-      border.width: 1
-      border.color: Qt.rgba(Colors.accent.r, Colors.accent.g, Colors.accent.b, 0.18)
-      clip: true
+      attachedEdge: "bottom"
+      borderColor: Qt.rgba(Colors.accent.r, Colors.accent.g, Colors.accent.b, 0.18)
+      gradientEnabled: false
 
       ColumnLayout {
         anchors.fill: parent

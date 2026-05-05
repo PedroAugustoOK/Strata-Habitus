@@ -93,12 +93,10 @@ ensure_hyprland_env() {
 }
 
 apply_hyprland_border() {
-  local accent_hex="$1"
-
   ensure_hyprland_env
   log "hyprland signature=${HYPRLAND_INSTANCE_SIGNATURE:-<unset>}"
 
-  if ! hyprctl keyword "general:col.active_border" "rgba(${accent_hex}66)" >/dev/null 2>&1; then
+  if ! hyprctl keyword "general:col.active_border" "rgba(00000000)" >/dev/null 2>&1; then
     log "hyprctl failed to apply active border"
   fi
 

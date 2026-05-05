@@ -5,6 +5,7 @@ import Quickshell.Services.Notifications
 import QtQuick
 import QtQuick.Layouts
 import ".."
+import "../frame"
 
 PanelWindow {
   id: root
@@ -30,8 +31,9 @@ PanelWindow {
       refreshAll()
       keyGrabber.forceActiveFocus()
       panel.opacity = 0
-      panelScale.xScale = 0.92
-      panelScale.yScale = 0.92
+      panelXOffset = 28
+      panelScale.xScale = 0.965
+      panelScale.yScale = 0.985
       openAnim.start()
     }
   }
@@ -64,15 +66,17 @@ PanelWindow {
     id: openAnim
     ParallelAnimation {
       NumberAnimation { target: panel; property: "opacity"; from: 0; to: 1; duration: 120; easing.type: Easing.OutQuad }
-      NumberAnimation { target: panelScale; property: "xScale"; from: OverlayState.morphStartXScale(panel.width); to: 1; duration: 260; easing.type: Easing.OutCubic }
-      NumberAnimation { target: panelScale; property: "yScale"; from: OverlayState.morphStartYScale(panel.height); to: 1; duration: 260; easing.type: Easing.OutCubic }
+      NumberAnimation { target: root; property: "panelXOffset"; from: 28; to: 0; duration: 260; easing.type: Easing.OutCubic }
+      NumberAnimation { target: panelScale; property: "xScale"; from: 0.965; to: 1; duration: 260; easing.type: Easing.OutCubic }
+      NumberAnimation { target: panelScale; property: "yScale"; from: 0.985; to: 1; duration: 260; easing.type: Easing.OutCubic }
     }
   }
   SequentialAnimation {
     id: closeAnim
     ParallelAnimation {
-      NumberAnimation { target: panelScale; property: "xScale"; to: OverlayState.morphStartXScale(panel.width); duration: 150; easing.type: Easing.InCubic }
-      NumberAnimation { target: panelScale; property: "yScale"; to: OverlayState.morphStartYScale(panel.height); duration: 150; easing.type: Easing.InCubic }
+      NumberAnimation { target: root; property: "panelXOffset"; to: 28; duration: 150; easing.type: Easing.InCubic }
+      NumberAnimation { target: panelScale; property: "xScale"; to: 0.965; duration: 150; easing.type: Easing.InCubic }
+      NumberAnimation { target: panelScale; property: "yScale"; to: 0.985; duration: 150; easing.type: Easing.InCubic }
       NumberAnimation { target: panel; property: "opacity"; to: 0; duration: 110; easing.type: Easing.InQuad }
     }
     ScriptAction { script: root.visible = false }
@@ -95,6 +99,7 @@ PanelWindow {
   property bool   protonVpnConnected: false
   property var    notificationHistory: []
   property var    notificationIgnoredKeys: []
+  property real   panelXOffset: 0
   readonly property string sessionBus: Quickshell.env("DBUS_SESSION_BUS_ADDRESS")
   readonly property string runtimeDir: Quickshell.env("XDG_RUNTIME_DIR")
   readonly property bool showLaptopHeader: DeviceState.isLaptop && DeviceState.hasBattery
@@ -187,19 +192,22 @@ PanelWindow {
   }
   MouseArea { anchors.fill: parent; onClicked: root.close() }
 
-  Rectangle {
+  FrameSurface {
     id: panel
-    anchors { top: parent.top; right: parent.right; topMargin: 44; rightMargin: 20 }
-    width: DeviceState.isDesktop ? 332 : 310
+    anchors { top: parent.top; right: parent.right; topMargin: 44; rightMargin: 10 - root.panelXOffset }
+    width: DeviceState.isDesktop ? 344 : 316
     height: col.implicitHeight + 28
-    radius: 24
-    color: Colors.bg1
-    clip: true
+    radius: 18
+    attachedEdge: "right"
+    fillColor: Colors.panelBackground
+    borderColor: Qt.rgba(Colors.primary.r, Colors.primary.g, Colors.primary.b, Colors.darkMode ? 0.18 : 0.16)
+    topToneOpacity: Colors.darkMode ? 0.62 : 0.48
+    bottomToneOpacity: 0.98
     opacity: 0
     transform: Scale {
       id: panelScale
-      origin.x: Math.max(0, Math.min(panel.width, OverlayState.islandCenterX - panel.x))
-      origin.y: Math.max(0, Math.min(panel.height, OverlayState.islandCenterY - panel.y))
+      origin.x: panel.width
+      origin.y: 0
       xScale: 1
       yScale: 1
     }

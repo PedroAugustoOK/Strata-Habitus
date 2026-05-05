@@ -153,13 +153,11 @@ Item {
     gutter: 10
     open: root.open
 
-    Rectangle {
+    FrameSurface {
       anchors.fill: parent
       radius: 18
-      color: Colors.bg1
-      border.width: 1
-      border.color: Qt.rgba(Colors.accent.r, Colors.accent.g, Colors.accent.b, 0.18)
-      clip: true
+      attachedEdge: "bottom"
+      borderColor: Qt.rgba(Colors.accent.r, Colors.accent.g, Colors.accent.b, 0.18)
 
       Item {
         id: keyGrabber

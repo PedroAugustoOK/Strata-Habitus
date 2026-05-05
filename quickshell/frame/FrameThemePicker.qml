@@ -93,18 +93,15 @@ Item {
     gutter: 10
     open: root.open
 
-    Rectangle {
+    FrameSurface {
       anchors.fill: parent
       radius: 18
-      antialiasing: true
-      color: Colors.bg1
-      border.width: 1
-      border.color: Qt.rgba(Colors.text1.r, Colors.text1.g, Colors.text1.b, Colors.darkMode ? 0.18 : 0.22)
-      clip: true
+      attachedEdge: "bottom"
+      borderColor: Qt.rgba(Colors.text1.r, Colors.text1.g, Colors.text1.b, Colors.darkMode ? 0.18 : 0.22)
 
       Rectangle {
         anchors.fill: parent
-        radius: parent.radius
+        radius: 18
         color: root.transitionColor
         opacity: root.transitionOpacity
         visible: opacity > 0

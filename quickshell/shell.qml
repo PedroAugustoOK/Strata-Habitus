@@ -19,13 +19,20 @@ import "screenshot"
 import "frame"
 
 ShellRoot {
-  property bool integratedFrameEnabled: true
+  property bool integratedFrameEnabled: false
+  property bool screenFrameVisible: false
+
+  function toggleControlCenter() {
+    if (integratedFrameEnabled) shellFrame.closeDrawers("")
+    controlCenter.toggle()
+  }
 
   Bar {}
   ShellFrame {
     id: shellFrame
     active: integratedFrameEnabled
-    onOpenControlCenter: controlCenter.toggle()
+    onOpenControlCenter: toggleControlCenter()
+    onCloseControlCenter: if (controlCenter.visible) controlCenter.close()
     onOpenThemePicker: themePicker.toggle()
     onOpenWallPickr: wallPickr.toggle()
     onOpenAppCenter: appCenter.toggle()
@@ -48,7 +55,7 @@ ShellRoot {
   ScreenshotSelector { id: screenshotSelector }
   SettingsCenter {
     id: settingsCenter
-    onOpenControlCenter: controlCenter.toggle()
+    onOpenControlCenter: toggleControlCenter()
     onOpenThemePicker: themePicker.toggle()
     onOpenWallPickr: wallPickr.toggle()
     onOpenAppCenter: appCenter.toggle()
@@ -122,7 +129,7 @@ ShellRoot {
     implicitHeight: Screen.height - barH
     color: Colors.bg1
     exclusionMode: ExclusionMode.Ignore
-    visible: !integratedFrameEnabled
+    visible: screenFrameVisible
   }
 
   // Arco superior esquerdo
@@ -132,7 +139,7 @@ ShellRoot {
     implicitHeight: barH + r
     color: "transparent"
     exclusionMode: ExclusionMode.Ignore
-    visible: !integratedFrameEnabled
+    visible: screenFrameVisible
     mask: Region { item: cv1arc }
     Canvas {
       id: cv1
@@ -169,7 +176,7 @@ ShellRoot {
     implicitHeight: Screen.height - barH
     color: Colors.bg1
     exclusionMode: ExclusionMode.Ignore
-    visible: !integratedFrameEnabled
+    visible: screenFrameVisible
   }
 
   // Arco superior direito
@@ -179,7 +186,7 @@ ShellRoot {
     implicitHeight: barH + r
     color: "transparent"
     exclusionMode: ExclusionMode.Ignore
-    visible: !integratedFrameEnabled
+    visible: screenFrameVisible
     mask: Region { item: cv2arc }
     Canvas {
       id: cv2
@@ -215,7 +222,7 @@ ShellRoot {
     implicitHeight: brd
     color: Colors.bg1
     exclusionMode: ExclusionMode.Ignore
-    visible: !integratedFrameEnabled
+    visible: screenFrameVisible
   }
 
   // Canto inferior esquerdo
@@ -225,7 +232,7 @@ ShellRoot {
     implicitHeight: brd + r
     color: "transparent"
     exclusionMode: ExclusionMode.Ignore
-    visible: !integratedFrameEnabled
+    visible: screenFrameVisible
     Canvas {
       id: cv3
       anchors.fill: parent
@@ -256,7 +263,7 @@ ShellRoot {
     implicitHeight: brd + r
     color: "transparent"
     exclusionMode: ExclusionMode.Ignore
-    visible: !integratedFrameEnabled
+    visible: screenFrameVisible
     Canvas {
       id: cv4
       anchors.fill: parent
@@ -289,7 +296,7 @@ ShellRoot {
   }
   IpcHandler {
     target: "controlcenter"
-    function toggle(): void { controlCenter.toggle() }
+    function toggle(): void { toggleControlCenter() }
   }
   IpcHandler {
     target: "powermenu"

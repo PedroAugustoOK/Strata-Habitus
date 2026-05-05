@@ -11,11 +11,50 @@ Item {
   signal openWallPickr()
   signal openAppCenter()
   signal openUpdateCenter()
+  signal closeControlCenter()
 
   property bool active: false
   readonly property int barH: 34
   readonly property int brd: 10
   readonly property int r: 12
+  property bool drawerOpen: anyDrawerOpen()
+  property real bottomDrawerProgress: (
+    frameLauncher.open ||
+    frameThemePicker.open ||
+    frameWallPickr.open ||
+    frameClipboard.open ||
+    framePowerMenu.open
+  ) ? 1 : 0
+  property real rightDrawerProgress: (
+    frameSettingsCenter.open ||
+    frameUpdateCenter.open ||
+    frameAppCenter.open ||
+    OverlayState.activeOverlay === "controlcenter"
+  ) ? 1 : 0
+  readonly property color frameFill: Qt.rgba(
+    Colors.barBackground.r,
+    Colors.barBackground.g,
+    Colors.barBackground.b,
+    1
+  )
+  readonly property color frameLine: Qt.rgba(
+    Colors.panelBorder.r,
+    Colors.panelBorder.g,
+    Colors.panelBorder.b,
+    Colors.darkMode ? 0.18 : 0.26
+  )
+  readonly property color bottomFrameGlow: Qt.rgba(
+    Colors.primary.r,
+    Colors.primary.g,
+    Colors.primary.b,
+    (Colors.darkMode ? 0.18 : 0.14) * bottomDrawerProgress
+  )
+  readonly property color rightFrameGlow: Qt.rgba(
+    Colors.primary.r,
+    Colors.primary.g,
+    Colors.primary.b,
+    (Colors.darkMode ? 0.18 : 0.14) * rightDrawerProgress
+  )
 
   function anyDrawerOpen() {
     return frameLauncher.open ||
@@ -39,43 +78,48 @@ Item {
     if (except !== "power" && framePowerMenu.open) framePowerMenu.close()
   }
 
+  function prepareDrawer(except) {
+    closeControlCenter()
+    closeDrawers(except)
+  }
+
   function toggleLauncher() {
-    closeDrawers("launcher")
+    prepareDrawer("launcher")
     frameLauncher.toggle()
   }
 
   function toggleSettingsCenter() {
-    closeDrawers("settings")
+    prepareDrawer("settings")
     frameSettingsCenter.toggle()
   }
 
   function toggleUpdateCenter() {
-    closeDrawers("update")
+    prepareDrawer("update")
     frameUpdateCenter.toggle()
   }
 
   function toggleThemePicker() {
-    closeDrawers("theme")
+    prepareDrawer("theme")
     frameThemePicker.toggle()
   }
 
   function toggleWallPickr() {
-    closeDrawers("wall")
+    prepareDrawer("wall")
     frameWallPickr.toggle()
   }
 
   function toggleAppCenter() {
-    closeDrawers("app")
+    prepareDrawer("app")
     frameAppCenter.toggle()
   }
 
   function toggleClipboard() {
-    closeDrawers("clipboard")
+    prepareDrawer("clipboard")
     frameClipboard.toggle()
   }
 
   function togglePowerMenu() {
-    closeDrawers("power")
+    prepareDrawer("power")
     framePowerMenu.toggle()
   }
 
@@ -85,19 +129,24 @@ Item {
     color: "transparent"
     exclusionMode: ExclusionMode.Ignore
     visible: root.active
-    mask: Region { item: root.anyDrawerOpen() ? inputRegion : emptyInputRegion }
-    focusable: root.anyDrawerOpen()
-    WlrLayershell.keyboardFocus: root.anyDrawerOpen() ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
-
-    Keys.onPressed: function(event) {
-      if (event.key === Qt.Key_Escape && root.anyDrawerOpen()) {
-        root.closeDrawers("")
-        event.accepted = true
-      }
-    }
+    mask: Region { item: root.drawerOpen ? inputRegion : emptyInputRegion }
+    focusable: root.drawerOpen
+    WlrLayershell.keyboardFocus: root.drawerOpen ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
 
     Item {
       anchors.fill: parent
+
+      Item {
+        id: frameKeyGrabber
+        anchors.fill: parent
+        focus: root.drawerOpen
+        Keys.onPressed: function(event) {
+          if (event.key === Qt.Key_Escape && root.drawerOpen) {
+            root.closeDrawers("")
+            event.accepted = true
+          }
+        }
+      }
 
       Item {
         id: inputRegion
@@ -112,7 +161,7 @@ Item {
 
       MouseArea {
         anchors.fill: parent
-        enabled: root.anyDrawerOpen()
+        enabled: root.drawerOpen
         onClicked: root.closeDrawers("")
       }
 
@@ -121,7 +170,7 @@ Item {
         y: root.barH
         width: root.brd
         height: parent.height - root.barH
-        color: Colors.bg1
+        color: root.frameFill
       }
 
       Rectangle {
@@ -129,7 +178,7 @@ Item {
         y: root.barH
         width: root.brd
         height: parent.height - root.barH
-        color: Colors.bg1
+        color: root.frameFill
       }
 
       Rectangle {
@@ -137,7 +186,50 @@ Item {
         y: parent.height - root.brd
         width: parent.width
         height: root.brd
-        color: Colors.bg1
+        color: root.frameFill
+      }
+
+      Rectangle {
+        x: root.brd - 1
+        y: root.barH
+        width: 1
+        height: parent.height - root.barH - root.brd
+        color: root.frameLine
+        opacity: 0.78
+      }
+
+      Rectangle {
+        x: parent.width - root.brd
+        y: root.barH
+        width: 1
+        height: parent.height - root.barH - root.brd
+        color: root.frameLine
+        opacity: 0.78
+      }
+
+      Rectangle {
+        x: root.brd
+        y: parent.height - root.brd
+        width: parent.width - root.brd * 2
+        height: 1
+        color: root.frameLine
+        opacity: 0.78
+      }
+
+      Rectangle {
+        x: parent.width - root.brd - 1
+        y: root.barH
+        width: 1
+        height: parent.height - root.barH - root.brd
+        color: root.rightFrameGlow
+      }
+
+      Rectangle {
+        x: root.brd
+        y: parent.height - root.brd - 1
+        width: parent.width - root.brd * 2
+        height: 1
+        color: root.bottomFrameGlow
       }
 
       Canvas {
@@ -154,7 +246,7 @@ Item {
           const w = width
           const h = height
           ctx.clearRect(0, 0, w, h)
-          ctx.fillStyle = Colors.bg1.toString()
+          ctx.fillStyle = root.frameFill.toString()
 
           ctx.beginPath()
           ctx.moveTo(b, bh)
@@ -187,7 +279,9 @@ Item {
 
         Connections {
           target: Colors
-          function onBg1Changed() { frameCanvas.requestPaint() }
+          function onBarBackgroundChanged() { frameCanvas.requestPaint() }
+          function onPanelBorderChanged() { frameCanvas.requestPaint() }
+          function onDarkModeChanged() { frameCanvas.requestPaint() }
         }
       }
 
@@ -228,5 +322,31 @@ Item {
         id: framePowerMenu
       }
     }
+  }
+
+  Behavior on bottomDrawerProgress {
+    NumberAnimation {
+      duration: 180
+      easing.type: Easing.OutCubic
+    }
+  }
+
+  Behavior on rightDrawerProgress {
+    NumberAnimation {
+      duration: 180
+      easing.type: Easing.OutCubic
+    }
+  }
+
+  onDrawerOpenChanged: {
+    if (drawerOpen)
+      frameFocusTimer.restart()
+  }
+
+  Timer {
+    id: frameFocusTimer
+    interval: 20
+    repeat: false
+    onTriggered: frameKeyGrabber.forceActiveFocus()
   }
 }

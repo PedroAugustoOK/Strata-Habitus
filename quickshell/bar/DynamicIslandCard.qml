@@ -13,6 +13,7 @@ PanelWindow {
   WlrLayershell.keyboardFocus: DynamicIslandState.mode === "notification" ? WlrKeyboardFocus.None : WlrKeyboardFocus.OnDemand
   focusable: DynamicIslandState.mode !== "notification"
   visible: DynamicIslandState.visible || closing
+  mask: Region { item: DynamicIslandState.mode === "notification" ? cardInputRegion : fullInputRegion }
 
   readonly property real cardWidth: DynamicIslandState.mode === "media" ? 416 : 380
   readonly property real cardHeight: DynamicIslandState.mode === "media" ? 200
@@ -67,6 +68,19 @@ PanelWindow {
         e.accepted = true
       }
     }
+  }
+
+  Item {
+    id: fullInputRegion
+    anchors.fill: parent
+  }
+
+  Item {
+    id: cardInputRegion
+    x: card.x
+    y: card.y
+    width: card.width
+    height: card.height
   }
 
   MouseArea {

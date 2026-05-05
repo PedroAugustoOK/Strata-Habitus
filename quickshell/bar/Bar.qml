@@ -29,17 +29,13 @@ PanelWindow {
     id: barHairline
     anchors { left: parent.left; right: parent.right; top: barSurface.bottom }
     height: 1
-    color: Qt.rgba(0, 0, 0, Colors.darkMode ? 0.18 : 0.08)
+    color: Qt.rgba(Colors.panelBorder.r, Colors.panelBorder.g, Colors.panelBorder.b, Colors.darkMode ? 0.18 : 0.22)
   }
   Rectangle {
     id: barShadow
     anchors { left: parent.left; right: parent.right; top: barHairline.bottom }
-    height: 4
-    gradient: Gradient {
-      orientation: Gradient.Vertical
-      GradientStop { position: 0.0; color: Qt.rgba(0, 0, 0, Colors.darkMode ? 0.12 : 0.05) }
-      GradientStop { position: 1.0; color: Qt.rgba(0, 0, 0, 0.0) }
-    }
+    height: 0
+    color: "transparent"
   }
   Item {
     id: leftZone

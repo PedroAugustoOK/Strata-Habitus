@@ -10,12 +10,16 @@ PanelWindow {
   exclusionMode: ExclusionMode.Ignore
   focusable: true
   visible: false
+  onVisibleChanged: {
+    if (visible) OverlayState.setActive("appcenter")
+    else OverlayState.clear("appcenter")
+  }
 
   property int selected: 0
   property real cardYOffset: 20
   property real progressValue: 0
-  readonly property color cardBase: Colors.bg1
-  readonly property color cardAccentWash: Qt.rgba(Colors.accent.r, Colors.accent.g, Colors.accent.b, Colors.darkMode ? 0.10 : 0.06)
+  readonly property color cardBase: Colors.panelBackground
+  readonly property color cardAccentWash: Qt.rgba(Colors.primary.r, Colors.primary.g, Colors.primary.b, Colors.darkMode ? 0.10 : 0.06)
   readonly property color cardTop: Colors.darkMode
     ? Qt.rgba(Colors.bg2.r, Colors.bg2.g, Colors.bg2.b, 0.98)
     : Qt.rgba(Colors.bg2.r, Colors.bg2.g, Colors.bg2.b, 0.94)
@@ -55,11 +59,11 @@ PanelWindow {
         ? 0.94
         : 0
   readonly property int progressStepIndex: store.loading ? 1 : store.applying ? 2 : store.rebuilding ? 3 : 0
-  readonly property string progressTone: store.loading
-    ? "#7cc7ff"
+  readonly property color progressTone: store.loading
+      ? Colors.info
     : store.rebuilding
-      ? "#f6c76b"
-      : "#86f0aa"
+      ? Colors.warning
+      : Colors.success
   readonly property string progressLabel: store.loading
     ? "Atualizando catalogo"
     : store.rebuilding
@@ -88,7 +92,8 @@ PanelWindow {
     store.setMode("discover")
     store.reload()
     card.opacity = 0
-    card.scale = 0.985
+    cardScale.xScale = 0.985
+    cardScale.yScale = 0.985
     cardYOffset = 16
     openAnim.start()
   }
@@ -156,24 +161,22 @@ PanelWindow {
   function stateFillColor(item) {
     if (!item) return root.softFill
     if (item.source === "nix" && item.managed && !item.installed) {
-      return Qt.rgba(0.96, 0.78, 0.42, Colors.darkMode ? 0.18 : 0.14)
+      return Qt.rgba(Colors.warning.r, Colors.warning.g, Colors.warning.b, Colors.darkMode ? 0.18 : 0.14)
     }
     if (item.managed) {
-      return Qt.rgba(Colors.accent.r, Colors.accent.g, Colors.accent.b, 0.14)
+      return Qt.rgba(Colors.primary.r, Colors.primary.g, Colors.primary.b, 0.14)
     }
     if (item.installed) {
-      return Colors.darkMode
-        ? Qt.rgba(0.38, 0.82, 0.58, 0.18)
-        : Qt.rgba(0.19, 0.58, 0.33, 0.20)
+      return Qt.rgba(Colors.success.r, Colors.success.g, Colors.success.b, Colors.darkMode ? 0.18 : 0.14)
     }
     return root.softFill
   }
 
   function stateTextColor(item) {
     if (!item) return Colors.text3
-    if (item.source === "nix" && item.managed && !item.installed) return Qt.color("#f0bf6b")
-    if (item.managed) return Colors.accent
-    if (item.installed) return Colors.darkMode ? Qt.color("#74d38e") : Qt.color("#1f6b3e")
+    if (item.source === "nix" && item.managed && !item.installed) return Colors.warning
+    if (item.managed) return Colors.primary
+    if (item.installed) return Colors.success
     return Colors.text3
   }
 
@@ -229,9 +232,10 @@ PanelWindow {
   SequentialAnimation {
     id: openAnim
     ParallelAnimation {
-      NumberAnimation { target: root; property: "cardYOffset"; from: 16; to: 0; duration: 190; easing.type: Easing.OutCubic }
+      NumberAnimation { target: root; property: "cardYOffset"; from: OverlayState.morphStartYOffset(root.height); to: 0; duration: 260; easing.type: Easing.OutCubic }
       NumberAnimation { target: card; property: "opacity"; from: 0; to: 1; duration: 140; easing.type: Easing.OutQuad }
-      NumberAnimation { target: card; property: "scale"; from: 0.985; to: 1; duration: 190; easing.type: Easing.OutCubic }
+      NumberAnimation { target: cardScale; property: "xScale"; from: OverlayState.morphStartXScale(card.width); to: 1; duration: 260; easing.type: Easing.OutCubic }
+      NumberAnimation { target: cardScale; property: "yScale"; from: OverlayState.morphStartYScale(card.height); to: 1; duration: 260; easing.type: Easing.OutCubic }
     }
     ScriptAction { script: searchInput.forceActiveFocus() }
   }
@@ -239,8 +243,9 @@ PanelWindow {
   SequentialAnimation {
     id: closeAnim
     ParallelAnimation {
-      NumberAnimation { target: root; property: "cardYOffset"; to: 10; duration: 120; easing.type: Easing.InCubic }
-      NumberAnimation { target: card; property: "scale"; to: 0.992; duration: 120; easing.type: Easing.InCubic }
+      NumberAnimation { target: root; property: "cardYOffset"; to: OverlayState.morphStartYOffset(root.height); duration: 150; easing.type: Easing.InCubic }
+      NumberAnimation { target: cardScale; property: "xScale"; to: OverlayState.morphStartXScale(card.width); duration: 150; easing.type: Easing.InCubic }
+      NumberAnimation { target: cardScale; property: "yScale"; to: OverlayState.morphStartYScale(card.height); duration: 150; easing.type: Easing.InCubic }
       NumberAnimation { target: card; property: "opacity"; to: 0; duration: 95; easing.type: Easing.InQuad }
     }
     ScriptAction { script: {
@@ -280,9 +285,16 @@ PanelWindow {
     antialiasing: true
     color: root.cardBase
     border.width: 1
-    border.color: Qt.rgba(Colors.accent.r, Colors.accent.g, Colors.accent.b, 0.22)
+    border.color: Qt.rgba(Colors.primary.r, Colors.primary.g, Colors.primary.b, 0.22)
     opacity: 0
     clip: true
+    transform: Scale {
+      id: cardScale
+      origin.x: Math.max(0, Math.min(card.width, OverlayState.islandCenterX - card.x))
+      origin.y: Math.max(0, Math.min(card.height, OverlayState.islandCenterY - card.y))
+      xScale: 1
+      yScale: 1
+    }
 
     Rectangle {
       anchors.fill: parent
@@ -343,12 +355,12 @@ PanelWindow {
           width: 98
           height: 20
           radius: 10
-          color: Qt.rgba(Colors.accent.r, Colors.accent.g, Colors.accent.b, 0.14)
+          color: Qt.rgba(Colors.primary.r, Colors.primary.g, Colors.primary.b, 0.14)
 
           Text {
             anchors.centerIn: parent
             text: "Nix + Flatpak"
-            color: Colors.accent
+            color: Colors.primary
             font { pixelSize: 9; family: "JetBrainsMono Nerd Font" }
           }
         }
@@ -360,17 +372,17 @@ PanelWindow {
           height: 46
           radius: 14
           color: store.pendingCount > 0
-            ? Qt.rgba(Colors.accent.r, Colors.accent.g, Colors.accent.b, 0.16)
+            ? Qt.rgba(Colors.warning.r, Colors.warning.g, Colors.warning.b, 0.16)
             : Qt.rgba(1, 1, 1, 0.035)
           border.width: 1
           border.color: store.pendingCount > 0
-            ? Qt.rgba(Colors.accent.r, Colors.accent.g, Colors.accent.b, 0.24)
+            ? Qt.rgba(Colors.warning.r, Colors.warning.g, Colors.warning.b, 0.24)
             : Qt.rgba(1, 1, 1, 0.06)
 
           Text {
             anchors.centerIn: parent
             text: queueHeadline
-            color: store.pendingCount > 0 ? Colors.accent : Colors.text2
+            color: store.pendingCount > 0 ? Colors.warning : Colors.text2
             font { pixelSize: 10; family: "JetBrainsMono Nerd Font" }
           }
         }
@@ -493,18 +505,18 @@ PanelWindow {
               radius: 12
               antialiasing: true
               color: store.mode === modelData.key
-                ? Qt.rgba(Colors.accent.r, Colors.accent.g, Colors.accent.b, 0.18)
+                ? Qt.rgba(Colors.primary.r, Colors.primary.g, Colors.primary.b, 0.18)
                 : root.softFill
               border.width: 1
               border.color: store.mode === modelData.key
-                ? Qt.rgba(Colors.accent.r, Colors.accent.g, Colors.accent.b, 0.26)
+                ? Qt.rgba(Colors.primary.r, Colors.primary.g, Colors.primary.b, 0.26)
                 : root.panelBorder
 
               Text {
                 x: 12
                 anchors.verticalCenter: parent.verticalCenter
                 text: modelData.label
-                color: store.mode === modelData.key ? Colors.accent : Colors.text2
+                color: store.mode === modelData.key ? Colors.primary : Colors.text2
                 font { pixelSize: 11; family: "JetBrainsMono Nerd Font" }
               }
 
@@ -544,14 +556,14 @@ PanelWindow {
           color: root.searchFill
           border.width: 1
           border.color: searchInput.activeFocus
-            ? Qt.rgba(Colors.accent.r, Colors.accent.g, Colors.accent.b, 0.30)
+            ? Qt.rgba(Colors.primary.r, Colors.primary.g, Colors.primary.b, 0.30)
             : root.panelBorder
 
           Text {
             x: 16
             anchors.verticalCenter: parent.verticalCenter
             text: "󰍉"
-            color: Colors.accent
+            color: Colors.primary
             font { pixelSize: 15; family: "JetBrainsMono Nerd Font" }
           }
 
@@ -603,11 +615,11 @@ PanelWindow {
           radius: 11
           antialiasing: true
           color: (store.loading || store.applying || store.rebuilding)
-            ? Qt.rgba(Colors.accent.r, Colors.accent.g, Colors.accent.b, 0.16)
+            ? Qt.rgba(Colors.primary.r, Colors.primary.g, Colors.primary.b, 0.16)
             : root.softFill
           border.width: 1
           border.color: (store.loading || store.applying || store.rebuilding)
-            ? Qt.rgba(Colors.accent.r, Colors.accent.g, Colors.accent.b, 0.24)
+            ? Qt.rgba(Colors.primary.r, Colors.primary.g, Colors.primary.b, 0.24)
             : root.panelBorder
 
           Text {
@@ -620,7 +632,7 @@ PanelWindow {
                 : store.rebuilding
                   ? "Abrindo rebuild..."
                   : store.mode
-            color: (store.loading || store.applying || store.rebuilding) ? Colors.accent : Colors.text2
+            color: (store.loading || store.applying || store.rebuilding) ? Colors.primary : Colors.text2
             font { pixelSize: 10; family: "JetBrainsMono Nerd Font" }
           }
         }
@@ -642,13 +654,13 @@ PanelWindow {
             radius: 14
             antialiasing: true
             color: root.selected === index
-              ? Qt.rgba(Colors.accent.r, Colors.accent.g, Colors.accent.b, 0.18)
+              ? Qt.rgba(Colors.primary.r, Colors.primary.g, Colors.primary.b, 0.18)
               : mouse.containsMouse
-                ? Qt.rgba(Colors.accent.r, Colors.accent.g, Colors.accent.b, Colors.darkMode ? 0.08 : 0.06)
+                ? Qt.rgba(Colors.primary.r, Colors.primary.g, Colors.primary.b, Colors.darkMode ? 0.08 : 0.06)
                 : root.softerFill
             border.width: 1
             border.color: root.selected === index
-              ? Qt.rgba(Colors.accent.r, Colors.accent.g, Colors.accent.b, 0.28)
+              ? Qt.rgba(Colors.primary.r, Colors.primary.g, Colors.primary.b, 0.28)
               : root.panelBorder
             Behavior on color { ColorAnimation { duration: 110 } }
             Behavior on border.color { ColorAnimation { duration: 110 } }
@@ -661,13 +673,13 @@ PanelWindow {
               radius: 10
               antialiasing: true
               color: item.source === "flatpak"
-                ? Qt.rgba(Colors.accent.r, Colors.accent.g, Colors.accent.b, 0.16)
+                ? Qt.rgba(Colors.primary.r, Colors.primary.g, Colors.primary.b, 0.16)
                 : root.softFill
 
               Text {
                 anchors.centerIn: parent
                 text: item.source === "flatpak" ? "F" : "N"
-                color: item.source === "flatpak" ? Colors.accent : Colors.text2
+                color: item.source === "flatpak" ? Colors.primary : Colors.text2
                 font { pixelSize: 13; family: "JetBrainsMono Nerd Font" }
               }
             }
@@ -707,14 +719,14 @@ PanelWindow {
                 radius: 8
                 antialiasing: true
                 color: item.source === "flatpak"
-                  ? Qt.rgba(Colors.accent.r, Colors.accent.g, Colors.accent.b, 0.12)
+                  ? Qt.rgba(Colors.primary.r, Colors.primary.g, Colors.primary.b, 0.12)
                   : root.softFill
 
                 Text {
                   id: sourceLabel
                   anchors.centerIn: parent
                   text: item.source === "flatpak" ? "Flatpak" : "Nix"
-                  color: item.source === "flatpak" ? Colors.accent : Colors.text2
+                  color: item.source === "flatpak" ? Colors.primary : Colors.text2
                   font { pixelSize: 10; family: "JetBrainsMono Nerd Font" }
                 }
               }
@@ -743,15 +755,14 @@ PanelWindow {
                 height: 22
                 radius: 8
                 antialiasing: true
-                color: store.isQueued(item)
-                  ? Qt.rgba(Colors.accent.r, Colors.accent.g, Colors.accent.b, 0.14)
+                color: store.isQueued(item) ? Qt.rgba(Colors.warning.r, Colors.warning.g, Colors.warning.b, 0.14)
                   : root.softerFill
 
                 Text {
                   id: queueLabel
                   anchors.centerIn: parent
                   text: store.isQueued(item) ? "Na fila" : "Fila"
-                  color: store.isQueued(item) ? Colors.accent : Colors.text3
+                  color: store.isQueued(item) ? Colors.warning : Colors.text3
                   font { pixelSize: 10; family: "JetBrainsMono Nerd Font" }
                 }
               }
@@ -769,9 +780,8 @@ PanelWindow {
               color: item.source === "flatpak"
                 ? (item.installed
                     ? root.softFill
-                    : Qt.rgba(Colors.accent.r, Colors.accent.g, Colors.accent.b, 0.16))
-                : (store.isQueued(item)
-                    ? Qt.rgba(Colors.accent.r, Colors.accent.g, Colors.accent.b, 0.16)
+                    : Qt.rgba(Colors.primary.r, Colors.primary.g, Colors.primary.b, 0.16))
+                : (store.isQueued(item) ? Qt.rgba(Colors.warning.r, Colors.warning.g, Colors.warning.b, 0.16)
                     : root.softFill)
               border.width: 1
               border.color: root.panelBorder
@@ -782,8 +792,8 @@ PanelWindow {
                   ? (store.isQueued(item) ? "Tirar" : "+")
                   : (item.installed ? "Tirar" : "+")
                 color: item.source === "flatpak"
-                  ? (item.installed ? Colors.text2 : Colors.accent)
-                  : (store.isQueued(item) ? Colors.accent : Colors.text2)
+                  ? (item.installed ? Colors.text2 : Colors.primary)
+                  : (store.isQueued(item) ? Colors.warning : Colors.text2)
                 font { pixelSize: 10; family: "JetBrainsMono Nerd Font" }
               }
 
@@ -831,9 +841,9 @@ PanelWindow {
           height: 126
           radius: 16
           antialiasing: true
-          color: Qt.rgba(Colors.accent.r, Colors.accent.g, Colors.accent.b, 0.10)
+          color: Qt.rgba(Colors.primary.r, Colors.primary.g, Colors.primary.b, 0.10)
           border.width: 1
-          border.color: Qt.rgba(Colors.accent.r, Colors.accent.g, Colors.accent.b, 0.16)
+          border.color: Qt.rgba(Colors.primary.r, Colors.primary.g, Colors.primary.b, 0.16)
           clip: true
 
           Rectangle {
@@ -848,7 +858,7 @@ PanelWindow {
             Text {
               anchors.centerIn: parent
               text: currentItem ? (currentItem.source === "flatpak" ? "F" : "N") : "?"
-              color: currentItem && currentItem.source === "flatpak" ? Colors.accent : Colors.text2
+              color: currentItem && currentItem.source === "flatpak" ? Colors.primary : Colors.text2
               font { pixelSize: 20; family: "JetBrainsMono Nerd Font" }
             }
           }
@@ -883,14 +893,14 @@ PanelWindow {
               height: 24
               radius: 8
               color: currentItem && currentItem.source === "flatpak"
-                ? Qt.rgba(Colors.accent.r, Colors.accent.g, Colors.accent.b, 0.12)
+                ? Qt.rgba(Colors.primary.r, Colors.primary.g, Colors.primary.b, 0.12)
                 : Qt.rgba(1, 1, 1, 0.05)
 
               Text {
                 id: sourceTag
                 anchors.centerIn: parent
                 text: formatSource(currentItem)
-                color: currentItem && currentItem.source === "flatpak" ? Colors.accent : Colors.text2
+                color: currentItem && currentItem.source === "flatpak" ? Colors.primary : Colors.text2
                 font { pixelSize: 10; family: "JetBrainsMono Nerd Font" }
               }
             }
@@ -919,8 +929,7 @@ PanelWindow {
               width: queueTag.implicitWidth + 16
               height: 24
               radius: 8
-              color: store.isQueued(currentItem)
-                ? Qt.rgba(Colors.accent.r, Colors.accent.g, Colors.accent.b, 0.14)
+              color: store.isQueued(currentItem) ? Qt.rgba(Colors.warning.r, Colors.warning.g, Colors.warning.b, 0.14)
                 : Qt.rgba(1, 1, 1, 0.04)
 
               Text {
@@ -929,7 +938,7 @@ PanelWindow {
                 text: store.isQueued(currentItem)
                   ? (currentQueueMode === "remove" ? "Remocao na fila" : "Instalacao na fila")
                   : "Nao esta na fila"
-                color: store.isQueued(currentItem) ? Colors.accent : Colors.text3
+                color: store.isQueued(currentItem) ? Colors.warning : Colors.text3
                 font { pixelSize: 10; family: "JetBrainsMono Nerd Font" }
               }
             }
@@ -960,11 +969,11 @@ PanelWindow {
           radius: 16
           antialiasing: true
           color: store.pendingCount > 0
-            ? Qt.rgba(Colors.accent.r, Colors.accent.g, Colors.accent.b, 0.10)
+            ? Qt.rgba(Colors.warning.r, Colors.warning.g, Colors.warning.b, 0.10)
             : root.softFill
           border.width: 1
           border.color: store.pendingCount > 0
-            ? Qt.rgba(Colors.accent.r, Colors.accent.g, Colors.accent.b, 0.16)
+            ? Qt.rgba(Colors.warning.r, Colors.warning.g, Colors.warning.b, 0.16)
             : root.panelBorder
           clip: true
 
@@ -972,7 +981,7 @@ PanelWindow {
             x: 16
             y: 14
             text: "Lista de compras"
-            color: store.pendingCount > 0 ? Colors.accent : Colors.text2
+            color: store.pendingCount > 0 ? Colors.warning : Colors.text2
             font { pixelSize: 11; family: "JetBrainsMono Nerd Font" }
           }
 
@@ -1049,11 +1058,11 @@ PanelWindow {
           radius: 13
           antialiasing: true
           color: store.pendingCount > 0
-            ? Qt.rgba(Colors.accent.r, Colors.accent.g, Colors.accent.b, 0.18)
+            ? Qt.rgba(Colors.warning.r, Colors.warning.g, Colors.warning.b, 0.18)
             : root.softFill
           border.width: 1
           border.color: store.pendingCount > 0
-            ? Qt.rgba(Colors.accent.r, Colors.accent.g, Colors.accent.b, 0.24)
+            ? Qt.rgba(Colors.warning.r, Colors.warning.g, Colors.warning.b, 0.24)
             : root.panelBorder
 
           Text {
@@ -1065,7 +1074,7 @@ PanelWindow {
                     ? "Aplicando lista..."
                     : "Confirmar lista e rebuild")
               : "Fila vazia"
-            color: store.pendingCount > 0 ? Colors.accent : Colors.text3
+            color: store.pendingCount > 0 ? Colors.warning : Colors.text3
             font { pixelSize: 11; family: "JetBrainsMono Nerd Font" }
           }
 
@@ -1096,10 +1105,10 @@ PanelWindow {
                     ? store.warningMessage
                     : keyboardHint()))
           color: store.errorMessage !== ""
-            ? "#ff8e8e"
+            ? Colors.danger
             : (store.infoMessage !== ""
-                ? Colors.accent
-                : (store.warningMessage !== "" ? "#e6c07b" : Colors.text3))
+                ? Colors.primary
+                : (store.warningMessage !== "" ? Colors.warning : Colors.text3))
           font { pixelSize: 9; family: "JetBrainsMono Nerd Font" }
         }
       }

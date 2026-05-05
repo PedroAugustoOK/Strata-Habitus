@@ -28,6 +28,15 @@ PanelWindow {
   readonly property color detailFill: Colors.darkMode
     ? Qt.rgba(Colors.bg2.r, Colors.bg2.g, Colors.bg2.b, 0.50)
     : Qt.rgba(Colors.bg2.r, Colors.bg2.g, Colors.bg2.b, 0.74)
+  readonly property color statusTone: store.status === "error"
+    ? Colors.danger
+    : store.status === "success" || store.status === "clean"
+      ? Colors.success
+      : store.blockedReason !== ""
+        ? Colors.warning
+        : store.running
+          ? Colors.info
+          : Colors.primary
 
   function toggle() {
     if (visible) {
@@ -38,7 +47,8 @@ PanelWindow {
     store.resetViewState()
     visible = true
     card.opacity = 0
-    card.scale = 0.985
+    cardScale.xScale = 0.985
+    cardScale.yScale = 0.985
     cardYOffset = 16
     store.reload()
     openAnim.start()
@@ -62,6 +72,8 @@ PanelWindow {
   }
 
   onVisibleChanged: {
+    if (visible) OverlayState.setActive("updatecenter")
+    else OverlayState.clear("updatecenter")
     if (visible) {
       root.forceActiveFocus()
     }
@@ -75,9 +87,10 @@ PanelWindow {
   SequentialAnimation {
     id: openAnim
     ParallelAnimation {
-      NumberAnimation { target: root; property: "cardYOffset"; from: 16; to: 0; duration: 190; easing.type: Easing.OutCubic }
+      NumberAnimation { target: root; property: "cardYOffset"; from: OverlayState.morphStartYOffset(root.height); to: 0; duration: 260; easing.type: Easing.OutCubic }
       NumberAnimation { target: card; property: "opacity"; from: 0; to: 1; duration: 140; easing.type: Easing.OutQuad }
-      NumberAnimation { target: card; property: "scale"; from: 0.985; to: 1; duration: 190; easing.type: Easing.OutCubic }
+      NumberAnimation { target: cardScale; property: "xScale"; from: OverlayState.morphStartXScale(card.width); to: 1; duration: 260; easing.type: Easing.OutCubic }
+      NumberAnimation { target: cardScale; property: "yScale"; from: OverlayState.morphStartYScale(card.height); to: 1; duration: 260; easing.type: Easing.OutCubic }
     }
     ScriptAction { script: root.forceActiveFocus() }
   }
@@ -85,8 +98,9 @@ PanelWindow {
   SequentialAnimation {
     id: closeAnim
     ParallelAnimation {
-      NumberAnimation { target: root; property: "cardYOffset"; to: 10; duration: 120; easing.type: Easing.InCubic }
-      NumberAnimation { target: card; property: "scale"; to: 0.992; duration: 120; easing.type: Easing.InCubic }
+      NumberAnimation { target: root; property: "cardYOffset"; to: OverlayState.morphStartYOffset(root.height); duration: 150; easing.type: Easing.InCubic }
+      NumberAnimation { target: cardScale; property: "xScale"; to: OverlayState.morphStartXScale(card.width); duration: 150; easing.type: Easing.InCubic }
+      NumberAnimation { target: cardScale; property: "yScale"; to: OverlayState.morphStartYScale(card.height); duration: 150; easing.type: Easing.InCubic }
       NumberAnimation { target: card; property: "opacity"; to: 0; duration: 95; easing.type: Easing.InQuad }
     }
     ScriptAction { script: root.visible = false }
@@ -103,6 +117,13 @@ PanelWindow {
     color: Colors.bg1
     border.width: 1
     border.color: root.panelBorder
+    transform: Scale {
+      id: cardScale
+      origin.x: Math.max(0, Math.min(card.width, OverlayState.islandCenterX - card.x))
+      origin.y: Math.max(0, Math.min(card.height, OverlayState.islandCenterY - card.y))
+      xScale: 1
+      yScale: 1
+    }
     clip: true
     opacity: 0
 
@@ -135,7 +156,7 @@ PanelWindow {
       radius: parent.radius - 1
       color: "transparent"
       border.width: 1
-      border.color: Qt.rgba(Colors.accent.r, Colors.accent.g, Colors.accent.b, 0.10)
+      border.color: Qt.rgba(Colors.primary.r, Colors.primary.g, Colors.primary.b, 0.10)
     }
 
     Item {
@@ -189,15 +210,15 @@ PanelWindow {
           radius: 13
           implicitWidth: badgeLabel.implicitWidth + 18
           implicitHeight: 30
-          color: Qt.rgba(Colors.accent.r, Colors.accent.g, Colors.accent.b, Colors.darkMode ? 0.14 : 0.11)
+          color: Qt.rgba(root.statusTone.r, root.statusTone.g, root.statusTone.b, Colors.darkMode ? 0.14 : 0.11)
           border.width: 1
-          border.color: Qt.rgba(Colors.accent.r, Colors.accent.g, Colors.accent.b, 0.22)
+          border.color: Qt.rgba(root.statusTone.r, root.statusTone.g, root.statusTone.b, 0.22)
 
           Text {
             id: badgeLabel
             anchors.centerIn: parent
             text: store.host + " • " + store.channel
-            color: Colors.accent
+            color: root.statusTone
             font { pixelSize: 10; family: "JetBrains Mono"; weight: Font.DemiBold }
           }
         }
@@ -276,6 +297,7 @@ PanelWindow {
             model: store.steps
             delegate: ColumnLayout {
               required property var modelData
+              required property int index
               readonly property int idx: index
               readonly property string state: store.stepState(idx)
               Layout.fillWidth: true
@@ -286,11 +308,11 @@ PanelWindow {
                 implicitHeight: 4
                 radius: 3
                 color: state === "done"
-                  ? Colors.accent
+                  ? Colors.success
                   : state === "active"
-                    ? Qt.rgba(Colors.accent.r, Colors.accent.g, Colors.accent.b, 0.70)
+                    ? Qt.rgba(Colors.info.r, Colors.info.g, Colors.info.b, 0.70)
                     : state === "error"
-                      ? "#d96c6c"
+                      ? Colors.danger
                       : Qt.rgba(Colors.text1.r, Colors.text1.g, Colors.text1.b, 0.10)
               }
 
@@ -313,7 +335,7 @@ PanelWindow {
             width: Math.max(8, parent.width * store.progressValue)
             height: parent.height
             radius: parent.radius
-            color: store.status === "error" ? "#d96c6c" : Colors.accent
+            color: root.statusTone
           }
         }
       }
@@ -328,13 +350,13 @@ PanelWindow {
           implicitHeight: 50
           radius: 17
           color: store.running
-            ? Qt.rgba(Colors.accent.r, Colors.accent.g, Colors.accent.b, 0.16)
+              ? Qt.rgba(root.statusTone.r, root.statusTone.g, root.statusTone.b, 0.16)
             : store.primaryEnabled()
-              ? Colors.accent
+              ? root.statusTone
               : Qt.rgba(Colors.text1.r, Colors.text1.g, Colors.text1.b, 0.12)
           border.width: 1
           border.color: store.primaryEnabled()
-            ? Qt.rgba(Colors.accent.r, Colors.accent.g, Colors.accent.b, store.running ? 0.24 : 0.36)
+            ? Qt.rgba(root.statusTone.r, root.statusTone.g, root.statusTone.b, store.running ? 0.24 : 0.36)
             : Qt.rgba(Colors.text1.r, Colors.text1.g, Colors.text1.b, 0.12)
           focus: true
 
@@ -342,7 +364,7 @@ PanelWindow {
             anchors.centerIn: parent
             text: store.primaryLabel()
             color: store.running
-              ? Colors.accent
+              ? root.statusTone
               : store.primaryEnabled()
                 ? Colors.bg0
                 : Colors.text3

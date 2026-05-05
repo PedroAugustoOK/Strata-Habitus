@@ -21,7 +21,7 @@ Item {
     id: pill
     anchors.fill: parent
     radius: 14
-    color:  Colors.bg2
+    color:  Colors.barPill
     implicitWidth: innerRow.implicitWidth + 24
 
     Row {

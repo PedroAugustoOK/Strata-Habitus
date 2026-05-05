@@ -3,4 +3,6 @@ singleton Colors 1.0 Colors.qml
 singleton DeviceState 1.0 DeviceState.qml
 singleton NotificationService 1.0 NotificationService.qml
 singleton SystemState 1.0 SystemState.qml
+singleton OverlayState 1.0 OverlayState.qml
+singleton DynamicIslandState 1.0 DynamicIslandState.qml
 singleton Paths 1.0 Paths.qml

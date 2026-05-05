@@ -51,7 +51,7 @@ PanelWindow {
   readonly property color rowFill: Colors.darkMode
     ? Qt.rgba(Colors.bg2.r, Colors.bg2.g, Colors.bg2.b, 0.34)
     : Qt.rgba(Colors.bg2.r, Colors.bg2.g, Colors.bg2.b, 0.78)
-  readonly property color rowSelected: Qt.rgba(Colors.accent.r, Colors.accent.g, Colors.accent.b, Colors.darkMode ? 0.16 : 0.12)
+  readonly property color rowSelected: Qt.rgba(Colors.primary.r, Colors.primary.g, Colors.primary.b, Colors.darkMode ? 0.16 : 0.12)
 
   function toggle() {
     if (visible) {
@@ -61,8 +61,9 @@ PanelWindow {
     selectedActionIdx = 0
     visible = true
     card.opacity = 0
-    card.scale = 0.988
-    cardYOffset = 16
+    cardScale.xScale = OverlayState.morphStartXScale(card.width)
+    cardScale.yScale = OverlayState.morphStartYScale(card.height)
+    cardYOffset = OverlayState.morphStartYOffset(root.height)
     openAnim.start()
   }
 
@@ -112,6 +113,8 @@ PanelWindow {
   }
 
   onVisibleChanged: {
+    if (visible) OverlayState.setActive("settingscenter")
+    else OverlayState.clear("settingscenter")
     if (visible) {
       keyGrabber.forceActiveFocus()
       ensureCurrentActionVisible()
@@ -128,9 +131,10 @@ PanelWindow {
   SequentialAnimation {
     id: openAnim
     ParallelAnimation {
-      NumberAnimation { target: root; property: "cardYOffset"; from: 16; to: 0; duration: 170; easing.type: Easing.OutCubic }
-      NumberAnimation { target: card; property: "opacity"; from: 0; to: 1; duration: 140; easing.type: Easing.OutQuad }
-      NumberAnimation { target: card; property: "scale"; from: 0.988; to: 1; duration: 170; easing.type: Easing.OutCubic }
+      NumberAnimation { target: root; property: "cardYOffset"; from: OverlayState.morphStartYOffset(root.height); to: 0; duration: 260; easing.type: Easing.OutCubic }
+      NumberAnimation { target: card; property: "opacity"; from: 0; to: 1; duration: 120; easing.type: Easing.OutQuad }
+      NumberAnimation { target: cardScale; property: "xScale"; from: OverlayState.morphStartXScale(card.width); to: 1; duration: 260; easing.type: Easing.OutCubic }
+      NumberAnimation { target: cardScale; property: "yScale"; from: OverlayState.morphStartYScale(card.height); to: 1; duration: 260; easing.type: Easing.OutCubic }
     }
     ScriptAction {
       script: {
@@ -143,9 +147,10 @@ PanelWindow {
   SequentialAnimation {
     id: closeAnim
     ParallelAnimation {
-      NumberAnimation { target: root; property: "cardYOffset"; to: 10; duration: 110; easing.type: Easing.InCubic }
-      NumberAnimation { target: card; property: "scale"; to: 0.992; duration: 110; easing.type: Easing.InCubic }
-      NumberAnimation { target: card; property: "opacity"; to: 0; duration: 90; easing.type: Easing.InQuad }
+      NumberAnimation { target: root; property: "cardYOffset"; to: OverlayState.morphStartYOffset(root.height); duration: 150; easing.type: Easing.InCubic }
+      NumberAnimation { target: cardScale; property: "xScale"; to: OverlayState.morphStartXScale(card.width); duration: 150; easing.type: Easing.InCubic }
+      NumberAnimation { target: cardScale; property: "yScale"; to: OverlayState.morphStartYScale(card.height); duration: 150; easing.type: Easing.InCubic }
+      NumberAnimation { target: card; property: "opacity"; to: 0; duration: 110; easing.type: Easing.InQuad }
     }
     ScriptAction { script: root.visible = false }
   }
@@ -163,6 +168,13 @@ PanelWindow {
     border.color: root.panelBorder
     clip: true
     opacity: 0
+    transform: Scale {
+      id: cardScale
+      origin.x: Math.max(0, Math.min(card.width, OverlayState.islandCenterX - card.x))
+      origin.y: Math.max(0, Math.min(card.height, OverlayState.islandCenterY - card.y))
+      xScale: 1
+      yScale: 1
+    }
 
     Rectangle {
       anchors.fill: parent
@@ -255,7 +267,7 @@ PanelWindow {
               color: selected ? root.rowSelected : root.rowFill
               border.width: 1
               border.color: selected
-                ? Qt.rgba(Colors.accent.r, Colors.accent.g, Colors.accent.b, 0.28)
+                ? Qt.rgba(Colors.primary.r, Colors.primary.g, Colors.primary.b, 0.28)
                 : Qt.rgba(Colors.text1.r, Colors.text1.g, Colors.text1.b, Colors.darkMode ? 0.05 : 0.08)
 
               RowLayout {
@@ -268,7 +280,7 @@ PanelWindow {
                   Layout.preferredHeight: 44
                   radius: 14
                   color: selected
-                    ? Qt.rgba(Colors.accent.r, Colors.accent.g, Colors.accent.b, 0.22)
+                    ? Qt.rgba(Colors.primary.r, Colors.primary.g, Colors.primary.b, 0.22)
                     : Qt.rgba(Colors.text1.r, Colors.text1.g, Colors.text1.b, Colors.darkMode ? 0.08 : 0.06)
                   border.width: 1
                   border.color: Qt.rgba(Colors.text1.r, Colors.text1.g, Colors.text1.b, Colors.darkMode ? 0.05 : 0.08)

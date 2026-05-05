@@ -45,7 +45,7 @@
   - persistent history
   - image preview
   - close on copy
-  - current notebook bind is `Super+V`
+  - `Super+Y` flow working
 
 ### Theme system
 - Theme propagation is custom and intentionally integrated across:
@@ -318,68 +318,6 @@ sudo nixos-generate-config --show-hardware-config > ~/dotfiles/hosts/desktop/har
     - `Control Center`
     - top bar connected-state pill
 - Current desktop host config points to:
-
-## Session update - 2026-04-29
-
-### Stable sync attempt on desktop
-- User needed to bring `desktop` up to the same level as notebook work already published to `stable`
-- Verified branch relationship:
-  - `origin/stable` contained one notebook-side commit ahead of `main`
-  - commit `06588ea` `Apply notebook stable UI pass and web apps overlay`
-- Verified risk profile of that commit:
-  - touches Quickshell/UI/session files and `flake.lock`
-  - does not touch `hosts/*`, GPU config, `configuration.nix`, or `home.nix`
-
-### What the notebook-side stable commit contains
-- Added `Apps Web` overlay
-- Added `Settings Center` entry for `Apps Web`
-- Updated clipboard UI and binds:
-  - notebook bind now uses `Super+V`
-  - float/fullscreen binds moved to `Super+Shift+G` and `Super+Shift+F`
-- Added expandable notification history cards in `Control Center`
-- Improved notification body cleanup for noisy Chromium/site-origin content
-- Kept `mako` as the popup delivery layer
-
-### Rebuild blocker encountered on desktop
-- `git checkout stable` and `git pull --ff-only origin stable` succeeded
-- First `nixos-rebuild test` looked stuck at:
-  - `fetching rust-src from https://cache.nixos.org`
-- That run was cancelled
-- Follow-up diagnostic:
-  - `nix build nixpkgs#rustc.src -L` succeeded
-- Conclusion:
-  - the earlier `rust-src` stall was not a hard permanent failure
-
-### Current real blocker
-- Re-running with `-L` advanced into a long local Rust/V8 build:
-  - `rusty-v8`
-  - `temporal_rs`
-  - `temporal_capi`
-- Observed long-running visible line:
-  - `Compiling temporal_capi v0.2.3`
-- This resembles a Deno/V8 dependency path rather than a desktop GPU/config issue
-
-### Current working hypothesis
-- The likely trigger is `codex` from `modules/packages.nix`
-- `codex` is declared in `environment.systemPackages`
-- The hypothesis was based on the dependency shape, not on a completed formal `why-depends` proof
-- Practical implication:
-  - if the goal is simply to sync desktop to the notebook UI state quickly, temporarily removing `codex` is the best next experiment
-
-### Safe operational rule remembered
-- Cancelling `sudo nixos-rebuild test ...` is acceptable here
-- Since `test` was cancelled before completion:
-  - the old system generation should remain the effective active state
-  - shutting down immediately afterward was considered safe
-
-### Next-session continuation plan
-- Keep in mind that the local repo is currently checked out on `stable`
-- Recommended resume path:
-  1. Temporarily remove `codex` from `modules/packages.nix`
-  2. Run `sudo nixos-rebuild test --flake path:$HOME/dotfiles#desktop -L`
-  3. If successful, run `sudo nixos-rebuild switch --flake path:$HOME/dotfiles#desktop`
-  4. Validate Web Apps, clipboard binds, Settings Center, Control Center notification expansion
-  5. After validation, switch repo checkout back to `main` for normal desktop development flow
   - `/home/ankh/Projects/VPN/Strata-BR-18.conf`
 - Important sudo decision:
   - Strata UI actions may start/stop `protonvpn-wg.service` via NOPASSWD sudo rules
@@ -490,6 +428,102 @@ sudo nixos-generate-config --show-hardware-config > ~/dotfiles/hosts/desktop/har
   - explicit `[mode=do-not-disturb] invisible=1`
 
 ### Notification content shaping
+- `quickshell/scripts/notification-history.js` normalizes `mako` payloads into inbox cards
+- notification cards now prefer app name, summary, body, and timestamp in a compact mobile-like layout
+
+## Session update - 2026-05-03 (codex update + nix rebuild path)
+
+### Root cause of the long rebuild stall
+- The earlier hypothesis that `codex` itself was causing the huge local build was incorrect.
+- Dependency tracing on `desktop` showed the problematic chain was:
+  - `mpv`
+  - `mpv-with-scripts`
+  - `yt-dlp`
+  - `deno`
+  - `rusty-v8`
+- Practical outcome:
+  - removing `mpv` from `modules/packages.nix` allowed both:
+    - `sudo nixos-rebuild test --flake path:$HOME/dotfiles#desktop -L`
+    - `sudo nixos-rebuild switch --flake path:$HOME/dotfiles#desktop`
+  - to finish successfully
+
+### Branch / memory handling note
+- During the same session, `codex memories/STRATA_CONTEXT.md` and `codex memories/STRATA_MEMORY.md` were real modified files in git.
+- The user explicitly wants memory files committed/pushed when needed so they can resume context on another machine later.
+
+### Full flake update outcome
+- `nix flake update` was run successfully on `main`.
+- `home-manager` and `nixpkgs` both advanced in `flake.lock`.
+- First full rebuild after the update did not fail on compilation logic.
+- It failed on binary substitute/network instability from `cache.nixos.org`.
+- Repeated signals in the failed run:
+  - `HTTP error 206`
+  - `Failed sending data to the peer`
+  - `OpenSSL SSL_read: SSL_ERROR_SYSCALL`
+- Packages affected by substitute failures included:
+  - `chromium`
+  - `deno`
+  - `gdal`
+  - `hyprland`
+  - `kitty`
+  - `libreoffice`
+  - `linux`
+  - `yt-dlp`
+
+### Working rebuild retry strategy
+- The rebuild passed after reducing cache download concurrency.
+- Working command:
+  - `sudo nixos-rebuild switch --flake path:$HOME/dotfiles#desktop -L --option http-connections 2 --option max-substitution-jobs 2 --option connect-timeout 15 --option stalled-download-timeout 30`
+- Important operational note:
+  - the current blocker for large updates on this machine is unstable substitute downloads, not evaluation or the `codex` package itself
+  - `--fallback` is still a bad default here because it could trigger very large local builds
+
+### Codex package state after successful rebuild
+- After the successful reduced-concurrency rebuild, the system `codex` version was still:
+  - `codex-cli 0.125.0`
+- Local validation confirmed this matched the package exposed by the current `nixpkgs` snapshot:
+  - `nix eval 'path:/home/ankh/dotfiles#nixosConfigurations.desktop.pkgs.codex.version' -> 0.125.0`
+- Binary path at that point:
+  - `/run/current-system/sw/bin/codex`
+  - real store path under `/nix/store/...-codex-0.125.0/bin/codex`
+
+### Upstream Codex version validation
+- Official/current published npm package was verified during the session:
+  - `npm view @openai/codex version -> 0.128.0`
+- This established the exact gap:
+  - upstream npm release: `0.128.0`
+  - current `nixpkgs` package in this flake: `0.125.0`
+
+### Codex override implemented in repo
+- A local Nix overlay was added so `pkgs.codex` no longer depends on the lagging `nixpkgs` package definition.
+- Files added/changed:
+  - `flake.nix`
+  - `pkgs/codex.nix`
+- Implementation choice:
+  - do not rebuild the Rust package from source
+  - instead package the official Linux x64 npm release tarball:
+    - `https://registry.npmjs.org/@openai/codex/-/codex-0.128.0-linux-x64.tgz`
+- The packaged tarball contains:
+  - vendored `codex` binary
+  - vendored `rg`
+- The local wrapper keeps `bubblewrap` on `PATH`, preserving expected Linux runtime behavior.
+
+### Codex override validation
+- The override evaluated successfully:
+  - `nix eval 'path:/home/ankh/dotfiles#nixosConfigurations.desktop.pkgs.codex.version' -> 0.128.0`
+- The package built successfully via:
+  - `nix build 'path:/home/ankh/dotfiles#nixosConfigurations.desktop.pkgs.codex' -L --no-link`
+- Built binary validation succeeded:
+  - `/nix/store/...-codex-0.128.0/bin/codex --version -> codex-cli 0.128.0`
+
+### Resume point for next session
+- Current repo state after this work includes:
+  - updated `flake.lock`
+  - `flake.nix` overlay change
+  - new `pkgs/codex.nix`
+- Next practical step on the real machine:
+  - run `sudo nixos-rebuild switch --flake path:$HOME/dotfiles#desktop -L --option http-connections 2 --option max-substitution-jobs 2 --option connect-timeout 15 --option stalled-download-timeout 30`
+  - then confirm `codex --version`
 - Website notifications now suppress raw site/domain lines when they are only noise:
   - examples like `claude.ai`
   - `web.whatsapp.com`
@@ -509,49 +543,723 @@ sudo nixos-generate-config --show-hardware-config > ~/dotfiles/hosts/desktop/har
 - Result:
   - Chromium notifications in the Control Center can preserve the site icon instead of falling back to the browser icon
 
-## Session update - 2026-04-28 (notebook-only UI iteration)
+## Session update - 2026-05-03 (theme system direction)
 
-### Important branch/host note
-- This round of changes was made directly on notebook host `strata`
-- The working branch during this session is `stable`
-- Treat these as notebook-originated UI changes until they are intentionally replayed or merged back into the desktop development path
+### Theme model
+- Strata themes now carry two explicit layers:
+  - `semantic`: primary, secondary, success, warning, danger, info
+  - `ui`: bar style/colors, panel colors, radius scale, accent strength
+- `Colors.qml` treats theme `ui` values as the default source of interface personality.
+- `theme-preferences.json` is now an explicit override file only when it contains `"enabled": true`; otherwise it does not freeze all themes into the same bar/panel style.
+
+### Applied visual semantics
+- Top bar indicators use role colors instead of a single accent.
+- App Center uses:
+  - success for installed apps
+  - warning for queued/pending rebuild state
+  - danger for errors
+  - primary for main actions
+- Update Center derives a status tone:
+  - success for clean/success
+  - warning for blocked local state
+  - info for running
+  - danger for error
+- Control Center uses semantic tones for VPN, Wi-Fi, Bluetooth, DND, caffeine, recording, power profile, volume muted state, and notification cards.
+
+### Theme Picker
+- The Theme Picker no longer hardcodes themes.
+- It loads normalized theme data from `quickshell/scripts/theme-list.js`.
+- Theme cards now preview a miniature Strata UI:
+  - bar
+  - workspace/status pills
+  - semantic color row
+  - notification-like card
+- Applying a theme triggers a short dry color pulse before closing.
+
+## Session update - 2026-05-04 (wallpaper picker + animation test)
+
+### WallPickr direction
+- `WallPickr` was changed from a large carousel into a compact centered grid.
+- Current shape:
+  - centered, minimal panel
+  - 3-column wallpaper grid for the active theme
+  - vertical scrolling when a theme has more options
+  - selected wallpaper has a primary border
+  - currently applied wallpaper has a success check marker
+  - thumbnails are clipped through an inner rounded mask so image corners match the card
+- This was inspired by the grid screenshot the user provided.
+
+### Animation state
+- Hyprland is currently using a Zephyr-inspired animation preset:
+  - `strataZephyr = 0.23, 1, 0.61, 1`
+  - window open uses quick `popin 92%`
+  - workspace/special workspace uses longer `slide`
+  - window close uses faster `strataClose` with `popin 86%` to avoid ghost-like lingering
+- Quickshell workspace slider now uses the same Zephyr-like QML bezier curve:
+  - `Easing.BezierSpline`
+  - curve `[0.23, 1, 0.61, 1, 1, 1]`
+  - duration `570ms`
+- `hyprctl reload` succeeded after the config change.
+- Quickshell was restarted and loaded the new WallPickr.
+
+## Session update - 2026-05-04 (Zephyr screenshot selector)
+
+### Screenshot selector
+- Strata now has a Quickshell-native screenshot area selector inspired by `flickowoa/dotfiles` branch `hyprland-zephyr`.
+- Main files:
+  - `quickshell/screenshot/ScreenshotSelector.qml`
+  - `quickshell/screenshot/Rope.qml`
+  - `quickshell/screenshot/qmldir`
+  - `quickshell/scripts/screenshot-geometry.sh`
+  - `quickshell/scripts/screenshot.sh`
+  - `quickshell/shell.qml`
+- Visual behavior:
+  - fullscreen dimmed overlay
+  - drag selection rectangle
+  - primary-colored border
+  - circular corner handles
+  - animated rope lines from screen corners to the selected rectangle
+- Integration:
+  - `quickshell ipc call screenshot select <requestId>`
+  - `screenshot.sh area ...` tries this overlay first
+  - previous `grimblast --freeze` / `slurp` area capture remains the fallback
+- Supported screenshot actions retained:
+  - `copy`
+  - `save`
+  - `copysave`
+  - `edit`
+
+### Screenshot capture implementation notes
+- Area captures through the new overlay use `grim -g "$geometry"`.
+- `modules/packages.nix` now includes `grim` explicitly.
+- Until a rebuild exposes `grim` directly on PATH, `screenshot.sh` can find the `grim` binary referenced inside the current `grimblast` wrapper.
+- Geometry results are passed through runtime files under:
+  - `${XDG_RUNTIME_DIR:-/tmp}/strata-screenshot`
+- Canceling the selector writes `cancel` and exits cleanly without falling through to a capture.
+
+### Validation state
+- Script syntax validation passed:
+  - `bash -n quickshell/scripts/screenshot.sh`
+  - `bash -n quickshell/scripts/screenshot-geometry.sh`
+- Nix package list evaluation for `desktop` passed after adding `grim`.
+- Quickshell was restarted and loaded the config successfully.
+- Remaining manual validation:
+  - press `Print` or `Super+Shift+S`
+  - drag a region
+  - confirm the saved/copied image matches the selected geometry
+
+### Current publish bundle
+- The user asked to save all context/memory and push to GitHub.
+- This publish should include the current complete repo state, including:
+  - Codex package override files under `pkgs/`
+  - flake updates
+  - theme model updates
+  - notification/icon daemon updates
+  - WallPickr grid changes
+  - Zephyr animation changes
+  - screenshot selector implementation
+
+## Session update - 2026-05-04 (login polish + Codex close guard + theme transitions)
+
+### SDDM/login
+- User reported the previous session was interrupted and asked to inspect/fix login behavior.
+- Implemented current wallpaper propagation to SDDM:
+  - `modules/desktop.nix`
+    - activation now reads `/home/ankh/dotfiles/state/current-wallpaper`
+    - generates `/var/lib/strata/background.jpg` with strong ImageMagick blur
+    - fallback remains repo `wallpaper.jpg`
+  - `quickshell/scripts/apply-theme-state.sh`
+    - added `render_sddm_background()`
+    - updates `/var/lib/strata/background.jpg` when wallpaper/theme changes
+- Implemented likely cursor fix for SDDM:
+  - `services.displayManager.sddm.settings.Theme.CursorSize = "24"`
+  - `environment.pathsToLink = [ "/share/icons" ]`
+- Reason:
+  - live `/run/current-system/sw/share/icons` exposed only generic icon dirs, so SDDM likely could not see Bibata cursor assets.
+
+### Codex close guard
+- Initial broad guard blocking all terminal close was removed after user clarified the requirement.
+- Final behavior:
+  - `Super+W` closes windows normally
+  - if the active terminal process tree includes `codex`, first press warns and does not close
+  - second press within 5 seconds confirms close
+- Files:
+  - `hyprland.conf`
+  - `quickshell/scripts/codex-close-guard.sh`
+- Validation:
+  - `bash -n quickshell/scripts/codex-close-guard.sh`
+  - `hyprctl reload`
+
+### Smooth theme transitions
+- User wanted theme changes to feel modern, smooth, and fast.
+- Implemented:
+  - `quickshell/Colors.qml`
+    - global color/number property animations for theme properties
+    - `themeTransitionDuration = 220`
+    - `Easing.OutCubic`
+  - `quickshell/scripts/apply-theme-state.sh`
+    - awww wallpaper transition changed to fast centered grow:
+      - `grow`
+      - `0.34s`
+      - `144fps`
+      - `step=90`
+      - bezier `0.23,1,0.61,1`
+    - wallpaper application moved to the beginning of `--apply-wallpaper`
+    - prevents delayed wallpaper change after GTK/kitty/mako work
+- Validation:
+  - `bash -n quickshell/scripts/apply-theme-state.sh`
+  - Quickshell loaded with the updated `Colors.qml`
+  - tested real switches:
+    - `rosepine -> nord -> rosepine`
+  - restored wallpaper:
+    - `/home/ankh/dotfiles/wallpapers/rosepine/Rosepine3.jpg`
+  - confirmed only one Quickshell instance remained in Hyprland layers.
+
+## Session update - 2026-05-04 (Caelestia shell research + future Strata frame)
+
+### User direction
+- User asked to research how Caelestia Shell makes windows/panels and borders feel like they expand from corners and integrate with the system instead of floating.
+- User approved pursuing that direction for Strata.
+
+### Research summary
+- Caelestia Shell:
+  - Quickshell-based desktop shell for Hyprland
+  - QML/Qt6 UI with C++ plugins for deeper integration/deformation
+  - main repo: `caelestia-dots/shell`
+- Relevant source inspected:
+  - `shell.qml`
+  - `modules/drawers/Drawers.qml`
+  - `modules/drawers/ContentWindow.qml`
+  - `modules/drawers/Panels.qml`
+  - `modules/drawers/Backgrounds.qml`
+  - `modules/drawers/Interactions.qml`
+  - `modules/drawers/Exclusions.qml`
+  - `modules/launcher/Wrapper.qml`
+  - `modules/launcher/Background.qml`
+  - `modules/sidebar/Wrapper.qml`
+  - `modules/sidebar/Background.qml`
+- Key architecture:
+  - fullscreen transparent Quickshell `PanelWindow` per monitor
+  - persistent bar/border/drawer frame belongs to that window
+  - drawer contents are anchored `Item`s, not separate floating windows
+  - drawers animate through `offsetScale`
+  - backgrounds are drawn as connected shapes through `ShapePath`
+  - Caelestia also uses `Caelestia.Blobs` for organic deformation/smoothing
+  - interactions are edge/corner driven through hover and drag thresholds
+
+### Future implementation plan for Strata
+- Do not copy Caelestia wholesale.
+- Build a Strata-native integrated shell frame:
+  1. Add a fullscreen transparent `ShellFrame` layer.
+  2. Move current border pieces into that layer.
+  3. Add edge-attached drawer wrappers with shared animation tokens.
+  4. Start with QML `Shape` / `ShapePath` connected backgrounds.
+  5. Convert overlays gradually:
+     - launcher from bottom
+     - settings/update/app center from right/top
+     - theme picker and wallpickr as integrated drawers
+  6. Preserve Strata visual identity and current theme system.
+  7. Consider plugin/blob deformation only after QML-only implementation is proven.
+- Target feel:
+  - panels expand from the screen frame/corners
+  - borders and panels are one cohesive shell surface
+  - fewer floating-card overlays
+
+### Publish intent
+- User requested:
+  - record everything in memory/context
+  - push complete current repo state to GitHub
+
+## Session update - 2026-05-04 (dynamic island + notification surface)
+
+### Dynamic island role
+- The active production island is `quickshell/bar/DynamicPill.qml`.
+- `quickshell/island/Island.qml` was confirmed to be a second/test island only.
+- Workspaces were separated from the island and restored as an always-visible pill in the bar.
+- Bar direction:
+  - active window title on the left
+  - workspace pill near center
+  - dynamic island in center
+  - status/tray/clock on the right
+- This avoids hiding workspace navigation whenever media/notifications/recording are active.
+
+### New island state files
+- Added:
+  - `quickshell/OverlayState.qml`
+  - `quickshell/DynamicIslandState.qml`
+  - `quickshell/bar/DynamicPill.qml`
+  - `quickshell/bar/DynamicIslandCard.qml`
+- Registered:
+  - `OverlayState` and `DynamicIslandState` in `quickshell/qmldir`
+  - `DynamicPill` and `DynamicIslandCard` in `quickshell/bar/qmldir`
+- `shell.qml` now instantiates:
+  - `DynamicIslandCard {}`
+
+### Overlay animation integration
+- `OverlayState` now records the island geometry.
+- Major overlays use that geometry as their animation origin:
+  - Launcher
+  - Clipboard
+  - App Center
+  - Update Center
+  - Theme Picker
+  - WallPickr
+  - Control Center
+- This preserves existing card UI while making overlays feel like they emerge from the island.
+- It is the current bridge toward the future Caelestia-inspired Strata frame/drawer architecture.
+
+### Expanded island
+- Clicking the island now opens an expanded card when context exists:
+  - media -> compact media controls
+  - notification -> notification detail card
+  - recording -> recording status card
+- The expanded island is a separate overlay layer because it cannot be drawn inside the bar window without clipping.
+- Media card controls:
+  - previous
+  - play/pause
+  - next
+  - progress bar
+- Notification card shows:
+  - app/icon
+  - summary
+  - body/app fallback
+  - urgency tone
+- Click outside or Escape closes the expanded card.
+- The card closes automatically if the island mode changes and would otherwise show stale content.
+
+### Notifications and mako
+- Mako is now intended to be invisible notification backend/history, not the visible notification UI.
+- Generated mako config now includes:
+  - `max-visible=0`
+  - `max-history=100`
+  - high urgency timeout `9000ms`
+- `hyprland.conf` starts mako explicitly with:
+  - `mako --config ~/dotfiles/generated/mako/config`
+- `DynamicPill` polls `notification-history.js` every `900ms`.
+- The island notification pill now handles:
+  - cached notification icon
+  - app name
+  - summary/body
+  - high urgency danger color
+  - right-click dismissal through `makoctl dismiss -n <id> --no-history`
+- Control Center remains the notification inbox/history.
+
+### Validation
+- QML load validation passed with:
+```bash
+timeout 5 quickshell -p /home/ankh/dotfiles/quickshell/shell.qml --no-color
+```
+- `apply-theme-state.sh` syntax validation passed with:
+```bash
+bash -n quickshell/scripts/apply-theme-state.sh
+```
+- Known remaining warnings:
+  - pre-existing `Keys` attachment warnings on some overlay `PanelWindow`s.
+
+## Session update - 2026-05-04 (Dynamic Island fixes + music refinement)
+
+### ActivSpot direction
+- User clarified that the Strata island is based conceptually on:
+  - `https://github.com/Devvvmn/ActivSpot`
+- Relevant ActivSpot idea retained:
+  - island/launcher illusion is driven by shared top-center positioning and state changes
+  - Strata should use its existing `OverlayState`/IPC instead of copying ActivSpot's `/tmp/qs_*` file IPC model
+
+### Notifications fixed
+- Root cause:
+  - `mako` backend/history was present on DBus, but `notification-history.js` did not recognize the current `makoctl` JSON keys:
+    - `app_name`
+    - `desktop_entry`
+  - older parser only looked for forms like `app-name` / `desktop-entry`
+- Fix:
+  - `quickshell/scripts/notification-history.js` now recognizes both snake_case and dashed notification fields
+- Product correction:
+  - `max-visible=0` is no longer used because it prevented the expected backend/history flow from behaving reliably
+  - generated `mako` config now keeps a transparent `1x1` notification surface:
+    - `max-visible=1`
+    - transparent background/border/text
+    - `width=1`
+    - `height=1`
+  - this preserves DBus/history without showing visible banners; the island is the visible notification surface
+- Startup hardening:
+  - `hyprland.conf` and `quickshell/shell.qml` now check for `org.freedesktop.Notifications` before starting `mako`
+  - fallback still starts `mako --config ~/dotfiles/generated/mako/config`
+  - `home.nix` now defines a declarative user service:
+    - `systemd.user.services.mako`
+
+### Island actions
+- `DynamicPill.qml` actions now include:
+  - left click idle -> launcher
+  - right click -> Control Center
+  - middle click -> Settings Center
+  - left click while overlay mode is active -> toggles/closes the active overlay
+  - media/notification/recording states still open their expanded card on left click
+  - media right click still play/pauses
+  - notification right click dismisses through `makoctl`
+
+### Overlay morph
+- `OverlayState.qml` now exposes helper functions for island-origin morph animation:
+  - `morphStartYOffset()`
+  - `morphStartXScale()`
+  - `morphStartYScale()`
+- Major overlays now open/close from the island position instead of only doing a subtle center scale:
+  - Launcher
+  - Clipboard
+  - App Center
+  - Update Center
+  - Theme Picker
+  - WallPickr
+  - Control Center
+  - Settings Center
+- This is the current Strata-native ActivSpot-style morph implementation.
+
+### Music island refinement
+- `DynamicIslandState.qml` now carries richer media state:
+  - `mediaArtPath`
+  - `mediaPositionText`
+  - `mediaDurationText`
+- `DynamicPill.qml` now resolves Spotify/MPRIS album art from:
+  - `mpris:artUrl`
+  - cached files under `${XDG_RUNTIME_DIR}/strata/spotify-art`
+- Compact island media state now shows:
+  - album art when available
+  - title
+  - artist
+  - play/pause affordance
+  - progress bar
+- `DynamicIslandCard.qml` media mode was redesigned:
+  - wider/taller card
+  - prominent album art
+  - title can use two lines
+  - artist/status chip
+  - progress bar with current time/duration
+  - larger previous/play-pause/next controls
+  - clicking album art attempts to focus Spotify through Hyprland
+
+### Validation
+- Quickshell QML load passed:
+```bash
+timeout 5 quickshell -p /home/ankh/dotfiles/quickshell/shell.qml --no-color
+```
+- Theme script syntax passed:
+```bash
+bash -n quickshell/scripts/apply-theme-state.sh
+```
+- `nix eval` confirmed the declarative `mako` service shape.
+- Real notification tests via `notify-send` were parsed correctly by:
+```bash
+node /home/ankh/dotfiles/quickshell/scripts/notification-history.js
+```
+- Quickshell was restarted after the changes and loaded successfully.
+
+## Session update - 2026-05-05 (Dynamic Island redesign + bar layout)
+
+### Dynamic Island architecture
+- The island was refactored toward a more iPhone-like shared-surface model.
+- Main files changed:
+  - `quickshell/bar/DynamicPill.qml`
+  - `quickshell/bar/DynamicIslandCard.qml`
+  - `quickshell/DynamicIslandState.qml`
+  - `quickshell/bar/Bar.qml`
+  - `quickshell/scripts/notification-history.js`
+- Important behavior:
+  - the bar pill hides while the expanded island surface is visible
+  - the expanded card starts from the real island geometry
+  - compact content is rendered inside the morphing surface first
+  - expanded content fades/lifts in after the surface grows
+  - clicking a notification card collapses it
+  - notification cards are passive and no longer steal keyboard/mouse focus
+- Key fix:
+  - notification mode now uses `WlrKeyboardFocus.None`
+  - it does not call `forceActiveFocus()`
+  - the fullscreen click-catcher is disabled for notifications
+  - only the notification card itself is clickable
+
+### Music / Spotify island
+- Compact media state was redesigned around the current track.
+- The album/song cover now becomes a real circular spinning disc:
+  - `DynamicPill.qml` resolves Spotify art
+  - generates circular `*.disc.png` assets under `${XDG_RUNTIME_DIR}/strata/spotify-art`
+  - QML uses the circular PNG instead of relying on `Rectangle clip` masking
+- Reason:
+  - QML `Rectangle { radius; clip: true }` did not reliably mask album art as a circle
+  - `Qt5Compat.GraphicalEffects` / `OpacityMask` is not installed on the current system
+- Music controls:
+  - compact play/pause button no longer opens the card
+  - play/pause updates optimistically for instant UI feedback
+  - a short refresh confirms the real `playerctl` state after `120ms`
+  - scroll gestures for next/previous were removed from the compact island
+- Spotify notifications are filtered out in `notification-history.js` because music state is already represented by the island.
+
+### Notification card
+- New notification arrival now opens the island automatically when no larger overlay is active.
+- The old `Abrir histórico` button was removed from notification cards.
+- Notification card is now compact/minimal:
+  - app/icon
+  - app name
+  - summary
+  - body up to two lines
+  - optional high-urgency chip
+- Current known refinement idea:
+  - add intelligent autoclose:
+    - normal notification: around 5-6s
+    - high urgency: around 9-10s
+    - pause timer on hover
+
+### Child pills / bar layout
+- Proton VPN indicator moved out of the main island surface into a child pill beside it.
+- The main island publishes only the primary surface geometry for morphing.
+- `Bar.qml` now reserves a fixed center area for the Dynamic Island:
+  - prevents workspaces, window title, stats, clock, tray, and status pills from shifting when the island changes width
+  - Dynamic Island remains visually centered
+  - child pill space is balanced so VPN does not visually move the main island
+- Workspaces and active window title were swapped:
+  - workspaces are now on the left
+  - active window title is to their right
+- Recording state was made more compact:
+  - `Gravando 00:15` became `REC 00:15`
+- Future child-pill direction:
+  - generalize the child rail for VPN, REC, DND, caffeine, and update states
+  - keep the main island for the highest-priority active context
+
+### Suggested next refinements
+- Implement notification autoclose with hover pause.
+- Move recording into a child pill when media or notification is the main context.
+- Define a strict island priority model:
+  - overlay active
+  - new notification
+  - media
+  - idle
+  - persistent states as child pills
+- Make the media-card morph more content-aware:
+  - compact disc should move toward the expanded art position
+  - compact title should morph toward expanded title
+  - controls should enter with a short delayed lift
+- Consider reducing polling by using MPRIS events or a more event-driven player state path later.
+
+### Validation
+- Quickshell QML load was repeatedly validated with:
+```bash
+timeout 5 quickshell -p /home/ankh/dotfiles/quickshell/shell.qml --no-color
+```
+- Validation result:
+  - config loaded successfully
+  - only pre-existing `Keys` warnings remain on some overlay `PanelWindow`s
+- Circular media disc generation was confirmed by a generated file under:
+```bash
+${XDG_RUNTIME_DIR}/strata/spotify-art/*.disc.png
+```
+
+## Session update - 2026-05-05 (ShellFrame migration completed)
+
+### Integrated shell default
+- The Strata integrated `ShellFrame` is now the default path:
+  - `quickshell/shell.qml`
+  - `integratedFrameEnabled: true`
+- A runtime override remains available:
+  - `state/shell-frame-enabled`
+  - current local value: `true`
+  - set to `false` to fall back to legacy overlays without editing QML.
+
+### Migrated drawers
+- Integrated drawers now implemented:
+  - launcher: `FrameLauncher.qml`
+  - settings: `FrameSettingsCenter.qml`
+  - updates: `FrameUpdateCenter.qml`
+  - themes: `FrameThemePicker.qml`
+  - wallpapers: `FrameWallPickr.qml`
+  - app center: `FrameAppCenter.qml`
+  - clipboard: `FrameClipboard.qml`
+  - power menu: `FramePowerMenu.qml`
+- Shared drawer primitives:
+  - `BottomDrawer.qml`
+  - `RightDrawer.qml`
+- `ShellFrame.qml` now centralizes:
+  - frame borders
+  - drawer focus
+  - `Esc` handling
+  - click-outside dismissal
+  - `closeDrawers(except)`
+  - `anyDrawerOpen()`
+
+### Scope intentionally not migrated
+- `ControlCenter` remains standalone for now because it is large and tightly coupled to current panel layout, notifications, system toggles, and live status scripts.
+- `ScreenshotSelector` remains standalone because it is a fullscreen capture interaction.
+- Tray/calendar menus remain bar-attached popups.
+- OSDs and Dynamic Island remain separate shell surfaces.
+
+### Live validation
+- Integrated mode was validated with:
+```bash
+timeout 5 quickshell -p /home/ankh/dotfiles/quickshell/shell.qml --no-color
+```
+- Live Quickshell was started through Hyprland.
+- Duplicate older Quickshell instance was removed.
+- Hyprland layers show one Quickshell instance after cleanup.
+- IPC smoke tests succeeded for several integrated drawers.
+- Strict log scan showed no QML load/type/reference/property errors.
+
+### Mouse/input correction after enabling frame
+- Important implementation note:
+  - a transparent fullscreen `PanelWindow` can still block pointer input on Wayland
+  - disabling the fullscreen `MouseArea` is not enough
+- `ShellFrame.qml` now masks input dynamically:
+  - drawer open -> fullscreen `inputRegion`
+  - no drawer open -> zero-size `emptyInputRegion`
+- This preserves click-outside dismissal while preventing the frame from eating mouse input when idle.
+
+### Completed IPC smoke test
+- A real IPC smoke loop opened and closed every integrated drawer:
+  - launcher
+  - settingscenter
+  - updatecenter
+  - themepicker
+  - wallPickr
+  - appcenter
+  - clipboard
+  - powermenu
+- The command had to run outside the sandbox because Quickshell IPC socket access is blocked inside it.
+- Post-test state:
+  - one Quickshell instance in Hyprland layers
+  - no overlay layer left open
+  - no strict QML/log errors found
+
+### Autostart hardening
+- Added `quickshell/scripts/quickshell-start.sh`.
+- `hyprland.conf` now uses:
+```bash
+exec-once = bash ~/.config/quickshell/scripts/quickshell-start.sh
+```
+- The wrapper starts the explicit Strata entrypoint:
+```bash
+quickshell -p ~/dotfiles/quickshell/shell.qml --no-color
+```
+- The wrapper exits when a `quickshell` process already exists, so login should not create duplicate shells.
+- Validation completed:
+  - shell script syntax passed with `bash -n`
+  - QML load test passed with `timeout 5 quickshell -p /home/ankh/dotfiles/quickshell/shell.qml --no-color`
+  - `hyprctl reload` returned `ok`
+  - live layer check still showed a single Quickshell instance, pid `3344506`
+
+### GitHub sync request
+- User asked to save the final state in memory/context files and push to GitHub.
+- Branch: `main`
+- Remote: `git@github.com:PedroAugustoOK/Strata-Habitus.git`
+- Commit should include:
+  - the integrated frame/drawer QML files
+  - the `shell.qml` integrated routing and runtime toggle
+  - `quickshell/scripts/quickshell-start.sh`
+  - the `hyprland.conf` autostart update
+  - current memory/context notes
+
+## 2026-05-05 - Current shell state for next session
+
+### What happened
+- User reviewed the Caelestia-style shell attempt with screenshots and identified persistent issues:
+  - screen/window border looked wrong and mismatched the top bar
+  - launcher/theme picker/power menu did not feel connected to the border/frame
+  - drawers sometimes needed mouse movement before clicks/keyboard worked
+  - notifications could stop clicks/keyboard from working
+- Treat these reports as correct. Do not assume the old fullscreen ShellFrame approach is fixed.
+
+### Current decision
+- The always-on fullscreen `ShellFrame PanelWindow` approach is disabled for stability.
+- Caelestia remains the target inspiration, but the implementation needs to be rebuilt using smaller, exact-size panel windows instead of a fullscreen fake frame.
+- `FrameSurface.qml` and the updated frame drawer files are retained as experimental/reference code.
+
+### Stabilized defaults
+- `quickshell/shell.qml`
+  - `integratedFrameEnabled: false`
+  - `screenFrameVisible: false`
+- Runtime state:
+  - `state/shell-frame-enabled` contains `false`
+- Hyprland:
+  - `border_size = 0`
+  - `gaps_out = 0`
+  - active/inactive borders transparent
+- Theme scripts:
+  - `quickshell/scripts/init-border.sh` sets transparent Hyprland borders
+  - `quickshell/scripts/apply-theme-state.sh` does not reapply accent borders
+- Dynamic Island / notifications:
+  - notification mode uses a smaller input mask around the card instead of a broad input region
+
+### Validation
+- QML validation passed with:
+```bash
+timeout 5 quickshell -p /home/ankh/dotfiles/quickshell/shell.qml --no-color
+```
+- Diff whitespace validation passed with:
+```bash
+git diff --check
+```
+- Live session was updated with Hyprland keywords for border/gap cleanup and Quickshell restart.
+
+### Git / release target
+- Repo: `/home/ankh/dotfiles`
+- Remote: `git@github.com:PedroAugustoOK/Strata-Habitus.git`
+- Development branch: `main`
+- Notebook rollout channel: `stable`
+- After committing on `main`, publish current state for notebooks with:
+```bash
+./strata-promote-release.sh stable HEAD
+```
+
+### Notebook continuation command
+- Preferred command on the notebook when continuing this work and applying the updated system:
+```bash
+cd ~/dotfiles && ./strata-apply-channel.sh stable
+```
+- Alternative direct update path if the notebook already has the installed update script configured:
+```bash
+sudo ~/dotfiles/strata-update.sh
+```
+
+### Next implementation guidance
+- Do not continue trying to fix input by adding more fullscreen ShellFrame masks.
+- Rebuild the integrated shell in this order:
+  - keep standalone overlays active as the stable baseline
+  - create one exact-size panel window for one drawer
+  - validate click, keyboard, Esc, notification behavior
+  - migrate the next drawer only after the previous one is proven
+  - reconnect visual borders/animations last
+
+## Stable branch notebook notes preserved during 2026-05-05 merge
+
+### Notebook-originated UI work
+- Branch `stable` had notebook-only commits before the ShellFrame stabilization merge:
+  - `06588ea Apply notebook stable UI pass and web apps overlay`
+  - `fda46c2 Update memories and temporarily remove mpv`
+- Preserve these notebook decisions when continuing work on the notebook.
 
 ### Web apps overlay
-- New files were added for a native web-app management overlay:
+- Native web-app management overlay exists on the notebook rollout path:
   - `quickshell/webapps/WebApps.qml`
   - `quickshell/webapps/WebAppsStore.qml`
   - `quickshell/scripts/webapp-lib.js`
   - `quickshell/scripts/webapps-index.js`
   - `quickshell/scripts/webapps-apply.js`
-- Current notebook integration:
+- Integration:
   - `Super+K`
   - `Settings Center -> Apps Web`
-- Current design direction:
+- Current web-app UI direction:
   - simpler two-column card
   - no top counter
-  - no inline search field on the installed list
+  - no inline search field on installed list
   - main action labeled `Adicionar`
-- Important implementation caveat still remembered:
-  - catalog/state/install identity for web apps still needs a cleaner architectural pass later
+- Catalog/state/install identity still needs a cleaner architectural pass later.
 
-### Clipboard UI pass on notebook
-- Clipboard overlay was restyled to align better with the rest of Strata:
+### Clipboard and notification notes
+- Notebook clipboard UI pass:
   - title/body typography moved away from the old all-monospace treatment
   - light-theme panel contrast was corrected
   - excess instructional copy in the header was removed
-- Current notebook binds:
+- Notebook binds:
   - `Super+V` -> clipboard
-  - `Super+Shift+G` -> floating toggle
+  - `Super+Shift+V` and `Super+Shift+G` -> floating toggle
   - `Super+Shift+F` -> fullscreen
+- Control Center notification cards support click-to-expand for longer text.
+- Keep `mako` as the live popup notification renderer; Quickshell remains the inbox/history layer.
 
-### Control Center notifications
-- Notification cards in the Control Center now support click-to-expand for longer text
-- The explicit `expandir/mostrar menos` hint text was intentionally removed
-- Web notification normalization was refined so site-origin noise can be removed from the body without breaking deduplication keys
-
-### Notification renderer decision
-- Keep `mako` as the live popup notification renderer
-- Do not move Chromium/site popup rendering back into Quickshell yet
-- Practical reason:
-  - Chromium notifications remain more reliable through `mako`
-  - Quickshell should continue as the inbox/history layer on top
+### Package note
+- `mpv` was intentionally removed from the `stable` package list in the notebook branch.
+- During the merge, this was preserved while keeping newer main additions such as `appimage-run` and `gearlever`.

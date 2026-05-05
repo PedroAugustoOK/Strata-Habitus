@@ -81,8 +81,10 @@ function looksLikeNotification(node) {
       "summary" in node ||
       "body" in node ||
       "app-name" in node ||
+      "app_name" in node ||
       "appName" in node ||
-      "desktop-entry" in node
+      "desktop-entry" in node ||
+      "desktop_entry" in node
     )
   );
 }
@@ -99,8 +101,13 @@ function normalizeNotification(node) {
   const actions = Array.isArray(node.actions)
     ? node.actions.length
     : (node.actions && typeof node.actions === "object" ? Object.keys(node.actions).length : 0);
+  const urgency = asString(node.urgency || node["urgency-level"] || node.urgencyLevel || "normal").toLowerCase();
   const body = sanitizeBody(rawBody, appName, summary);
   const groupKey = classifyGroupKey(appName, desktopEntry, summary);
+
+  if (isMediaNotification(appName, desktopEntry, summary, body))
+    return null;
+
   const notificationKey = groupKey || buildKey(appName, summary, rawBody || body);
   const iconName = firstNonEmpty([
     node["app-icon"],
@@ -125,8 +132,17 @@ function normalizeNotification(node) {
     summary,
     body,
     actionsCount: actions,
-    iconPath
+    iconPath,
+    urgency: urgency || "normal"
   };
+}
+
+function isMediaNotification(appName, desktopEntry, summary, body) {
+  const text = `${appName} ${desktopEntry} ${summary} ${body}`.toLowerCase();
+  return (
+    text.includes("spotify") ||
+    text.includes("spotify-client")
+  );
 }
 
 function asString(value) {

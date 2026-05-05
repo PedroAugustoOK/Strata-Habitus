@@ -56,7 +56,7 @@ Item {
           width:  occupied || focused ? 26 : 6
           height: occupied || focused ? 26 : 6
           radius: width / 2
-          color: focused ? Colors.accent : Qt.rgba(Colors.text3.r, Colors.text3.g, Colors.text3.b, 0.3)
+          color: focused ? Colors.barActive : Qt.rgba(Colors.text3.r, Colors.text3.g, Colors.text3.b, 0.3)
           Behavior on width  { NumberAnimation { duration: 200; easing.type: Easing.OutCubic } }
           Behavior on height { NumberAnimation { duration: 200; easing.type: Easing.OutCubic } }
           Behavior on color  { ColorAnimation  { duration: 200 } }
@@ -83,7 +83,7 @@ Item {
     width: 26
     height: 26
     radius: 13
-    color: Colors.accent
+    color: Colors.barActive
     y: (parent.height - height) / 2
     x: posForIdx(currentIdx)
     scale: 1
@@ -94,8 +94,9 @@ Item {
     id: moveAnim
     target: slider
     property: "x"
-    duration: 200
-    easing.type: Easing.InOutCubic
+    duration: 570
+    easing.type: Easing.BezierSpline
+    easing.bezierCurve: [0.23, 1, 0.61, 1, 1, 1]
     onFinished: bounceAnim.start()
   }
 

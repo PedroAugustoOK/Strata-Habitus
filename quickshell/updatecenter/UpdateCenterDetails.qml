@@ -89,7 +89,7 @@ Rectangle {
             width: 5
             height: 5
             radius: 3
-            color: Colors.accent
+            color: Colors.primary
           }
 
           Text {

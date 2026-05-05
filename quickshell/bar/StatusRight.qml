@@ -81,16 +81,16 @@ Item {
         var sig = parseInt(t.split(":")[1]) || 50
         if (sig > 75) {
           wifiLabel.text  = "\uE63E"
-          wifiLabel.color = Colors.accent
+          wifiLabel.color = Colors.info
         } else if (sig > 50) {
           wifiLabel.text  = "\uE4D9"
-          wifiLabel.color = Colors.accent
+          wifiLabel.color = Colors.info
         } else if (sig > 25) {
           wifiLabel.text  = "\uE4D9"
-          wifiLabel.color = Colors.accent
+          wifiLabel.color = Colors.warning
         } else {
           wifiLabel.text  = "\uE4CA"
-          wifiLabel.color = "#d9bc8c"
+          wifiLabel.color = Colors.warning
         }
       }
     }
@@ -114,10 +114,10 @@ Item {
           btLabel.color = Colors.text3
         } else if (s === "connected") {
           btLabel.text  = "\uE1A8"
-          btLabel.color = Colors.accent
+          btLabel.color = Colors.secondary
         } else {
           btLabel.text  = "\uE1A7"
-          btLabel.color = Colors.accent
+          btLabel.color = Colors.secondary
         }
       }
     }

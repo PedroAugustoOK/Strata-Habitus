@@ -13,27 +13,27 @@ Row {
   Text {
     anchors.verticalCenter: parent.verticalCenter
     text: root.h
-    color: Colors.accent
+    color: Colors.secondary
     font { pixelSize: 13; family: "Roboto"; weight: Font.Bold }
   }
 
   Text {
     anchors.verticalCenter: parent.verticalCenter
     text: ":"
-    color: Qt.rgba(Colors.accent.r, Colors.accent.g, Colors.accent.b, 0.4)
+    color: Qt.rgba(Colors.secondary.r, Colors.secondary.g, Colors.secondary.b, 0.45)
     font { pixelSize: 11; family: "Roboto" }
   }
 
   Text {
     anchors.verticalCenter: parent.verticalCenter
     text: root.m
-    color: Colors.accent
+    color: Colors.secondary
     font { pixelSize: 13; family: "Roboto"; weight: Font.Bold }
   }
 
   Rectangle {
     width: 1; height: 14
-    color: Qt.rgba(1,1,1,0.08)
+    color: Colors.panelBorder
     anchors.verticalCenter: parent.verticalCenter
   }
 

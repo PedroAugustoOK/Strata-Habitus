@@ -5,6 +5,7 @@ import Quickshell.Services.Notifications
 import QtQuick
 import QtQuick.Layouts
 import ".."
+import "../frame"
 
 PanelWindow {
   id: root
@@ -17,6 +18,10 @@ PanelWindow {
   WlrLayershell.layer: WlrLayer.Overlay
   focusable: true
   visible: false
+  onVisibleChanged: {
+    if (visible) OverlayState.setActive("controlcenter")
+    else OverlayState.clear("controlcenter")
+  }
 
   function toggle() {
     if (visible) {
@@ -26,7 +31,9 @@ PanelWindow {
       refreshAll()
       keyGrabber.forceActiveFocus()
       panel.opacity = 0
-      panel.scale = 0.92
+      panelXOffset = 28
+      panelScale.xScale = 0.965
+      panelScale.yScale = 0.985
       openAnim.start()
     }
   }
@@ -57,14 +64,21 @@ PanelWindow {
 
   SequentialAnimation {
     id: openAnim
-    NumberAnimation { target: panel; property: "opacity"; to: 1; duration: 80 }
-    NumberAnimation { target: panel; property: "scale"; from: 0.92; to: 1.02; duration: 220; easing.type: Easing.OutCubic }
-    NumberAnimation { target: panel; property: "scale"; to: 1.0; duration: 80; easing.type: Easing.InOutQuad }
+    ParallelAnimation {
+      NumberAnimation { target: panel; property: "opacity"; from: 0; to: 1; duration: 120; easing.type: Easing.OutQuad }
+      NumberAnimation { target: root; property: "panelXOffset"; from: 28; to: 0; duration: 260; easing.type: Easing.OutCubic }
+      NumberAnimation { target: panelScale; property: "xScale"; from: 0.965; to: 1; duration: 260; easing.type: Easing.OutCubic }
+      NumberAnimation { target: panelScale; property: "yScale"; from: 0.985; to: 1; duration: 260; easing.type: Easing.OutCubic }
+    }
   }
   SequentialAnimation {
     id: closeAnim
-    NumberAnimation { target: panel; property: "scale"; to: 0.92; duration: 160; easing.type: Easing.InCubic }
-    NumberAnimation { target: panel; property: "opacity"; to: 0; duration: 60 }
+    ParallelAnimation {
+      NumberAnimation { target: root; property: "panelXOffset"; to: 28; duration: 150; easing.type: Easing.InCubic }
+      NumberAnimation { target: panelScale; property: "xScale"; to: 0.965; duration: 150; easing.type: Easing.InCubic }
+      NumberAnimation { target: panelScale; property: "yScale"; to: 0.985; duration: 150; easing.type: Easing.InCubic }
+      NumberAnimation { target: panel; property: "opacity"; to: 0; duration: 110; easing.type: Easing.InQuad }
+    }
     ScriptAction { script: root.visible = false }
   }
 
@@ -86,6 +100,7 @@ PanelWindow {
   property var    notificationHistory: []
   property var    notificationIgnoredKeys: []
   property var    notificationExpandedKeys: []
+  property real   panelXOffset: 0
   readonly property string sessionBus: Quickshell.env("DBUS_SESSION_BUS_ADDRESS")
   readonly property string runtimeDir: Quickshell.env("XDG_RUNTIME_DIR")
   readonly property bool showLaptopHeader: DeviceState.isLaptop && DeviceState.hasBattery
@@ -177,6 +192,17 @@ PanelWindow {
     root.notificationExpandedKeys = current
   }
 
+  function notificationTone(entry) {
+    if (!entry) return Colors.info
+    const urgency = String(entry.urgency || "").toLowerCase()
+    const app = String(entry.appName || "").toLowerCase()
+    if (urgency === "critical" || urgency === "high") return Colors.danger
+    if (urgency === "low") return Colors.secondary
+    if ((entry.actionsCount || 0) > 0) return Colors.primary
+    if (app.indexOf("chrom") >= 0 || app.indexOf("firefox") >= 0 || app.indexOf("web") >= 0) return Colors.secondary
+    return Colors.info
+  }
+
   Item {
     id: keyGrabber
     focus: true
@@ -186,16 +212,25 @@ PanelWindow {
   }
   MouseArea { anchors.fill: parent; onClicked: root.close() }
 
-  Rectangle {
+  FrameSurface {
     id: panel
-    transformOrigin: Item.TopRight
-    anchors { top: parent.top; right: parent.right; topMargin: 44; rightMargin: 20 }
-    width: DeviceState.isDesktop ? 332 : 310
+    anchors { top: parent.top; right: parent.right; topMargin: 44; rightMargin: 10 - root.panelXOffset }
+    width: DeviceState.isDesktop ? 344 : 316
     height: col.implicitHeight + 28
-    radius: 24
-    color: Colors.bg1
-    clip: true
+    radius: 18
+    attachedEdge: "right"
+    fillColor: Colors.panelBackground
+    borderColor: Qt.rgba(Colors.primary.r, Colors.primary.g, Colors.primary.b, Colors.darkMode ? 0.18 : 0.16)
+    topToneOpacity: Colors.darkMode ? 0.62 : 0.48
+    bottomToneOpacity: 0.98
     opacity: 0
+    transform: Scale {
+      id: panelScale
+      origin.x: panel.width
+      origin.y: 0
+      xScale: 1
+      yScale: 1
+    }
 
     MouseArea { anchors.fill: parent }
 
@@ -217,7 +252,7 @@ PanelWindow {
             Text {
               text: root.batValue
               font { pixelSize: 38; weight: Font.Bold; family: "Roboto" }
-              color: Colors.accent
+              color: Colors.primary
               anchors.baseline: parent.bottom
               anchors.baselineOffset: -6
             }
@@ -227,7 +262,7 @@ PanelWindow {
               Text {
                 text: "%"
                 font { pixelSize: 14; weight: Font.Medium; family: "Roboto" }
-                color: Colors.accent
+                color: Colors.primary
               }
               Text {
                 text: "BATERIA"
@@ -294,21 +329,21 @@ PanelWindow {
             Layout.preferredWidth: uptimeDesktop.implicitWidth + 18
             Layout.preferredHeight: 28
             radius: 10
-            color: Qt.rgba(Colors.accent.r, Colors.accent.g, Colors.accent.b, 0.12)
+            color: Qt.rgba(Colors.primary.r, Colors.primary.g, Colors.primary.b, 0.12)
 
             Text {
               id: uptimeDesktop
               anchors.centerIn: parent
               text: root.uptimeStr
               font { pixelSize: 10; family: "Roboto"; weight: Font.Medium }
-              color: Colors.accent
+              color: Colors.primary
             }
           }
         }
       }
 
       // divider accent
-      Rectangle { width: parent.width; height: 1; color: Qt.rgba(Colors.accent.r, Colors.accent.g, Colors.accent.b, 0.15) }
+      Rectangle { width: parent.width; height: 1; color: Qt.rgba(Colors.primary.r, Colors.primary.g, Colors.primary.b, 0.15) }
 
       // ── Sliders ───────────────────────────────────────────
       Column {
@@ -341,14 +376,14 @@ PanelWindow {
               width: parent.width * (root.brightValue / 100)
               height: parent.height
               radius: 4
-              color: Colors.accent
+              color: Colors.primary
               Behavior on width { NumberAnimation { duration: 80 } }
             }
             Rectangle {
               x: parent.width * (root.brightValue / 100) - 7
               y: -3
               width: 14; height: 14; radius: 7
-              color: Colors.accent
+              color: Colors.primary
               Behavior on x { NumberAnimation { duration: 80 } }
             }
             MouseArea {
@@ -398,7 +433,7 @@ PanelWindow {
               width: parent.width * (root.volValue / 100)
               height: parent.height
               radius: 4
-              color: root.volValue === 0 ? "#f28779" : Colors.accent
+              color: root.volValue === 0 ? Colors.danger : Colors.primary
               Behavior on width { NumberAnimation { duration: 80 } }
               Behavior on color { ColorAnimation { duration: 150 } }
             }
@@ -406,7 +441,7 @@ PanelWindow {
               x: parent.width * (root.volValue / 100) - 7
               y: -3
               width: 14; height: 14; radius: 7
-              color: root.volValue === 0 ? "#f28779" : Colors.accent
+              color: root.volValue === 0 ? Colors.danger : Colors.primary
               Behavior on x { NumberAnimation { duration: 80 } }
               Behavior on color { ColorAnimation { duration: 150 } }
             }
@@ -426,7 +461,7 @@ PanelWindow {
           Text {
             text: root.volValue === 0 ? "󰝟" : "󰕾"
             font { pixelSize: 12; family: "JetBrainsMono Nerd Font" }
-            color: root.volValue === 0 ? "#f28779" : Colors.text3
+            color: root.volValue === 0 ? Colors.danger : Colors.text3
             width: 14
             anchors.verticalCenter: parent.verticalCenter
             Behavior on color { ColorAnimation { duration: 150 } }
@@ -445,7 +480,7 @@ PanelWindow {
           Text {
             text: "󰋋"
             font { pixelSize: 14; family: "JetBrainsMono Nerd Font" }
-            color: Colors.accent
+            color: Colors.primary
           }
           Column {
             Layout.fillWidth: true
@@ -503,7 +538,7 @@ PanelWindow {
               Text {
                 text: "󰒓"
                 font { pixelSize: 13; family: "JetBrainsMono Nerd Font" }
-                color: Colors.accent
+                color: Colors.primary
               }
               Text {
                 text: "Configurações"
@@ -531,7 +566,7 @@ PanelWindow {
               Text {
                 text: "󰏗"
                 font { pixelSize: 13; family: "JetBrainsMono Nerd Font" }
-                color: Colors.accent
+                color: Colors.primary
               }
               Text {
                 text: "Atualizações"
@@ -559,7 +594,7 @@ PanelWindow {
               Text {
                 text: "󰀻"
                 font { pixelSize: 13; family: "JetBrainsMono Nerd Font" }
-                color: Colors.accent
+                color: Colors.primary
               }
               Text {
                 text: "Central de Apps"
@@ -580,7 +615,7 @@ PanelWindow {
             Layout.preferredHeight: 46
             radius: 10
             color: root.protonVpnConnected
-              ? Qt.rgba(Colors.accent.r, Colors.accent.g, Colors.accent.b, 0.15)
+              ? Qt.rgba(Colors.success.r, Colors.success.g, Colors.success.b, 0.15)
               : Colors.bg1
             Behavior on color { ColorAnimation { duration: 150 } }
 
@@ -590,13 +625,13 @@ PanelWindow {
               Text {
                 text: "󰌾"
                 font { pixelSize: 13; family: "JetBrainsMono Nerd Font" }
-                color: root.protonVpnConnected ? Colors.accent : Colors.text3
+                color: root.protonVpnConnected ? Colors.success : Colors.text3
                 Behavior on color { ColorAnimation { duration: 150 } }
               }
               Text {
                 text: root.protonVpnConnected ? "VPN conectada" : "Proton VPN"
                 font { pixelSize: 10; family: "Roboto"; weight: Font.Medium }
-                color: root.protonVpnConnected ? Colors.accent : Colors.text1
+                color: root.protonVpnConnected ? Colors.success : Colors.text1
                 Behavior on color { ColorAnimation { duration: 150 } }
               }
             }
@@ -627,7 +662,7 @@ PanelWindow {
           Text {
             text: "󰤨"
             font { pixelSize: 14; family: "JetBrainsMono Nerd Font" }
-            color: root.wifiActive ? Colors.accent : Colors.text3
+            color: root.wifiActive ? Colors.info : Colors.text3
             Behavior on color { ColorAnimation { duration: 150 } }
           }
           Item { Layout.preferredWidth: 10 }
@@ -643,14 +678,14 @@ PanelWindow {
             height: 20
             width: statusWifi.implicitWidth + 16
             radius: 6
-            color: root.wifiActive ? Qt.rgba(Colors.accent.r, Colors.accent.g, Colors.accent.b, 0.12) : Colors.bg2
+            color: root.wifiActive ? Qt.rgba(Colors.info.r, Colors.info.g, Colors.info.b, 0.12) : Colors.bg2
             Behavior on color { ColorAnimation { duration: 150 } }
             Text {
               id: statusWifi
               anchors.centerIn: parent
               text: root.wifiActive ? "conectado" : "desligado"
               font { pixelSize: 9; family: "Roboto" }
-              color: root.wifiActive ? Qt.rgba(Colors.accent.r, Colors.accent.g, Colors.accent.b, 0.9) : Colors.text3
+              color: root.wifiActive ? Qt.rgba(Colors.info.r, Colors.info.g, Colors.info.b, 0.9) : Colors.text3
               Behavior on color { ColorAnimation { duration: 150 } }
             }
             MouseArea {
@@ -690,7 +725,7 @@ PanelWindow {
           Text {
             text: root.btConnected ? "󰂱" : "󰂯"
             font { pixelSize: 14; family: "JetBrainsMono Nerd Font" }
-            color: root.btActive ? Colors.accent : Colors.text3
+            color: root.btActive ? Colors.secondary : Colors.text3
             Behavior on color { ColorAnimation { duration: 150 } }
           }
           Item { Layout.preferredWidth: 10 }
@@ -706,14 +741,14 @@ PanelWindow {
             height: 20
             width: statusBt.implicitWidth + 16
             radius: 6
-            color: root.btActive ? Qt.rgba(Colors.accent.r, Colors.accent.g, Colors.accent.b, 0.12) : Colors.bg2
+            color: root.btActive ? Qt.rgba(Colors.secondary.r, Colors.secondary.g, Colors.secondary.b, 0.12) : Colors.bg2
             Behavior on color { ColorAnimation { duration: 150 } }
             Text {
               id: statusBt
               anchors.centerIn: parent
               text: root.btConnected ? "conectado" : root.btActive ? "ativado" : "desligado"
               font { pixelSize: 9; family: "Roboto" }
-              color: root.btActive ? Qt.rgba(Colors.accent.r, Colors.accent.g, Colors.accent.b, 0.9) : Colors.text3
+              color: root.btActive ? Qt.rgba(Colors.secondary.r, Colors.secondary.g, Colors.secondary.b, 0.9) : Colors.text3
               Behavior on color { ColorAnimation { duration: 150 } }
             }
             MouseArea {
@@ -770,7 +805,7 @@ PanelWindow {
           width: (parent.width - ((root.toggleCount - 1) * 6)) / root.toggleCount
           height: 56
           radius: 10
-          color: SystemState.dnd ? Qt.rgba(Colors.accent.r, Colors.accent.g, Colors.accent.b, 0.15) : Colors.bg2
+          color: SystemState.dnd ? Qt.rgba(Colors.secondary.r, Colors.secondary.g, Colors.secondary.b, 0.15) : Colors.bg2
           Behavior on color { ColorAnimation { duration: 150 } }
           Column {
             anchors.centerIn: parent
@@ -779,14 +814,14 @@ PanelWindow {
               anchors.horizontalCenter: parent.horizontalCenter
               text: SystemState.dnd ? "󰂛" : "󰂚"
               font { pixelSize: 16; family: "JetBrainsMono Nerd Font" }
-              color: SystemState.dnd ? Colors.accent : Colors.text3
+              color: SystemState.dnd ? Colors.secondary : Colors.text3
               Behavior on color { ColorAnimation { duration: 150 } }
             }
             Text {
               anchors.horizontalCenter: parent.horizontalCenter
               text: "silêncio"
               font { pixelSize: 8; family: "Roboto" }
-              color: SystemState.dnd ? Colors.accent : Colors.text3
+              color: SystemState.dnd ? Colors.secondary : Colors.text3
               Behavior on color { ColorAnimation { duration: 150 } }
             }
           }
@@ -803,7 +838,7 @@ PanelWindow {
           width: (parent.width - ((root.toggleCount - 1) * 6)) / root.toggleCount
           height: 56
           radius: 10
-          color: SystemState.caffeine ? Qt.rgba(Colors.accent.r, Colors.accent.g, Colors.accent.b, 0.15) : Colors.bg2
+          color: SystemState.caffeine ? Qt.rgba(Colors.warning.r, Colors.warning.g, Colors.warning.b, 0.15) : Colors.bg2
           Behavior on color { ColorAnimation { duration: 150 } }
           Column {
             anchors.centerIn: parent
@@ -812,14 +847,14 @@ PanelWindow {
               anchors.horizontalCenter: parent.horizontalCenter
               text: SystemState.caffeine ? "󰅶" : "󰄰"
               font { pixelSize: 16; family: "JetBrainsMono Nerd Font" }
-              color: SystemState.caffeine ? Colors.accent : Colors.text3
+              color: SystemState.caffeine ? Colors.warning : Colors.text3
               Behavior on color { ColorAnimation { duration: 150 } }
             }
             Text {
               anchors.horizontalCenter: parent.horizontalCenter
               text: "cafeína"
               font { pixelSize: 8; family: "Roboto" }
-              color: SystemState.caffeine ? Colors.accent : Colors.text3
+              color: SystemState.caffeine ? Colors.warning : Colors.text3
               Behavior on color { ColorAnimation { duration: 150 } }
             }
           }
@@ -840,7 +875,7 @@ PanelWindow {
           width: (parent.width - ((root.toggleCount - 1) * 6)) / root.toggleCount
           height: 56
           radius: 10
-          color: root.screenRecording ? Qt.rgba(228 / 255, 104 / 255, 118 / 255, 0.15) : Colors.bg2
+          color: root.screenRecording ? Qt.rgba(Colors.danger.r, Colors.danger.g, Colors.danger.b, 0.15) : Colors.bg2
           Behavior on color { ColorAnimation { duration: 150 } }
           Column {
             anchors.centerIn: parent
@@ -849,14 +884,14 @@ PanelWindow {
               anchors.horizontalCenter: parent.horizontalCenter
               text: root.screenRecording ? "󰻃" : "󰕧"
               font { pixelSize: 16; family: "JetBrainsMono Nerd Font" }
-              color: root.screenRecording ? "#e46876" : Colors.text3
+              color: root.screenRecording ? Colors.danger : Colors.text3
               Behavior on color { ColorAnimation { duration: 150 } }
             }
             Text {
               anchors.horizontalCenter: parent.horizontalCenter
               text: root.screenRecording ? "gravando" : "gravar"
               font { pixelSize: 8; family: "Roboto" }
-              color: root.screenRecording ? "#e46876" : Colors.text3
+              color: root.screenRecording ? Colors.danger : Colors.text3
               Behavior on color { ColorAnimation { duration: 150 } }
             }
           }
@@ -876,7 +911,7 @@ PanelWindow {
           Behavior on color { ColorAnimation { duration: 150 } }
           readonly property var modes:  ["󰾅", "󰓅", "󰌪"]
           readonly property var labels: ["economia", "balanceado", "performance"]
-          readonly property var cols:   ["#69c880", Colors.accent, "#ffb347"]
+          readonly property var cols:   [Colors.success, Colors.info, Colors.warning]
           Column {
             anchors.centerIn: parent
             spacing: 4
@@ -946,12 +981,12 @@ PanelWindow {
               height: 20
               width: 54
               radius: 10
-              color: SystemState.dnd ? Qt.rgba(Colors.accent.r, Colors.accent.g, Colors.accent.b, 0.15) : Colors.bg2
+              color: SystemState.dnd ? Qt.rgba(Colors.secondary.r, Colors.secondary.g, Colors.secondary.b, 0.15) : Colors.bg2
               Text {
                 anchors.centerIn: parent
                 text: "silenciar"
                 font { pixelSize: 9; family: "Roboto" }
-                color: SystemState.dnd ? Colors.accent : Colors.text3
+                color: SystemState.dnd ? Colors.secondary : Colors.text3
               }
               MouseArea {
                 anchors.fill: parent
@@ -1045,7 +1080,7 @@ PanelWindow {
                     radius: 16
                     color: Qt.rgba(Colors.bg1.r, Colors.bg1.g, Colors.bg1.b, 0.94)
                     border.width: 1
-                    border.color: Qt.rgba(Colors.text1.r, Colors.text1.g, Colors.text1.b, Colors.darkMode ? 0.04 : 0.08)
+                    border.color: Qt.rgba(root.notificationTone(modelData).r, root.notificationTone(modelData).g, root.notificationTone(modelData).b, Colors.darkMode ? 0.20 : 0.26)
 
                     Behavior on height {
                       NumberAnimation { duration: 140; easing.type: Easing.OutCubic }
@@ -1067,14 +1102,14 @@ PanelWindow {
                         width: 38
                         height: 38
                         radius: 19
-                        color: Qt.rgba(Colors.accent.r, Colors.accent.g, Colors.accent.b, 0.14)
+                        color: Qt.rgba(root.notificationTone(modelData).r, root.notificationTone(modelData).g, root.notificationTone(modelData).b, 0.14)
                         Layout.alignment: Qt.AlignTop
 
                         Text {
                           anchors.centerIn: parent
                           visible: !iconImage.visible
                           text: "󰍡"
-                          color: Colors.accent
+                          color: root.notificationTone(modelData)
                           font { pixelSize: 14; family: "JetBrainsMono Nerd Font" }
                         }
 
@@ -1154,7 +1189,7 @@ PanelWindow {
                           visible: modelData.actionsCount > 0
                           height: 20
                           radius: 10
-                          color: Qt.rgba(Colors.accent.r, Colors.accent.g, Colors.accent.b, 0.10)
+                          color: Qt.rgba(root.notificationTone(modelData).r, root.notificationTone(modelData).g, root.notificationTone(modelData).b, 0.10)
                           Layout.topMargin: 4
                           width: actionMetaText.implicitWidth + 16
 
@@ -1162,7 +1197,7 @@ PanelWindow {
                             id: actionMetaText
                             anchors.centerIn: parent
                             text: modelData.actionsCount === 1 ? "1 ação" : modelData.actionsCount + " ações"
-                            color: Colors.accent
+                            color: root.notificationTone(modelData)
                             font { pixelSize: 9; family: "Roboto"; weight: Font.Medium }
                           }
                         }

@@ -11,10 +11,10 @@ Item {
   property bool charging: false
 
   readonly property color ringColor: charging
-    ? "#87c181"
-    : value > 50 ? Colors.accent
-    : value > 20 ? "#d9bc8c"
-    :               "#f28779"
+    ? Colors.success
+    : value > 50 ? Colors.success
+    : value > 20 ? Colors.warning
+    :               Colors.danger
 
   Canvas {
     id: cv
@@ -60,7 +60,7 @@ Item {
     width:  tipText.implicitWidth + 12
     height: 20
     radius: 6
-    color:  Colors.bg2
+    color:  Colors.panelRaised
     z: 100
 
     Text {

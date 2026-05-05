@@ -12,6 +12,10 @@ PanelWindow {
   exclusionMode: ExclusionMode.Ignore
   focusable: true
   visible: false
+  onVisibleChanged: {
+    if (visible) OverlayState.setActive("clipboard")
+    else OverlayState.clear("clipboard")
+  }
 
   property var items: []
   property var filtered: []
@@ -84,7 +88,8 @@ PanelWindow {
     imagePreviewPath = ""
     imagePreviewError = ""
     card.opacity = 0
-    card.scale = 0.985
+    cardScale.xScale = 0.985
+    cardScale.yScale = 0.985
     cardYOffset = 16
     reload()
     openAnim.start()
@@ -179,9 +184,10 @@ PanelWindow {
   SequentialAnimation {
     id: openAnim
     ParallelAnimation {
-      NumberAnimation { target: root; property: "cardYOffset"; from: 16; to: 0; duration: 190; easing.type: Easing.OutCubic }
+      NumberAnimation { target: root; property: "cardYOffset"; from: OverlayState.morphStartYOffset(root.height); to: 0; duration: 260; easing.type: Easing.OutCubic }
       NumberAnimation { target: card; property: "opacity"; from: 0; to: 1; duration: 140; easing.type: Easing.OutQuad }
-      NumberAnimation { target: card; property: "scale"; from: 0.985; to: 1; duration: 190; easing.type: Easing.OutCubic }
+      NumberAnimation { target: cardScale; property: "xScale"; from: OverlayState.morphStartXScale(card.width); to: 1; duration: 260; easing.type: Easing.OutCubic }
+      NumberAnimation { target: cardScale; property: "yScale"; from: OverlayState.morphStartYScale(card.height); to: 1; duration: 260; easing.type: Easing.OutCubic }
     }
     ScriptAction { script: searchInput.forceActiveFocus() }
   }
@@ -189,8 +195,9 @@ PanelWindow {
   SequentialAnimation {
     id: closeAnim
     ParallelAnimation {
-      NumberAnimation { target: root; property: "cardYOffset"; to: 10; duration: 120; easing.type: Easing.InCubic }
-      NumberAnimation { target: card; property: "scale"; to: 0.992; duration: 120; easing.type: Easing.InCubic }
+      NumberAnimation { target: root; property: "cardYOffset"; to: OverlayState.morphStartYOffset(root.height); duration: 150; easing.type: Easing.InCubic }
+      NumberAnimation { target: cardScale; property: "xScale"; to: OverlayState.morphStartXScale(card.width); duration: 150; easing.type: Easing.InCubic }
+      NumberAnimation { target: cardScale; property: "yScale"; to: OverlayState.morphStartYScale(card.height); duration: 150; easing.type: Easing.InCubic }
       NumberAnimation { target: card; property: "opacity"; to: 0; duration: 95; easing.type: Easing.InQuad }
     }
     ScriptAction { script: {
@@ -301,8 +308,14 @@ PanelWindow {
     border.width: 1
     border.color: Qt.rgba(Colors.accent.r, Colors.accent.g, Colors.accent.b, 0.18)
     opacity: 0
-    scale: 1
     clip: true
+    transform: Scale {
+      id: cardScale
+      origin.x: Math.max(0, Math.min(card.width, OverlayState.islandCenterX - card.x))
+      origin.y: Math.max(0, Math.min(card.height, OverlayState.islandCenterY - card.y))
+      xScale: 1
+      yScale: 1
+    }
 
     Rectangle {
       anchors.fill: parent

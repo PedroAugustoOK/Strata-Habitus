@@ -33,7 +33,7 @@ in {
       p.json p.yaml p.toml p.markdown p.html p.css p.c p.cpp
       p.rust p.go p.fish
     ]))
-    grimblast wl-clipboard cliphist brightnessctl awww matugen satty
+    grim grimblast wl-clipboard cliphist brightnessctl awww matugen satty
     nautilus gvfs pavucontrol pwvucontrol
     impala bluetui playerctl hyprlock hypridle
     pipewire wireplumber blueman libnotify mako
@@ -43,7 +43,8 @@ in {
     spotify fish starship loupe zathura libreoffice
     gnome-calculator file-roller gnome-clocks gnome-calendar
     gnome-control-center simple-scan system-config-printer thunderbird
-    standardnotes  gsettings-desktop-schemas
+    standardnotes gsettings-desktop-schemas
+    appimage-run gearlever
     hplipWithPlugin glib imagemagick
     codex
     qgis fzf

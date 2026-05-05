@@ -16,9 +16,30 @@ import "appcenter"
 import "updatecenter"
 import "settingscenter"
 import "webapps"
+import "screenshot"
+import "frame"
 
 ShellRoot {
+  property bool integratedFrameEnabled: false
+  property bool screenFrameVisible: false
+
+  function toggleControlCenter() {
+    if (integratedFrameEnabled) shellFrame.closeDrawers("")
+    controlCenter.toggle()
+  }
+
   Bar {}
+  ShellFrame {
+    id: shellFrame
+    active: integratedFrameEnabled
+    onOpenControlCenter: toggleControlCenter()
+    onCloseControlCenter: if (controlCenter.visible) controlCenter.close()
+    onOpenThemePicker: themePicker.toggle()
+    onOpenWallPickr: wallPickr.toggle()
+    onOpenAppCenter: appCenter.toggle()
+    onOpenUpdateCenter: updateCenter.toggle()
+  }
+  DynamicIslandCard {}
   TrayMenu {}
   CalendarMenu {}
   Launcher { id: launcher }
@@ -33,9 +54,10 @@ ShellRoot {
   AppCenter { id: appCenter }
   WebApps { id: webApps }
   UpdateCenter { id: updateCenter }
+  ScreenshotSelector { id: screenshotSelector }
   SettingsCenter {
     id: settingsCenter
-    onOpenControlCenter: controlCenter.toggle()
+    onOpenControlCenter: toggleControlCenter()
     onOpenThemePicker: themePicker.toggle()
     onOpenWallPickr: wallPickr.toggle()
     onOpenAppCenter: appCenter.toggle()
@@ -47,7 +69,20 @@ ShellRoot {
   readonly property string notificationIconDaemonScript: Qt.resolvedUrl("./scripts/notification-icon-daemon.sh").toString().replace("file://", "")
   readonly property string spotifyNotifyScript: Qt.resolvedUrl("./scripts/spotify-notify.sh").toString().replace("file://", "")
 
+  FileView {
+    id: shellFrameFlag
+    path: Paths.state + "/shell-frame-enabled"
+    watchChanges: true
+    onFileChanged: reload()
+    onLoaded: {
+      const value = text().trim().toLowerCase()
+      integratedFrameEnabled = value === "1" || value === "true" || value === "yes" || value === "on"
+    }
+  }
+
   Component.onCompleted: {
+    makoBackend.command = ["/run/current-system/sw/bin/bash", "-lc", "busctl --user --quiet status org.freedesktop.Notifications >/dev/null 2>&1 || systemctl --user start mako 2>/dev/null || exec /run/current-system/sw/bin/mako --config /home/ankh/dotfiles/generated/mako/config"]
+    makoBackend.running = true
     clipboardDaemon.command = ["/run/current-system/sw/bin/bash", clipboardDaemonScript, "start"]
     clipboardDaemon.running = true
     notificationIconDaemon.command = ["/run/current-system/sw/bin/bash", notificationIconDaemonScript, "start"]
@@ -78,6 +113,10 @@ ShellRoot {
   }
 
   Process {
+    id: makoBackend
+    command: []
+  }
+  Process {
     id: spotifyNotify
     command: []
   }
@@ -93,6 +132,7 @@ ShellRoot {
     implicitHeight: Screen.height - barH
     color: Colors.bg1
     exclusionMode: ExclusionMode.Ignore
+    visible: screenFrameVisible
   }
 
   // Arco superior esquerdo
@@ -102,6 +142,7 @@ ShellRoot {
     implicitHeight: barH + r
     color: "transparent"
     exclusionMode: ExclusionMode.Ignore
+    visible: screenFrameVisible
     mask: Region { item: cv1arc }
     Canvas {
       id: cv1
@@ -138,6 +179,7 @@ ShellRoot {
     implicitHeight: Screen.height - barH
     color: Colors.bg1
     exclusionMode: ExclusionMode.Ignore
+    visible: screenFrameVisible
   }
 
   // Arco superior direito
@@ -147,6 +189,7 @@ ShellRoot {
     implicitHeight: barH + r
     color: "transparent"
     exclusionMode: ExclusionMode.Ignore
+    visible: screenFrameVisible
     mask: Region { item: cv2arc }
     Canvas {
       id: cv2
@@ -182,6 +225,7 @@ ShellRoot {
     implicitHeight: brd
     color: Colors.bg1
     exclusionMode: ExclusionMode.Ignore
+    visible: screenFrameVisible
   }
 
   // Canto inferior esquerdo
@@ -191,6 +235,7 @@ ShellRoot {
     implicitHeight: brd + r
     color: "transparent"
     exclusionMode: ExclusionMode.Ignore
+    visible: screenFrameVisible
     Canvas {
       id: cv3
       anchors.fill: parent
@@ -221,6 +266,7 @@ ShellRoot {
     implicitHeight: brd + r
     color: "transparent"
     exclusionMode: ExclusionMode.Ignore
+    visible: screenFrameVisible
     Canvas {
       id: cv4
       anchors.fill: parent
@@ -246,31 +292,49 @@ ShellRoot {
 
   IpcHandler {
     target: "launcher"
-    function toggle(): void { launcher.toggle() }
+    function toggle(): void {
+      if (integratedFrameEnabled) shellFrame.toggleLauncher()
+      else launcher.toggle()
+    }
   }
   IpcHandler {
     target: "controlcenter"
-    function toggle(): void { controlCenter.toggle() }
+    function toggle(): void { toggleControlCenter() }
   }
   IpcHandler {
     target: "powermenu"
-    function toggle(): void { powerMenu.toggle() }
+    function toggle(): void {
+      if (integratedFrameEnabled) shellFrame.togglePowerMenu()
+      else powerMenu.toggle()
+    }
   }
   IpcHandler {
     target: "wallPickr"
-    function toggle(): void { wallPickr.toggle() }
+    function toggle(): void {
+      if (integratedFrameEnabled) shellFrame.toggleWallPickr()
+      else wallPickr.toggle()
+    }
   }
   IpcHandler {
     target: "clipboard"
-    function toggle(): void { clipboard.toggle() }
+    function toggle(): void {
+      if (integratedFrameEnabled) shellFrame.toggleClipboard()
+      else clipboard.toggle()
+    }
   }
   IpcHandler {
     target: "themepicker"
-    function toggle(): void { themePicker.toggle() }
+    function toggle(): void {
+      if (integratedFrameEnabled) shellFrame.toggleThemePicker()
+      else themePicker.toggle()
+    }
   }
   IpcHandler {
     target: "appcenter"
-    function toggle(): void { appCenter.toggle() }
+    function toggle(): void {
+      if (integratedFrameEnabled) shellFrame.toggleAppCenter()
+      else appCenter.toggle()
+    }
   }
   IpcHandler {
     target: "webapps"
@@ -278,11 +342,22 @@ ShellRoot {
   }
   IpcHandler {
     target: "updatecenter"
-    function toggle(): void { updateCenter.toggle() }
+    function toggle(): void {
+      if (integratedFrameEnabled) shellFrame.toggleUpdateCenter()
+      else updateCenter.toggle()
+    }
   }
   IpcHandler {
     target: "settingscenter"
-    function toggle(): void { settingsCenter.toggle() }
+    function toggle(): void {
+      if (integratedFrameEnabled) shellFrame.toggleSettingsCenter()
+      else settingsCenter.toggle()
+    }
+  }
+  IpcHandler {
+    target: "screenshot"
+    function select(requestId: string): void { screenshotSelector.select(requestId) }
+    function cancel(): void { screenshotSelector.cancel() }
   }
 
   Process {

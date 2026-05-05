@@ -15,6 +15,7 @@ Item {
   property string mediaArtist: ""
   property real mediaProgress: 0
   property string mediaArtPath: ""
+  property string mediaDiscPath: ""
   property string mediaPositionText: "--:--"
   property string mediaDurationText: "--:--"
 
@@ -27,6 +28,10 @@ Item {
   property string notificationUrgency: "normal"
   property bool notificationFresh: false
   property bool hovered: false
+  property bool compactProgressVisible: mediaActive && mediaProgress > 0
+  readonly property int childGap: 6
+  readonly property int childSize: 24
+  readonly property int childRailWidth: protonVpnConnected ? childSize + childGap : 0
 
   readonly property bool mediaActive: mediaStatus !== "Stopped" && mediaTitle !== ""
   readonly property string notificationIconSource: notificationIconPath === ""
@@ -35,6 +40,9 @@ Item {
   readonly property string mediaArtSource: mediaArtPath === ""
     ? ""
     : mediaArtPath.indexOf("file://") === 0 ? mediaArtPath : "file://" + mediaArtPath
+  readonly property string mediaDiscSource: mediaDiscPath === ""
+    ? ""
+    : mediaDiscPath.indexOf("file://") === 0 ? mediaDiscPath : "file://" + mediaDiscPath
   readonly property string mode: OverlayState.activeOverlay !== "" ? "overlay"
     : notificationFresh ? "notification"
     : screenRecording ? "recording"
@@ -61,19 +69,19 @@ Item {
   readonly property int targetWidth: {
     if (mode === "overlay") return Math.min(330, Math.max(168, overlayLabel.implicitWidth + 58))
     if (mode === "notification") return Math.min(470, Math.max(250, notificationTextCol.implicitWidth + 74))
-    if (mode === "recording") return Math.max(170, recordLabel.implicitWidth + 44)
-    if (mode === "media") return Math.min(430, Math.max(286, mediaTitleLabel.implicitWidth + 116))
+    if (mode === "recording") return Math.max(118, recordLabel.implicitWidth + 42)
+    if (mode === "media") return Math.min(398, Math.max(196, Math.min(246, Math.max(mediaTitleLabel.implicitWidth, mediaArtistLabel.implicitWidth)) + 112))
     return idleLabel.implicitWidth + 66
   }
 
-  width: targetWidth
+  width: targetWidth + childRailWidth * 2
   height: 30
 
   Behavior on width { NumberAnimation { duration: 260; easing.type: Easing.OutCubic } }
 
   function publishGeometry() {
-    const point = root.mapToItem(null, 0, 0)
-    OverlayState.setIslandGeometry(point.x, point.y, root.width, root.height)
+    const point = surface.mapToItem(null, 0, 0)
+    OverlayState.setIslandGeometry(point.x, point.y, surface.width, surface.height)
   }
 
   function publishIslandState() {
@@ -82,6 +90,7 @@ Item {
     DynamicIslandState.mediaArtist = mediaArtist
     DynamicIslandState.mediaProgress = mediaProgress
     DynamicIslandState.mediaArtPath = mediaArtPath
+    DynamicIslandState.mediaDiscPath = mediaDiscPath
     DynamicIslandState.mediaPositionText = mediaPositionText
     DynamicIslandState.mediaDurationText = mediaDurationText
     DynamicIslandState.recording = screenRecording
@@ -106,15 +115,33 @@ Item {
     overlayToggleProc.running = true
   }
 
+  function requestMediaPlayPause() {
+    if (mediaStatus === "Playing") mediaStatus = "Paused"
+    else if (mediaStatus === "Paused") mediaStatus = "Playing"
+    publishIslandState()
+    mediaPauseProc.running = true
+    mediaRefreshAfterAction.restart()
+  }
+
+  function containsPoint(item, x, y) {
+    const point = item.mapToItem(surface, 0, 0)
+    return x >= point.x && x <= point.x + item.width && y >= point.y && y <= point.y + item.height
+  }
+
   onXChanged: publishGeometry()
   onYChanged: publishGeometry()
   onWidthChanged: publishGeometry()
   onHeightChanged: publishGeometry()
   onMediaStatusChanged: publishIslandState()
-  onMediaTitleChanged: publishIslandState()
+  onMediaTitleChanged: {
+    publishIslandState()
+    if (mode === "media")
+      mediaNudgeAnim.restart()
+  }
   onMediaArtistChanged: publishIslandState()
   onMediaProgressChanged: publishIslandState()
   onMediaArtPathChanged: publishIslandState()
+  onMediaDiscPathChanged: publishIslandState()
   onMediaPositionTextChanged: publishIslandState()
   onMediaDurationTextChanged: publishIslandState()
   onScreenRecordingChanged: publishIslandState()
@@ -126,6 +153,7 @@ Item {
   onNotificationUrgencyChanged: publishIslandState()
   onModeChanged: {
     publishIslandState()
+    modeMorphAnim.restart()
     if (DynamicIslandState.visible && DynamicIslandState.mode !== mode && mode !== "overlay")
       DynamicIslandState.close()
   }
@@ -136,17 +164,54 @@ Item {
 
   Rectangle {
     id: surface
-    anchors.fill: parent
+    anchors { horizontalCenter: parent.horizontalCenter; verticalCenter: parent.verticalCenter }
+    width: root.targetWidth
+    height: parent.height
+    opacity: DynamicIslandState.visible ? 0 : 1
     radius: 15
-    color: mode === "idle"
-      ? (root.hovered ? Qt.rgba(Colors.barActive.r, Colors.barActive.g, Colors.barActive.b, Colors.darkMode ? 0.12 : 0.10) : Colors.barPill)
-      : Qt.rgba(root.modeColor.r, root.modeColor.g, root.modeColor.b, root.hovered ? (Colors.darkMode ? 0.22 : 0.18) : (Colors.darkMode ? 0.16 : 0.13))
+    color: mode === "media"
+      ? (root.hovered ? Qt.rgba(Colors.bg0.r, Colors.bg0.g, Colors.bg0.b, Colors.darkMode ? 0.96 : 0.90) : Qt.rgba(Colors.bg0.r, Colors.bg0.g, Colors.bg0.b, Colors.darkMode ? 0.88 : 0.82))
+      : mode === "idle"
+        ? (root.hovered ? Qt.rgba(Colors.barActive.r, Colors.barActive.g, Colors.barActive.b, Colors.darkMode ? 0.12 : 0.10) : Colors.barPill)
+        : Qt.rgba(root.modeColor.r, root.modeColor.g, root.modeColor.b, root.hovered ? (Colors.darkMode ? 0.22 : 0.18) : (Colors.darkMode ? 0.16 : 0.13))
     border.width: mode === "idle" ? 0 : 1
-    border.color: Qt.rgba(root.modeColor.r, root.modeColor.g, root.modeColor.b, Colors.darkMode ? 0.34 : 0.28)
+    border.color: mode === "media"
+      ? Qt.rgba(Colors.text1.r, Colors.text1.g, Colors.text1.b, Colors.darkMode ? 0.14 : 0.18)
+      : Qt.rgba(root.modeColor.r, root.modeColor.g, root.modeColor.b, Colors.darkMode ? 0.34 : 0.28)
     clip: true
+    transform: Scale {
+      id: surfaceScale
+      origin.x: surface.width / 2
+      origin.y: surface.height / 2
+      xScale: 1
+      yScale: 1
+    }
 
     Behavior on color { ColorAnimation { duration: 180; easing.type: Easing.OutCubic } }
     Behavior on border.color { ColorAnimation { duration: 180; easing.type: Easing.OutCubic } }
+    Behavior on opacity { NumberAnimation { duration: 70; easing.type: Easing.OutQuad } }
+
+    ParallelAnimation {
+      id: modeMorphAnim
+      NumberAnimation {
+        target: surfaceScale
+        property: "xScale"
+        from: 0.78
+        to: 1
+        duration: 360
+        easing.type: Easing.BezierSpline
+        easing.bezierCurve: [0.23, 1, 0.61, 1, 1, 1]
+      }
+      NumberAnimation {
+        target: surfaceScale
+        property: "yScale"
+        from: 1.22
+        to: 1
+        duration: 360
+        easing.type: Easing.BezierSpline
+        easing.bezierCurve: [0.23, 1, 0.61, 1, 1, 1]
+      }
+    }
 
     Row {
       anchors.centerIn: parent
@@ -223,7 +288,7 @@ Item {
       Text {
         id: recordLabel
         anchors.verticalCenter: parent.verticalCenter
-        text: "Gravando " + root.screenRecordingElapsed
+        text: "REC " + root.screenRecordingElapsed
         color: Colors.text0
         font { family: "Inter"; pixelSize: 12; weight: Font.DemiBold }
       }
@@ -288,100 +353,178 @@ Item {
 
     Row {
       anchors.centerIn: parent
-      spacing: 9
+      spacing: 8
       opacity: root.mode === "media" ? 1 : 0
       visible: opacity > 0.01
       Behavior on opacity { NumberAnimation { duration: 120; easing.type: Easing.OutCubic } }
 
-      Rectangle {
+      Item {
         anchors.verticalCenter: parent.verticalCenter
-        width: 22
-        height: 22
-        radius: 7
-        color: Qt.rgba(Colors.primary.r, Colors.primary.g, Colors.primary.b, 0.16)
-        clip: true
+        width: 28
+        height: 28
+        rotation: 0
 
-        Image {
-          id: mediaArt
+        Rectangle {
           anchors.fill: parent
-          source: root.mediaArtSource
-          fillMode: Image.PreserveAspectCrop
-          smooth: true
-          visible: status === Image.Ready
+          radius: width / 2
+          color: Qt.rgba(0, 0, 0, Colors.darkMode ? 0.58 : 0.42)
         }
 
-        Text {
+        Image {
+          id: mediaDiscArt
+          anchors.fill: parent
+          source: root.mediaDiscSource
+          fillMode: Image.PreserveAspectFit
+          smooth: true
+          visible: mediaDiscArt.status === Image.Ready
+        }
+
+        Rectangle {
+          anchors.fill: parent
+          radius: width / 2
+          color: "transparent"
+          border.width: 1
+          border.color: Qt.rgba(Colors.text0.r, Colors.text0.g, Colors.text0.b, 0.14)
+        }
+
+        Rectangle {
           anchors.centerIn: parent
-          visible: mediaArt.status !== Image.Ready
-          text: "󰓇"
-          color: Colors.primary
-          font { family: "JetBrainsMono Nerd Font"; pixelSize: 12 }
+          width: 24
+          height: 24
+          radius: 12
+          color: "transparent"
+          border.width: 1
+          border.color: Qt.rgba(Colors.text0.r, Colors.text0.g, Colors.text0.b, 0.10)
+        }
+        Rectangle {
+          anchors.centerIn: parent
+          width: 18
+          height: 18
+          radius: 9
+          color: "transparent"
+          border.width: 1
+          border.color: Qt.rgba(Colors.text0.r, Colors.text0.g, Colors.text0.b, 0.07)
+        }
+        Rectangle {
+          x: 8
+          y: 5
+          width: 4
+          height: 4
+          radius: 2
+          color: Qt.rgba(Colors.primary.r, Colors.primary.g, Colors.primary.b, 0.75)
+        }
+        Rectangle {
+          anchors.centerIn: parent
+          width: 9
+          height: 9
+          radius: 5
+          color: Colors.bg0
+          border.width: 1
+          border.color: Qt.rgba(Colors.text1.r, Colors.text1.g, Colors.text1.b, 0.30)
+        }
+
+        NumberAnimation on rotation {
+          running: root.mode === "media" && root.mediaStatus === "Playing"
+          from: 0
+          to: 360
+          duration: 3200
+          loops: Animation.Infinite
         }
       }
 
       Column {
+        id: mediaTextCol
         anchors.verticalCenter: parent.verticalCenter
-        spacing: -1
+        spacing: 1
+        transform: Translate {
+          id: mediaTextNudge
+          x: 0
+        }
         Text {
           id: mediaTitleLabel
           text: root.mediaTitle
-          width: Math.min(300, implicitWidth)
+          width: Math.min(246, implicitWidth)
           elide: Text.ElideRight
           color: Colors.text0
           font { family: "Inter"; pixelSize: 11; weight: Font.DemiBold }
         }
         Text {
+          id: mediaArtistLabel
           text: root.mediaArtist
           visible: root.mediaArtist !== ""
-          width: Math.min(300, implicitWidth)
+          width: Math.min(246, implicitWidth)
           elide: Text.ElideRight
           color: Colors.text2
           font { family: "Inter"; pixelSize: 9 }
         }
+        Rectangle {
+          width: mediaTitleLabel.width
+          height: 1
+          radius: 1
+          visible: root.compactProgressVisible
+          color: Qt.rgba(Colors.text1.r, Colors.text1.g, Colors.text1.b, 0.08)
+          Rectangle {
+            anchors { left: parent.left; top: parent.top; bottom: parent.bottom }
+            width: parent.width * root.mediaProgress
+            radius: 1
+            color: Qt.rgba(Colors.primary.r, Colors.primary.g, Colors.primary.b, 0.42)
+            Behavior on width { NumberAnimation { duration: 700; easing.type: Easing.Linear } }
+          }
+        }
+      }
+
+      Row {
+        anchors.verticalCenter: parent.verticalCenter
+        height: 18
+        spacing: 2
+
+        Repeater {
+          model: [7, 12, 9, 15]
+          delegate: Rectangle {
+            required property int modelData
+            required property int index
+            anchors.verticalCenter: parent.verticalCenter
+            width: 2
+            height: root.mediaStatus === "Playing" ? Math.max(5, modelData - 2) : 5
+            radius: 2
+            color: Qt.rgba(Colors.primary.r, Colors.primary.g, Colors.primary.b, root.mediaStatus === "Playing" ? 0.78 : 0.36)
+            opacity: root.mediaStatus === "Playing" ? 1 : 0.58
+
+            SequentialAnimation on height {
+              running: root.mode === "media" && root.mediaStatus === "Playing"
+              loops: Animation.Infinite
+              NumberAnimation { to: Math.max(5, modelData - 5); duration: 360 + index * 55; easing.type: Easing.InOutSine }
+              NumberAnimation { to: modelData; duration: 420 + index * 45; easing.type: Easing.InOutSine }
+            }
+          }
+        }
       }
 
       Rectangle {
+        id: compactPlayButton
         anchors.verticalCenter: parent.verticalCenter
-        width: 22
-        height: 22
-        radius: 11
-        color: root.hovered ? Qt.rgba(Colors.primary.r, Colors.primary.g, Colors.primary.b, 0.22) : Qt.rgba(Colors.text1.r, Colors.text1.g, Colors.text1.b, 0.08)
+        width: 24
+        height: 24
+        radius: 12
+        color: compactPlayMouse.containsMouse ? Qt.rgba(Colors.text0.r, Colors.text0.g, Colors.text0.b, 0.17) : Qt.rgba(Colors.text1.r, Colors.text1.g, Colors.text1.b, 0.08)
+        Behavior on color { ColorAnimation { duration: 120; easing.type: Easing.OutCubic } }
         Text {
           anchors.centerIn: parent
           text: root.mediaStatus === "Playing" ? "󰏤" : "󰐊"
           color: Colors.text0
           font { family: "JetBrainsMono Nerd Font"; pixelSize: 11 }
         }
-      }
-    }
-
-    Rectangle {
-      anchors { left: parent.left; right: parent.right; bottom: parent.bottom; leftMargin: 16; rightMargin: 16 }
-      height: 2
-      radius: 1
-      visible: root.mode === "media"
-      color: Qt.rgba(Colors.text1.r, Colors.text1.g, Colors.text1.b, 0.10)
-      Rectangle {
-        anchors { left: parent.left; top: parent.top; bottom: parent.bottom }
-        width: parent.width * root.mediaProgress
-        radius: 1
-        color: Colors.primary
-        Behavior on width { NumberAnimation { duration: 600; easing.type: Easing.Linear } }
-      }
-    }
-
-    Rectangle {
-      anchors { right: parent.right; rightMargin: 8; verticalCenter: parent.verticalCenter }
-      width: 18
-      height: 18
-      radius: 9
-      visible: root.protonVpnConnected && root.mode !== "recording"
-      color: Qt.rgba(Colors.info.r, Colors.info.g, Colors.info.b, 0.14)
-      Text {
-        anchors.centerIn: parent
-        text: "󰌾"
-        color: Colors.info
-        font { family: "JetBrainsMono Nerd Font"; pixelSize: 10 }
+        MouseArea {
+          id: compactPlayMouse
+          anchors.fill: parent
+          hoverEnabled: true
+          cursorShape: Qt.PointingHandCursor
+          acceptedButtons: Qt.LeftButton
+          onClicked: function(mouse) {
+            requestMediaPlayPause()
+            mouse.accepted = true
+          }
+        }
       }
     }
 
@@ -403,7 +546,11 @@ Item {
           return
         }
         if (root.mode === "media" && mouse.button === Qt.RightButton) {
-          mediaPauseProc.running = true
+          requestMediaPlayPause()
+          return
+        }
+        if (root.mode === "media" && mouse.button === Qt.LeftButton && containsPoint(compactPlayButton, mouse.x, mouse.y)) {
+          requestMediaPlayPause()
           return
         }
         if (root.mode === "notification" && mouse.button === Qt.RightButton) {
@@ -435,17 +582,52 @@ Item {
         }
         launcherProc.running = true
       }
-      onWheel: function(wheel) {
-        if (root.mode !== "media") return
-        if (wheel.angleDelta.y > 0) mediaNextProc.running = true
-        else mediaPrevProc.running = true
-      }
+    }
+  }
+
+  Rectangle {
+    id: vpnChildPill
+    anchors { left: surface.right; leftMargin: root.childGap; verticalCenter: surface.verticalCenter }
+    width: root.protonVpnConnected ? root.childSize : 0
+    height: root.childSize
+    radius: height / 2
+    visible: width > 0 || opacity > 0.01
+    opacity: root.protonVpnConnected ? 1 : 0
+    scale: root.protonVpnConnected ? 1 : 0.78
+    color: Qt.rgba(Colors.info.r, Colors.info.g, Colors.info.b, Colors.darkMode ? 0.18 : 0.14)
+    border.width: 1
+    border.color: Qt.rgba(Colors.info.r, Colors.info.g, Colors.info.b, Colors.darkMode ? 0.30 : 0.24)
+    clip: true
+
+    Behavior on width { NumberAnimation { duration: 220; easing.type: Easing.OutCubic } }
+    Behavior on opacity { NumberAnimation { duration: 160; easing.type: Easing.OutCubic } }
+    Behavior on scale { NumberAnimation { duration: 220; easing.type: Easing.OutCubic } }
+    Behavior on color { ColorAnimation { duration: 180; easing.type: Easing.OutCubic } }
+
+    Text {
+      anchors.centerIn: parent
+      text: "󰌾"
+      color: Colors.info
+      font { family: "JetBrainsMono Nerd Font"; pixelSize: 11 }
+    }
+  }
+
+  SequentialAnimation {
+    id: mediaNudgeAnim
+    NumberAnimation {
+      target: mediaTextNudge
+      property: "x"
+      from: 6
+      to: 0
+      duration: 260
+      easing.type: Easing.BezierSpline
+      easing.bezierCurve: [0.23, 1, 0.61, 1, 1, 1]
     }
   }
 
   Process {
     id: mediaProc
-    command: ["bash", "-c", "status=\"$(playerctl -p spotify status 2>/dev/null || true)\"; title=\"$(playerctl -p spotify metadata xesam:title 2>/dev/null || true)\"; artist=\"$(playerctl -p spotify metadata xesam:artist 2>/dev/null || true)\"; pos=\"$(playerctl -p spotify position 2>/dev/null || true)\"; len=\"$(playerctl -p spotify metadata mpris:length 2>/dev/null || true)\"; art=\"$(playerctl -p spotify metadata mpris:artUrl 2>/dev/null || true)\"; art_path=\"\"; if [[ \"$art\" == file://* && -f \"${art#file://}\" ]]; then art_path=\"${art#file://}\"; elif [[ \"$art\" =~ ^https?:// ]]; then ext=\"$(printf '%s' \"$art\" | sed -E 's/[?#].*$//' | sed -En 's/.*(\\.(jpg|jpeg|png|webp))$/\\1/p' | tr '[:upper:]' '[:lower:]')\"; [ -n \"$ext\" ] || ext=.jpg; candidate=\"${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/strata/spotify-art/$(printf '%s' \"$art\" | sha1sum | cut -d' ' -f1)$ext\"; [ -f \"$candidate\" ] && art_path=\"$candidate\"; fi; printf '%s\\t%s\\t%s\\t%s\\t%s\\t%s\\n' \"$status\" \"$title\" \"$artist\" \"$pos\" \"$len\" \"$art_path\""]
+    command: ["bash", "-c", "status=\"$(playerctl -p spotify status 2>/dev/null || true)\"; title=\"$(playerctl -p spotify metadata xesam:title 2>/dev/null || true)\"; artist=\"$(playerctl -p spotify metadata xesam:artist 2>/dev/null || true)\"; pos=\"$(playerctl -p spotify position 2>/dev/null || true)\"; len=\"$(playerctl -p spotify metadata mpris:length 2>/dev/null || true)\"; art=\"$(playerctl -p spotify metadata mpris:artUrl 2>/dev/null || true)\"; art_path=\"\"; disc_path=\"\"; art_dir=\"${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/strata/spotify-art\"; if [[ \"$art\" == file://* && -f \"${art#file://}\" ]]; then art_path=\"${art#file://}\"; elif [[ \"$art\" =~ ^https?:// ]]; then ext=\"$(printf '%s' \"$art\" | sed -E 's/[?#].*$//' | sed -En 's/.*(\\.(jpg|jpeg|png|webp))$/\\1/p' | tr '[:upper:]' '[:lower:]')\"; [ -n \"$ext\" ] || ext=.jpg; candidate=\"$art_dir/$(printf '%s' \"$art\" | sha1sum | cut -d' ' -f1)$ext\"; [ -f \"$candidate\" ] && art_path=\"$candidate\"; fi; if [ -n \"$art_path\" ] && [ -f \"$art_path\" ]; then mkdir -p \"$art_dir\"; stamp=\"$(stat -c %Y \"$art_path\" 2>/dev/null || echo 0)\"; disc_path=\"$art_dir/$(printf '%s:%s' \"$art_path\" \"$stamp\" | sha1sum | cut -d' ' -f1).disc.png\"; if [ ! -f \"$disc_path\" ]; then if command -v magick >/dev/null 2>&1; then magick \"$art_path\" -resize 96x96^ -gravity center -extent 96x96 \\( -size 96x96 xc:none -fill white -draw 'circle 48,48 48,0' \\) -alpha off -compose CopyOpacity -composite \"$disc_path\" 2>/dev/null || disc_path=\"\"; elif command -v convert >/dev/null 2>&1; then convert \"$art_path\" -resize 96x96^ -gravity center -extent 96x96 \\( -size 96x96 xc:none -fill white -draw 'circle 48,48 48,0' \\) -alpha off -compose CopyOpacity -composite \"$disc_path\" 2>/dev/null || disc_path=\"\"; else disc_path=\"\"; fi; fi; fi; printf '%s\\t%s\\t%s\\t%s\\t%s\\t%s\\t%s\\n' \"$status\" \"$title\" \"$artist\" \"$pos\" \"$len\" \"$art_path\" \"$disc_path\""]
     stdout: StdioCollector {
       onStreamFinished: {
         const parts = this.text.trim().split("\t")
@@ -456,6 +638,7 @@ Item {
         const len = Number(parts[4] || 0) / 1000000
         root.mediaProgress = len > 0 ? Math.max(0, Math.min(1, pos / len)) : 0
         root.mediaArtPath = parts[5] || ""
+        root.mediaDiscPath = parts[6] || ""
         root.mediaPositionText = root.formatSeconds(pos)
         root.mediaDurationText = root.formatSeconds(len)
       }
@@ -491,6 +674,9 @@ Item {
             publishIslandState()
             if (root.notificationSummary !== "") {
               root.notificationFresh = true
+              publishIslandState()
+              if (OverlayState.activeOverlay === "")
+                DynamicIslandState.open("notification")
               notificationFreshTimer.restart()
             }
           }
@@ -514,6 +700,13 @@ Item {
     running: true
     repeat: true
     triggeredOnStart: true
+    onTriggered: mediaProc.running = true
+  }
+
+  Timer {
+    id: mediaRefreshAfterAction
+    interval: 120
+    repeat: false
     onTriggered: mediaProc.running = true
   }
 

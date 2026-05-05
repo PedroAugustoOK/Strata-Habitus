@@ -10,6 +10,7 @@ QtObject {
   property string mediaArtist: ""
   property real mediaProgress: 0
   property string mediaArtPath: ""
+  property string mediaDiscPath: ""
   property string mediaPositionText: "--:--"
   property string mediaDurationText: "--:--"
 
@@ -29,6 +30,9 @@ QtObject {
   readonly property string mediaArtSource: mediaArtPath === ""
     ? ""
     : mediaArtPath.indexOf("file://") === 0 ? mediaArtPath : "file://" + mediaArtPath
+  readonly property string mediaDiscSource: mediaDiscPath === ""
+    ? ""
+    : mediaDiscPath.indexOf("file://") === 0 ? mediaDiscPath : "file://" + mediaDiscPath
 
   function open(nextMode) {
     mode = nextMode || mode

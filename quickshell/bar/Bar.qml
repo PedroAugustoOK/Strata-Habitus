@@ -16,6 +16,9 @@ PanelWindow {
   property string protonVpnLabel: "Proton"
   property int pillAnimFast: 140
   property int pillAnimMedium: 180
+  readonly property int centerReserveWidth: 520
+  readonly property real centerReserveLeft: Math.max(0, width / 2 - centerReserveWidth / 2)
+  readonly property real centerReserveRight: Math.min(width, width / 2 + centerReserveWidth / 2)
   Rectangle {
     id: barSurface
     anchors { top: parent.top; left: parent.left; right: parent.right }
@@ -41,14 +44,14 @@ PanelWindow {
   Item {
     id: leftZone
     anchors { left: parent.left; verticalCenter: barSurface.verticalCenter }
-    width:  dynamicPill.x - 6
+    width: Math.max(0, barRoot.centerReserveLeft - 6)
     height: 34
     Rectangle {
       id: titlePill
-      anchors { left: parent.left; leftMargin: 10; verticalCenter: parent.verticalCenter }
+      anchors { left: wsPill.right; leftMargin: 6; verticalCenter: parent.verticalCenter }
       height: 28; radius: 14
       color: Colors.barPill
-      width:  winText.text !== "" ? Math.min(winText.implicitWidth + 24, Math.max(0, wsPill.x - 20)) : 0
+      width:  winText.text !== "" ? Math.min(winText.implicitWidth + 24, Math.max(0, parent.width - x - 6)) : 0
       opacity: winText.text !== "" ? 1 : 0
       scale: winText.text !== "" ? 1 : 0.96
       visible: width > 0 || opacity > 0.01
@@ -63,7 +66,7 @@ PanelWindow {
     }
     Rectangle {
       id: wsPill
-      anchors { right: parent.right; rightMargin: 0; verticalCenter: parent.verticalCenter }
+      anchors { left: parent.left; leftMargin: 10; verticalCenter: parent.verticalCenter }
       height: 28
       radius: 14
       color: Colors.barPill
@@ -87,12 +90,9 @@ PanelWindow {
   }
   Item {
     id: rightZone
-    anchors {
-      left:           dynamicPill.right
-      leftMargin:     6
-      right:          parent.right
-      verticalCenter: barSurface.verticalCenter
-    }
+    x: barRoot.centerReserveRight + 6
+    width: Math.max(0, parent.width - x)
+    anchors { verticalCenter: barSurface.verticalCenter }
     height: 34
     Row {
       id: infoRow

@@ -795,3 +795,100 @@ bash -n quickshell/scripts/apply-theme-state.sh
   - progress bar position
   - title wrapping
   - whether album art should also double-click or right-click to launch/focus Spotify.
+
+## Session continuation point - 2026-05-05 (Dynamic Island shared surface)
+
+### Current island direction
+- The Dynamic Island is now a central shell component, not just a status pill.
+- Current product model:
+  - main island surface shows the highest-priority context
+  - persistent states should become child pills around the island
+  - the bar should not reflow when the island changes width
+- The current implementation is still QML-only.
+
+### Files changed in this session
+- `quickshell/bar/DynamicPill.qml`
+- `quickshell/bar/DynamicIslandCard.qml`
+- `quickshell/DynamicIslandState.qml`
+- `quickshell/bar/Bar.qml`
+- `quickshell/scripts/notification-history.js`
+
+### Important implemented behavior
+- Expanded island now morphs from the actual island geometry.
+- The compact bar pill hides while the expanded island surface is visible.
+- Compact content is drawn inside the expanding surface before expanded content appears.
+- Notification mode is passive:
+  - no keyboard focus
+  - no forced active focus
+  - no fullscreen mouse capture
+  - clicking the card itself closes/collapses it
+- New notifications automatically open the island if no larger overlay is active.
+- Notification card no longer has `Abrir histórico`.
+- Spotify notifications are filtered out of `notification-history.js`.
+- Compact media play/pause:
+  - clickable button pauses/plays without opening the card
+  - visual state updates optimistically immediately
+  - real state refresh follows after `120ms`
+- Mouse wheel next/previous gestures were removed from the compact media island.
+
+### Album-art disc implementation
+- User wanted the album/song cover itself to become a round spinning disc.
+- Failed approach:
+  - QML `Rectangle { radius; clip: true }` around `Image`
+  - result looked broken because the image still behaved like a square crop
+- Also not available:
+  - `Qt5Compat.GraphicalEffects`
+  - `OpacityMask` import failed because the module is not installed
+- Current working implementation:
+  - `DynamicPill.qml` uses ImageMagick (`magick` or `convert`) to generate a circular transparent PNG from the current album art
+  - generated files are cached under:
+    - `${XDG_RUNTIME_DIR}/strata/spotify-art/*.disc.png`
+  - `DynamicIslandState.qml` carries:
+    - `mediaDiscPath`
+    - `mediaDiscSource`
+  - both `DynamicPill.qml` and `DynamicIslandCard.qml` use the circular `mediaDiscSource`
+  - the disc rotates while media is playing
+- Important note:
+  - keep the full square album art for the expanded media card
+  - use circular disc art only for compact island/morph state
+
+### Bar layout
+- `Bar.qml` now reserves a fixed center area for the island.
+- This avoids the left/right bar items moving when the island changes width.
+- Workspaces and title were swapped:
+  - workspaces first
+  - active window title second
+- Proton VPN is now a child pill, not part of the main island surface.
+- `DynamicPill.qml` balances child-pill width on both sides so the main island remains visually centered.
+
+### Current issues / next refinements
+- Implement notification autoclose:
+  - normal notification: 5-6s
+  - high urgency: 9-10s
+  - pause on hover
+- Build a real child-pill rail:
+  - VPN
+  - REC
+  - DND
+  - caffeine
+  - update state
+- Move screen recording out of the primary island when media/notification is active.
+- Define island priority explicitly:
+  - overlay active
+  - new notification
+  - media
+  - idle
+  - persistent states as children
+- Improve media card morph:
+  - compact disc moves toward expanded album art
+  - compact title moves toward expanded title
+  - controls lift/fade in with a short delay
+
+### Validation
+- QML load validation command:
+```bash
+timeout 5 quickshell -p /home/ankh/dotfiles/quickshell/shell.qml --no-color
+```
+- Result:
+  - loads successfully
+  - only known pre-existing `Keys` warnings remain

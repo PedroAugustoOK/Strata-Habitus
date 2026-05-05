@@ -104,6 +104,10 @@ function normalizeNotification(node) {
   const urgency = asString(node.urgency || node["urgency-level"] || node.urgencyLevel || "normal").toLowerCase();
   const body = sanitizeBody(rawBody, appName, summary);
   const groupKey = classifyGroupKey(appName, desktopEntry, summary);
+
+  if (isMediaNotification(appName, desktopEntry, summary, body))
+    return null;
+
   const iconName = firstNonEmpty([
     node["app-icon"],
     node.app_icon,
@@ -130,6 +134,14 @@ function normalizeNotification(node) {
     iconPath,
     urgency: urgency || "normal"
   };
+}
+
+function isMediaNotification(appName, desktopEntry, summary, body) {
+  const text = `${appName} ${desktopEntry} ${summary} ${body}`.toLowerCase();
+  return (
+    text.includes("spotify") ||
+    text.includes("spotify-client")
+  );
 }
 
 function asString(value) {

@@ -951,3 +951,101 @@ bash -n quickshell/scripts/apply-theme-state.sh
 node /home/ankh/dotfiles/quickshell/scripts/notification-history.js
 ```
 - Quickshell was restarted after the changes and loaded successfully.
+
+## Session update - 2026-05-05 (Dynamic Island redesign + bar layout)
+
+### Dynamic Island architecture
+- The island was refactored toward a more iPhone-like shared-surface model.
+- Main files changed:
+  - `quickshell/bar/DynamicPill.qml`
+  - `quickshell/bar/DynamicIslandCard.qml`
+  - `quickshell/DynamicIslandState.qml`
+  - `quickshell/bar/Bar.qml`
+  - `quickshell/scripts/notification-history.js`
+- Important behavior:
+  - the bar pill hides while the expanded island surface is visible
+  - the expanded card starts from the real island geometry
+  - compact content is rendered inside the morphing surface first
+  - expanded content fades/lifts in after the surface grows
+  - clicking a notification card collapses it
+  - notification cards are passive and no longer steal keyboard/mouse focus
+- Key fix:
+  - notification mode now uses `WlrKeyboardFocus.None`
+  - it does not call `forceActiveFocus()`
+  - the fullscreen click-catcher is disabled for notifications
+  - only the notification card itself is clickable
+
+### Music / Spotify island
+- Compact media state was redesigned around the current track.
+- The album/song cover now becomes a real circular spinning disc:
+  - `DynamicPill.qml` resolves Spotify art
+  - generates circular `*.disc.png` assets under `${XDG_RUNTIME_DIR}/strata/spotify-art`
+  - QML uses the circular PNG instead of relying on `Rectangle clip` masking
+- Reason:
+  - QML `Rectangle { radius; clip: true }` did not reliably mask album art as a circle
+  - `Qt5Compat.GraphicalEffects` / `OpacityMask` is not installed on the current system
+- Music controls:
+  - compact play/pause button no longer opens the card
+  - play/pause updates optimistically for instant UI feedback
+  - a short refresh confirms the real `playerctl` state after `120ms`
+  - scroll gestures for next/previous were removed from the compact island
+- Spotify notifications are filtered out in `notification-history.js` because music state is already represented by the island.
+
+### Notification card
+- New notification arrival now opens the island automatically when no larger overlay is active.
+- The old `Abrir histórico` button was removed from notification cards.
+- Notification card is now compact/minimal:
+  - app/icon
+  - app name
+  - summary
+  - body up to two lines
+  - optional high-urgency chip
+- Current known refinement idea:
+  - add intelligent autoclose:
+    - normal notification: around 5-6s
+    - high urgency: around 9-10s
+    - pause timer on hover
+
+### Child pills / bar layout
+- Proton VPN indicator moved out of the main island surface into a child pill beside it.
+- The main island publishes only the primary surface geometry for morphing.
+- `Bar.qml` now reserves a fixed center area for the Dynamic Island:
+  - prevents workspaces, window title, stats, clock, tray, and status pills from shifting when the island changes width
+  - Dynamic Island remains visually centered
+  - child pill space is balanced so VPN does not visually move the main island
+- Workspaces and active window title were swapped:
+  - workspaces are now on the left
+  - active window title is to their right
+- Recording state was made more compact:
+  - `Gravando 00:15` became `REC 00:15`
+- Future child-pill direction:
+  - generalize the child rail for VPN, REC, DND, caffeine, and update states
+  - keep the main island for the highest-priority active context
+
+### Suggested next refinements
+- Implement notification autoclose with hover pause.
+- Move recording into a child pill when media or notification is the main context.
+- Define a strict island priority model:
+  - overlay active
+  - new notification
+  - media
+  - idle
+  - persistent states as child pills
+- Make the media-card morph more content-aware:
+  - compact disc should move toward the expanded art position
+  - compact title should morph toward expanded title
+  - controls should enter with a short delayed lift
+- Consider reducing polling by using MPRIS events or a more event-driven player state path later.
+
+### Validation
+- Quickshell QML load was repeatedly validated with:
+```bash
+timeout 5 quickshell -p /home/ankh/dotfiles/quickshell/shell.qml --no-color
+```
+- Validation result:
+  - config loaded successfully
+  - only pre-existing `Keys` warnings remain on some overlay `PanelWindow`s
+- Circular media disc generation was confirmed by a generated file under:
+```bash
+${XDG_RUNTIME_DIR}/strata/spotify-art/*.disc.png
+```

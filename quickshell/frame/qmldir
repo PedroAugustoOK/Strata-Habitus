@@ -1,13 +1,25 @@
 module frame
+singleton FrameTokens 1.0 FrameTokens.qml
+ExactBottomPanelWindow 1.0 ExactBottomPanelWindow.qml
+ExactRightPanelWindow 1.0 ExactRightPanelWindow.qml
+ExactCenterPanelWindow 1.0 ExactCenterPanelWindow.qml
 Frame 1.0 Frame.qml
 ShellFrame 1.0 ShellFrame.qml
 BottomDrawer 1.0 BottomDrawer.qml
 RightDrawer 1.0 RightDrawer.qml
 FrameSurface 1.0 FrameSurface.qml
+FrameBlobSurface 1.0 FrameBlobSurface.qml
 FrameEdges 1.0 FrameEdges.qml
 StrataFrameExclusions 1.0 StrataFrameExclusions.qml
 StrataFrameRegions 1.0 StrataFrameRegions.qml
 LauncherPanel 1.0 LauncherPanel.qml
+ThemePickerPanel 1.0 ThemePickerPanel.qml
+WallPickrPanel 1.0 WallPickrPanel.qml
+PowerMenuPanel 1.0 PowerMenuPanel.qml
+ClipboardPanel 1.0 ClipboardPanel.qml
+SettingsCenterPanel 1.0 SettingsCenterPanel.qml
+UpdateCenterPanel 1.0 UpdateCenterPanel.qml
+AppCenterPanel 1.0 AppCenterPanel.qml
 FrameLauncher 1.0 FrameLauncher.qml
 FrameSettingsCenter 1.0 FrameSettingsCenter.qml
 FrameUpdateCenter 1.0 FrameUpdateCenter.qml

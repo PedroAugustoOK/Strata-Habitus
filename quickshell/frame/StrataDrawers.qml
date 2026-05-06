@@ -68,22 +68,6 @@ Scope {
         borderBottom: root.thickness - anchors.margins
       }
 
-      BlobRect {
-        id: launcherPocket
-        visible: FrameDrawerState.launcherProgress > 0.001
-        opacity: FrameDrawerState.launcherProgress
-        group: blobGroup
-        x: FrameDrawerState.launcherX - 18
-        y: FrameDrawerState.launcherY + 8 + 20 * FrameDrawerState.launcherOffsetScale
-        width: FrameDrawerState.launcherWidth + 36
-        height: FrameDrawerState.launcherHeight
-        radius: root.cornerRadius + 4
-        bottomLeftRadius: 0
-        bottomRightRadius: 0
-        deformScale: 0.000018
-        stiffness: 185
-        damping: 18
-      }
     }
   }
 }

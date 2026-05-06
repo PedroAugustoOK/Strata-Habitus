@@ -6,13 +6,13 @@ Item {
 
   property bool open: false
   property int gutter: -10
-  property int animationDuration: 320
+  property int animationDuration: FrameTokens.bottomDrawerDuration
   property real offsetScale: open ? 0 : 1
-  property int frameBlend: 12
+  property int frameBlend: FrameTokens.frameBlend
 
   visible: offsetScale < 1
   opacity: 1 - offsetScale
-  scale: 1 - (offsetScale * 0.035)
+  scale: 1 - (offsetScale * FrameTokens.bottomDrawerClosedScale)
   transformOrigin: Item.Bottom
   anchors.horizontalCenter: parent ? parent.horizontalCenter : undefined
   anchors.bottom: parent ? parent.bottom : undefined
@@ -41,7 +41,7 @@ Item {
     NumberAnimation {
       duration: root.animationDuration
       easing.type: Easing.BezierSpline
-      easing.bezierCurve: [0.23, 1, 0.61, 1, 1, 1]
+      easing.bezierCurve: FrameTokens.zephyrCurve
     }
   }
 
@@ -56,7 +56,7 @@ Item {
     NumberAnimation {
       duration: root.animationDuration
       easing.type: Easing.BezierSpline
-      easing.bezierCurve: [0.23, 1, 0.61, 1, 1, 1]
+      easing.bezierCurve: FrameTokens.zephyrCurve
     }
   }
 }

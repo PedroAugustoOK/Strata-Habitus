@@ -1567,3 +1567,656 @@ cat ~/dotfiles/state/launcher-panel-enabled
   - fullscreen window behavior
 - Avoid re-enabling the old fullscreen `ShellFrame` path as a fix for launcher visuals.
 - Avoid moving `StrataDrawers` back to `WlrLayer.Top` without redesigning masks/input first.
+
+## Session update - 2026-05-06 - exact-size panels and pocket rollback
+
+### Starting point
+- Continued on `main` from commit `8ac8e89 Add Caelestia-backed Strata drawer prototype`.
+- Confirmed the Caelestia plugin exists at:
+```bash
+/run/current-system/sw/lib/qt-6/qml/Caelestia/Blobs
+```
+- Local runtime flags used for this experimental pass:
+  - `state/shell-frame-enabled=false`
+  - `state/strata-drawers-enabled=true`
+  - `state/launcher-panel-enabled=true`
+  - `state/frame-edges-enabled=false`
+  - `state/theme-picker-panel-enabled=true`
+  - `state/wallpickr-panel-enabled=true`
+  - `state/powermenu-panel-enabled=true`
+  - `state/clipboard-panel-enabled=true`
+
+### Quickshell startup fix
+- `quickshell/scripts/quickshell-start.sh` was changed to avoid fragile `pgrep -x quickshell` duplicate detection.
+- It now exits only when `quickshell list -p "${SHELL_ENTRY}"` reports an actual `Instance`.
+- It starts Quickshell normally with:
+```bash
+quickshell -p "${SHELL_ENTRY}" --no-color
+```
+- A previous attempt with `--no-duplicate` was rejected because stale/dead instance state could falsely block startup after `quickshell kill`.
+
+### User-reported visual issue
+- User screenshots showed:
+  - a bottom ghost/notch even when no drawer/panel was open
+  - a second active-looking surface behind Theme Picker
+  - the same duplicate-surface behavior with Launcher
+- Root cause found:
+  - `StrataDrawers` pocket surfaces and `StrataFrameRegions` pocket regions were drawing a fake bridge behind the real panel.
+  - This produced duplicate active surfaces and residual bottom notches.
+
+### Fix applied
+- Removed the Theme Picker pocket/region.
+- Removed the Launcher pocket/region.
+- Removed `quickshell/FrameDrawerState.qml`.
+- Removed the `FrameDrawerState` singleton registration from `quickshell/qmldir`.
+- Removed `LauncherPanel` bindings to `FrameDrawerState`.
+- Current rule: do not add pocket/bridge surfaces inside `StrataDrawers` until there is a real single-surface/shared-surface design.
+
+### Exact-size panel wrappers added
+- Added exact-size, top-layer panel wrappers:
+  - `quickshell/frame/ThemePickerPanel.qml`
+  - `quickshell/frame/WallPickrPanel.qml`
+  - `quickshell/frame/PowerMenuPanel.qml`
+  - `quickshell/frame/ClipboardPanel.qml`
+- Registered those wrappers in `quickshell/frame/qmldir`.
+- Existing content components now expose panel state/sizing:
+  - `FrameThemePicker.qml`: `drawerVisible`
+  - `FrameWallPickr.qml`: `drawerVisible`, dynamic `panelWidth`, dynamic `panelHeight`
+  - `FramePowerMenu.qml`: `drawerVisible`, `panelWidth`, `panelHeight`
+  - `FrameClipboard.qml`: `drawerVisible`, fixed `panelWidth: 920`, fixed `panelHeight: 620`
+- Clipboard originally opened at about 102px high because of circular sizing; fixed by using explicit fixed dimensions.
+
+### Shell routing
+- `quickshell/shell.qml` gained flags for:
+  - `themePickerPanelEnabled`
+  - `wallPickrPanelEnabled`
+  - `powerMenuPanelEnabled`
+  - `clipboardPanelEnabled`
+- Added `closeFramePanels(except)` to close Launcher, Theme Picker, WallPickr, Power Menu and Clipboard as a coordinated group.
+- Added/touched toggle functions:
+  - `toggleThemePicker()`
+  - `toggleWallPickr()`
+  - `togglePowerMenu()`
+  - `toggleClipboard()`
+- IPC routes, SettingsCenter callbacks, ShellFrame callbacks and Launcher routing now close conflicting frame panels before opening another.
+
+### Validation
+- QML load validation passed repeatedly:
+```bash
+timeout 5 quickshell -p /home/ankh/dotfiles/quickshell/shell.qml --no-color
+```
+- Only known `Keys property ... is not an Item` warnings remained.
+- `git diff --check` passed.
+- Live Quickshell ended with one active instance and no drawer/panel open.
+- Final `hyprctl layers` state showed:
+  - bottom fullscreen `StrataDrawers`
+  - top bar/exclusions
+  - no drawer layer open
+- Panel geometries validated:
+```text
+Launcher:     600,624 720x456
+ThemePicker: 392,608 1136x472
+WallPickr:   502,758 916x322
+PowerMenu:   816,1000 288x80
+Clipboard:   452,438 1016x642
+```
+- Coordination validated:
+  - WallPickr -> Theme Picker -> Launcher closes the previous panel.
+  - Panels open as one top-layer panel with no pocket/second surface behind.
+  - Clipboard opened with list and image preview after the fixed-size correction.
+
+### Current direction
+- Keep old fullscreen `ShellFrame` disabled.
+- Keep `StrataDrawers` only as passive bottom-layer frame/exclusion support, without drawer pockets.
+- Continue migrating overlays one at a time to exact-size `PanelWindow` wrappers with local masks.
+- Do not fake visual integration by drawing a second surface behind a panel.
+- Reconnect visual integration only after designing a truly shared/single surface.
+
+## Session update - 2026-05-06 - right-side exact panel migration
+
+### What changed
+- Migrated three more frame overlays to exact-size top-layer panel wrappers:
+  - `quickshell/frame/SettingsCenterPanel.qml`
+  - `quickshell/frame/UpdateCenterPanel.qml`
+  - `quickshell/frame/AppCenterPanel.qml`
+- Registered the wrappers in `quickshell/frame/qmldir`.
+- Updated content components to expose stable panel sizing and close-animation visibility:
+  - `FrameSettingsCenter.qml`
+  - `FrameUpdateCenter.qml`
+  - `FrameAppCenter.qml`
+- `shell.qml` gained new runtime flags:
+  - `settingsCenterPanelEnabled`
+  - `updateCenterPanelEnabled`
+  - `appCenterPanelEnabled`
+- Local state files used for validation:
+  - `state/settingscenter-panel-enabled=true`
+  - `state/updatecenter-panel-enabled=true`
+  - `state/appcenter-panel-enabled=true`
+- Reminder:
+  - `state/` is gitignored, so these flags must be recreated locally when continuing on another machine.
+
+### Routing behavior
+- IPC routes now use:
+  - `toggleSettingsCenter()`
+  - `toggleUpdateCenter()`
+  - `toggleAppCenter()`
+- `SettingsCenterPanel` forwards internal actions to:
+  - Control Center
+  - Theme Picker
+  - WallPickr
+  - App Center
+  - Update Center
+- `closeFramePanels(except)` now closes all exact-size frame panels before opening another:
+  - Launcher
+  - Theme Picker
+  - WallPickr
+  - Power Menu
+  - Clipboard
+  - Settings Center
+  - Update Center
+  - App Center
+
+### Validation
+- QML load passed:
+```bash
+timeout 5 quickshell -p /home/ankh/dotfiles/quickshell/shell.qml --no-color
+```
+- Whitespace diff check passed:
+```bash
+git diff --check
+```
+- Live Quickshell was restarted through:
+```bash
+hyprctl dispatch exec /home/ankh/dotfiles/quickshell/scripts/quickshell-start.sh
+```
+- Smoke-tested IPC:
+```bash
+quickshell ipc call settingscenter toggle
+quickshell ipc call updatecenter toggle
+quickshell ipc call appcenter toggle
+```
+- Validated live layer geometries on 1920x1080:
+```text
+Settings Center: 1282,28 638x1024
+Update Center:   1182,28 738x1024
+App Center:       982,28 938x1024
+```
+- Final live layer state had no drawer/panel left open.
+- Strict log scan showed only known non-blocking `Keys property ... is not an Item` warnings.
+
+### Current continuation point
+- The exact-size panel path now covers:
+  - Launcher
+  - Theme Picker
+  - WallPickr
+  - Power Menu
+  - Clipboard
+  - Settings Center
+  - Update Center
+  - App Center
+- Still keep `ShellFrame` disabled.
+- Still keep `StrataDrawers` passive and bottom-layer only.
+- Remaining standalone surfaces include Control Center, Web Apps, Screenshot Selector, Dynamic Island, OSDs and bar-attached menus.
+
+## Session update - 2026-05-06 - Web Apps exact panel
+
+### What changed
+- `quickshell/webapps/WebApps.qml` is no longer a fullscreen layer with a centered card.
+- It is now an exact-size centered `PanelWindow`:
+  - `implicitWidth: 1040`
+  - `implicitHeight: 648`
+  - local mask tied to the card
+- Removed the fullscreen `MouseArea` click-catcher.
+- Added explicit `open` state so close animation can finish before hiding the panel.
+- `shell.qml` gained `toggleWebApps()`.
+- `closeFramePanels(except)` now closes Web Apps when another exact-size panel opens.
+- `FrameSettingsCenter.qml` now includes `Apps Web` and emits `openWebApps`.
+- `SettingsCenterPanel.qml` forwards `openWebApps` to shell routing.
+
+### Validation
+- QML load passed:
+```bash
+timeout 5 quickshell -p /home/ankh/dotfiles/quickshell/shell.qml --no-color
+```
+- `git diff --check` passed.
+- Live Quickshell was restarted.
+- Smoke-tested:
+```bash
+quickshell ipc call webapps toggle
+quickshell ipc call settingscenter toggle
+```
+- Validated Web Apps exact geometry on 1920x1080:
+```text
+Web Apps: 440,216 1040x648
+```
+- Opening Settings Center after Web Apps left only the Settings Center layer open:
+```text
+Settings Center: 1282,28 638x1024
+```
+- Strict log scan still showed only known non-blocking `Keys property ... is not an Item` warnings.
+
+### Updated continuation point
+- The exact-size panel path now covers:
+  - Launcher
+  - Theme Picker
+  - WallPickr
+  - Power Menu
+  - Clipboard
+  - Settings Center
+  - Update Center
+  - App Center
+  - Web Apps
+- Remaining standalone surfaces:
+  - Control Center
+  - Screenshot Selector
+  - Dynamic Island
+  - OSDs
+  - tray/calendar menus
+
+## Session update - 2026-05-06 - Control Center layer reduction
+
+### What changed
+- `quickshell/controlcenter/ControlCenter.qml` no longer uses a fullscreen overlay layer.
+- It now anchors to the top-right with a small layer window:
+```text
+Control Center: 1548,0 372x695
+```
+- The actual panel remains visually offset below the bar by `44px`.
+- Removed fullscreen `MouseArea` click-catcher.
+- Added `mask: Region { item: panel }`.
+- Changed keyboard focus from:
+  - `WlrKeyboardFocus.Exclusive`
+  - to `WlrKeyboardFocus.OnDemand`
+- The panel height is capped with:
+```qml
+Math.min(Screen.height - 56, col.implicitHeight + 28)
+```
+
+### Coordination fix
+- `closeFramePanels(except)` now closes Control Center unless the active target is Control Center.
+- `toggleControlCenter()` now calls:
+```qml
+closeFramePanels("controlcenter")
+```
+- This preserves the behavior where Control Center closes the exact-size panels, while exact-size panels also close Control Center.
+
+### Validation
+- QML load passed:
+```bash
+timeout 5 quickshell -p /home/ankh/dotfiles/quickshell/shell.qml --no-color
+```
+- `git diff --check` passed.
+- Live smoke:
+```bash
+quickshell ipc call controlcenter toggle
+quickshell ipc call settingscenter toggle
+```
+- Layer result after opening Settings Center from Control Center:
+  - Control Center overlay closed.
+  - Settings Center top-layer panel remained:
+```text
+Settings Center: 1282,28 638x1024
+```
+- Strict log scan showed only known non-blocking `Keys property ... is not an Item` warnings.
+
+### Updated continuation point
+- The reduced/exact panel direction now covers:
+  - Launcher
+  - Theme Picker
+  - WallPickr
+  - Power Menu
+  - Clipboard
+  - Settings Center
+  - Update Center
+  - App Center
+  - Web Apps
+  - Control Center
+- Remaining standalone fullscreen/special surfaces:
+  - Screenshot Selector
+  - Dynamic Island
+  - OSDs
+  - tray/calendar menus
+
+## Session update - 2026-05-06 - stabilization point 1 closed
+
+### Scope
+- User asked to close point 1 from the Caelestia-readiness plan:
+  - validate stability/input/layers before starting visual polish.
+- Result:
+  - point 1 is closed for the current live session.
+
+### Fix found during validation
+- Idle still had a fullscreen Quickshell overlay layer.
+- Cause:
+  - `DynamicIslandCard.qml` still used a fullscreen overlay `PanelWindow`.
+- Fix:
+  - changed `DynamicIslandCard` to a top-centered exact-size card layer.
+  - converted island start geometry into local card-window coordinates.
+  - removed the fullscreen input region.
+  - card input mask remains local to the card.
+
+### Validated idle state
+- After Quickshell restart and notification autoclose:
+  - no overlay layer remained in idle.
+  - only expected layers remained:
+    - wallpaper background
+    - bottom `StrataDrawers`
+    - top bar/exclusions
+
+### Validated migrated panels
+- Opened each panel via IPC and checked `hyprctl layers`.
+- Each opened as one active layer, and opening the next panel closed the previous one:
+```text
+Launcher:        600,624 720x456
+Theme Picker:    392,608 1136x472
+WallPickr:       502,758 916x322
+Power Menu:      816,1000 288x80
+Clipboard:       452,438 1016x642
+Settings Center: 1282,28 638x1024
+Update Center:   1182,28 738x1024
+App Center:       982,28 938x1024
+Web Apps:         440,216 1040x648
+Control Center:  1548,0 372x695
+```
+
+### Notification validation
+- Sent a real notification:
+```bash
+notify-send 'Strata validação' 'teste de notificação durante fechamento do ponto 1'
+```
+- Dynamic Island notification opened as:
+```text
+770,0 380x108
+```
+- It autocleared and returned to no overlay layer.
+
+### Fullscreen validation
+- `hyprctl dispatch fullscreen 1` failed in sandboxed mode but worked after command approval.
+- Active Kitty was toggled fullscreen.
+- Launcher opened over the fullscreen client as a single exact panel layer.
+- Fullscreen was toggled back off.
+- Final client state confirmed:
+  - `fullscreen: 0`
+  - no panel left open
+
+### Validation commands
+- QML:
+```bash
+timeout 5 quickshell -p /home/ankh/dotfiles/quickshell/shell.qml --no-color
+```
+- Diff:
+```bash
+git diff --check
+```
+- Logs:
+```bash
+strings /run/user/1000/quickshell/by-id/sxm4lkcmet/log.qslog | rg -n "ERROR|ReferenceError|TypeError|Cannot assign|Cannot read|Unable|Failed|Could not attach"
+```
+- Only known non-blocking `Keys property ... is not an Item` warnings remain.
+
+### Caveat
+- Automated Escape-key injection was not completed.
+- `hyprctl dispatch sendshortcut` returned a socket-timeout error in sandboxed execution.
+- Close behavior was validated through IPC toggle and panel coordination, not synthetic keyboard injection.
+
+### Next phase
+- Proceed to point 2:
+  - standardize geometry and animation tokens before starting heavy Caelestia-like visual polish.
+
+## Handoff summary - 2026-05-06
+
+### Current state
+- The current shell direction is no longer the old fullscreen `ShellFrame`.
+- Current stable experimental foundation:
+  - exact-size panel wrappers
+  - local input masks
+  - coordinated close/open routing
+  - passive bottom-layer `StrataDrawers`
+  - no drawer pockets or fake bridge surfaces
+- Point 1 is closed:
+  - idle layer state is clean
+  - notification layer state is clean
+  - panel sequencing is clean
+  - fullscreen sanity was validated
+
+### Files central to this phase
+- Routing:
+  - `quickshell/shell.qml`
+- Passive frame/exclusions:
+  - `quickshell/frame/StrataDrawers.qml`
+  - `quickshell/frame/StrataFrameRegions.qml`
+  - `quickshell/frame/StrataFrameExclusions.qml`
+- Exact wrappers:
+  - `quickshell/frame/LauncherPanel.qml`
+  - `quickshell/frame/ThemePickerPanel.qml`
+  - `quickshell/frame/WallPickrPanel.qml`
+  - `quickshell/frame/PowerMenuPanel.qml`
+  - `quickshell/frame/ClipboardPanel.qml`
+  - `quickshell/frame/SettingsCenterPanel.qml`
+  - `quickshell/frame/UpdateCenterPanel.qml`
+  - `quickshell/frame/AppCenterPanel.qml`
+- Reduced standalone panels:
+  - `quickshell/webapps/WebApps.qml`
+  - `quickshell/controlcenter/ControlCenter.qml`
+  - `quickshell/bar/DynamicIslandCard.qml`
+- Startup:
+  - `quickshell/scripts/quickshell-start.sh`
+
+### Local runtime flags
+- `state/` is ignored by git.
+- Recreate/check these on the next machine/session:
+```text
+shell-frame-enabled=false
+strata-drawers-enabled=true
+launcher-panel-enabled=true
+frame-edges-enabled=false
+theme-picker-panel-enabled=true
+wallpickr-panel-enabled=true
+powermenu-panel-enabled=true
+clipboard-panel-enabled=true
+settingscenter-panel-enabled=true
+updatecenter-panel-enabled=true
+appcenter-panel-enabled=true
+```
+
+### Do not regress
+- Do not re-enable fullscreen `ShellFrame` as a visual fix.
+- Do not reintroduce `FrameDrawerState` pocket/bridge surfaces.
+- Do not make `StrataDrawers` top-layer again as a quick fix.
+- Do not add permanent fullscreen click-catchers for normal panels.
+- If outside-click close is needed later, add a temporary, explicit modal catcher for that open state only.
+
+### Next points for development
+1. **Point 2: geometry and animation tokens**
+   - Create a shared token component, likely `FrameTokens.qml`.
+   - Centralize:
+     - panel widths/heights
+     - top/bar offsets
+     - side and bottom insets
+     - right-panel gutter
+     - animation durations
+     - close/open easing
+     - radius and border constants
+   - Replace per-file literals with token references.
+
+2. **Point 3: shared exact-panel primitives**
+   - Consolidate repeated wrapper behavior:
+     - bottom attached panel
+     - right attached panel
+     - centered utility panel
+   - Keep each wrapper's write scope small and test one group at a time.
+
+3. **Point 4: Caelestia-like visual attachment**
+   - Start with Launcher and Theme Picker only.
+   - Make connected edges feel attached to the screen frame/bar.
+   - Use squared/reduced connected corners and consistent frame border/fill.
+   - Avoid fake second surfaces behind panels.
+
+4. **Point 5: selective blob pass**
+   - Use `Caelestia.Blobs` only after geometry is stable.
+   - Candidate order:
+     - Launcher
+     - Theme Picker
+     - WallPickr
+     - then larger right panels.
+
+5. **Point 6: final QA before publish**
+   - Validate:
+     - click/keyboard/Esc
+     - notifications
+     - fullscreen
+     - tiled/floating windows
+     - restart/login startup
+     - light/dark themes
+   - Then commit/push/promote when the visual direction is no longer experimental.
+
+## Session update - 2026-05-06 - point 3 shared exact-panel primitives
+
+### Scope
+- Completed point 3 from the Caelestia-readiness plan:
+  - shared exact-panel primitives for bottom, right and centered panel windows.
+
+### Added primitives
+- Added:
+  - `quickshell/frame/ExactBottomPanelWindow.qml`
+  - `quickshell/frame/ExactRightPanelWindow.qml`
+  - `quickshell/frame/ExactCenterPanelWindow.qml`
+- Registered them in:
+  - `quickshell/frame/qmldir`
+
+### Migrated wrappers
+- Bottom primitive now backs:
+  - `LauncherPanel.qml`
+  - `ThemePickerPanel.qml`
+  - `WallPickrPanel.qml`
+  - `PowerMenuPanel.qml`
+  - `ClipboardPanel.qml`
+- Right primitive now backs:
+  - `SettingsCenterPanel.qml`
+  - `UpdateCenterPanel.qml`
+  - `AppCenterPanel.qml`
+- Center primitive now backs:
+  - `quickshell/webapps/WebApps.qml`
+
+### Validation
+- QML load passed:
+```bash
+timeout 5 quickshell -p /home/ankh/dotfiles/quickshell/shell.qml --no-color
+```
+- Diff whitespace check passed:
+```bash
+git diff --check
+```
+- Live Quickshell was restarted through:
+```bash
+quickshell kill
+hyprctl dispatch exec /home/ankh/dotfiles/quickshell/scripts/quickshell-start.sh
+```
+- Smoke-tested geometries on 1920x1080:
+```text
+Launcher:        600,624 720x456
+Settings Center: 1282,28 638x1024
+Web Apps:         440,216 1040x648
+```
+- Final `hyprctl layers` returned to a clean state with no panel open.
+- Strict log scan showed only the known non-blocking `Keys property ... is not an Item` warnings.
+
+### Continuation
+- Point 4 is next:
+  - start Caelestia-like visual attachment with Launcher and Theme Picker only.
+  - Keep using exact-size primitives and local masks.
+  - Do not reintroduce fake pocket/bridge surfaces behind panels.
+
+## Session update - 2026-05-06 - point 4 visual attachment pass
+
+### Scope
+- Completed point 4 from the Caelestia-readiness plan with a narrow visual pass on:
+  - Launcher
+  - Theme Picker
+- No fake pocket/bridge surface was reintroduced.
+- `StrataDrawers` remains passive bottom-layer frame/exclusion support.
+
+### What changed
+- Added shared attachment tokens in `FrameTokens.qml`:
+  - `attachedEdgeDepth`
+  - `attachedEdgeStrokeOffset`
+- `FrameSurface.qml` now uses those tokens for bottom-attached surfaces.
+- `FrameLauncher.qml` now uses the same attachment depth/stroke tokens as `FrameSurface`.
+- `ThemePickerPanel.qml` / `FrameThemePicker.qml` were adjusted so the visual Theme Picker surface reaches the bottom frame while keeping the content inset internally.
+- Theme Picker now preserves its validated layer geometry while visually attaching to the bottom edge.
+
+### Validation
+- QML load passed:
+```bash
+timeout 5 quickshell -p /home/ankh/dotfiles/quickshell/shell.qml --no-color
+```
+- Diff whitespace check passed:
+```bash
+git diff --check
+```
+- Live Quickshell was restarted and smoke-tested.
+- Validated geometries on 1920x1080:
+```text
+Theme Picker: 392,608 1136x472
+Launcher:     600,624 720x456
+```
+- Screenshots were captured and visually inspected:
+  - `/tmp/point4-theme.png`
+  - `/tmp/point4-launcher.png`
+- Final layer state returned to no open Strata panel.
+- Strict log scan showed only the known non-blocking `Keys property ... is not an Item` warnings.
+
+### Continuation
+- Point 5 is next:
+  - selective blob pass.
+  - Candidate order remains Launcher, Theme Picker, WallPickr, then larger right panels.
+  - Keep exact-size panel primitives and local masks as the stable base.
+
+## Session update - 2026-05-06 - point 5 selective blob pass
+
+### Scope
+- Completed point 5 with a selective blob pass on:
+  - Launcher
+  - Theme Picker
+- Did not migrate WallPickr or larger right panels in this pass.
+- Exact-size panel primitives and local masks remain the stable base.
+
+### What changed
+- Added shared blob surface component:
+  - `quickshell/frame/FrameBlobSurface.qml`
+- Registered it in:
+  - `quickshell/frame/qmldir`
+- `FrameBlobSurface` centralizes the `Caelestia.Blobs` import and draws:
+  - `BlobGroup`
+  - `BlobRect`
+  - normal border/top highlight
+  - bottom/right attachment fill support
+- `FrameLauncher.qml` now uses `FrameBlobSurface` instead of local `BlobGroup`/`BlobRect` drawing.
+- `FrameThemePicker.qml` now uses `FrameBlobSurface` instead of `FrameSurface`.
+- `FrameLauncher.qml` no longer imports `Caelestia.Blobs` directly.
+
+### Validation
+- QML load passed:
+```bash
+timeout 5 quickshell -p /home/ankh/dotfiles/quickshell/shell.qml --no-color
+```
+- Diff whitespace check passed:
+```bash
+git diff --check
+```
+- Live Quickshell was restarted.
+- Validated geometries on 1920x1080:
+```text
+Launcher:     600,624 720x456
+Theme Picker: 392,608 1136x472
+```
+- Screenshots were captured and visually inspected:
+  - `/tmp/point5-launcher.png`
+  - `/tmp/point5-theme.png`
+- Final `hyprctl layers` returned to a clean state with no panel open.
+- Strict log scan showed only the known non-blocking `Keys property ... is not an Item` warnings.
+
+### Continuation
+- Point 6 is next:
+  - final QA before publish.
+  - Validate click/keyboard/Esc, notifications, fullscreen, tiled/floating windows, restart/login startup, and light/dark themes.

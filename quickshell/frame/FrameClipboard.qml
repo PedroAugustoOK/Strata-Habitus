@@ -18,6 +18,9 @@ Item {
   property string imagePreviewPath: ""
   property string imagePreviewError: ""
   property int imagePreviewVersion: 0
+  readonly property int panelWidth: FrameTokens.clipboardWidth
+  readonly property int panelHeight: FrameTokens.clipboardHeight
+  readonly property bool drawerVisible: drawer.visible
 
   readonly property var currentItem: {
     if (filtered.length === 0) return null
@@ -148,14 +151,14 @@ Item {
 
   BottomDrawer {
     id: drawer
-    width: Math.min(920, parent.width - 96)
-    height: Math.min(620, parent.height - 90)
-    gutter: 10
+    width: root.panelWidth
+    height: root.panelHeight
+    gutter: FrameTokens.rightPanelGutter
     open: root.open
 
     FrameSurface {
       anchors.fill: parent
-      radius: 18
+      radius: FrameTokens.surfaceRadius
       attachedEdge: "bottom"
       borderColor: Qt.rgba(Colors.accent.r, Colors.accent.g, Colors.accent.b, 0.18)
 

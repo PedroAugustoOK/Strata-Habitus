@@ -7,6 +7,9 @@ Item {
   id: root
 
   property bool open: false
+  readonly property int panelWidth: FrameTokens.updateCenterWidth
+  readonly property int panelHeight: FrameTokens.rightPanelHeight(Screen.height)
+  readonly property bool drawerVisible: drawer.visible
 
   readonly property color panelBorder: Colors.darkMode
     ? Qt.rgba(Colors.text1.r, Colors.text1.g, Colors.text1.b, 0.10)
@@ -54,14 +57,14 @@ Item {
 
   RightDrawer {
     id: drawer
-    width: Math.min(720, Math.max(560, Math.round(parent.width * 0.40)))
-    height: parent.height - 56
-    gutter: 10
+    width: root.panelWidth
+    height: root.panelHeight
+    gutter: FrameTokens.rightPanelGutter
     open: root.open
 
     FrameSurface {
       anchors.fill: parent
-      radius: 18
+      radius: FrameTokens.surfaceRadius
       attachedEdge: "right"
       borderColor: root.panelBorder
       topToneOpacity: Colors.darkMode ? 0.96 : 0.91

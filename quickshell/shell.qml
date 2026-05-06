@@ -23,12 +23,107 @@ ShellRoot {
   property bool integratedFrameEnabled: false
   property bool screenFrameVisible: false
   property bool launcherPanelEnabled: false
+  property bool themePickerPanelEnabled: false
+  property bool wallPickrPanelEnabled: false
+  property bool powerMenuPanelEnabled: false
+  property bool clipboardPanelEnabled: false
+  property bool settingsCenterPanelEnabled: false
+  property bool updateCenterPanelEnabled: false
+  property bool appCenterPanelEnabled: false
   property bool frameEdgesEnabled: false
   property bool strataDrawersEnabled: false
 
+  function closeFramePanels(except) {
+    if (except !== "launcher") launcherPanel.close()
+    if (except !== "themepicker") themePickerPanel.close()
+    if (except !== "wallpickr") wallPickrPanel.close()
+    if (except !== "powermenu") powerMenuPanel.close()
+    if (except !== "clipboard") clipboardPanel.close()
+    if (except !== "settingscenter") settingsCenterPanel.close()
+    if (except !== "updatecenter") updateCenterPanel.close()
+    if (except !== "appcenter") appCenterPanel.close()
+    if (except !== "webapps") webApps.close()
+    if (except !== "controlcenter" && controlCenter.visible) controlCenter.close()
+  }
+
+  function toggleThemePicker() {
+    if (integratedFrameEnabled) shellFrame.toggleThemePicker()
+    else if (themePickerPanelEnabled) {
+      closeFramePanels("themepicker")
+      themePickerPanel.toggle()
+    } else {
+      themePicker.toggle()
+    }
+  }
+
+  function toggleWallPickr() {
+    if (integratedFrameEnabled) shellFrame.toggleWallPickr()
+    else if (wallPickrPanelEnabled) {
+      closeFramePanels("wallpickr")
+      wallPickrPanel.toggle()
+    } else {
+      wallPickr.toggle()
+    }
+  }
+
+  function togglePowerMenu() {
+    if (integratedFrameEnabled) shellFrame.togglePowerMenu()
+    else if (powerMenuPanelEnabled) {
+      closeFramePanels("powermenu")
+      powerMenuPanel.toggle()
+    } else {
+      powerMenu.toggle()
+    }
+  }
+
+  function toggleClipboard() {
+    if (integratedFrameEnabled) shellFrame.toggleClipboard()
+    else if (clipboardPanelEnabled) {
+      closeFramePanels("clipboard")
+      clipboardPanel.toggle()
+    } else {
+      clipboard.toggle()
+    }
+  }
+
+  function toggleSettingsCenter() {
+    if (integratedFrameEnabled) shellFrame.toggleSettingsCenter()
+    else if (settingsCenterPanelEnabled) {
+      closeFramePanels("settingscenter")
+      settingsCenterPanel.toggle()
+    } else {
+      settingsCenter.toggle()
+    }
+  }
+
+  function toggleUpdateCenter() {
+    if (integratedFrameEnabled) shellFrame.toggleUpdateCenter()
+    else if (updateCenterPanelEnabled) {
+      closeFramePanels("updatecenter")
+      updateCenterPanel.toggle()
+    } else {
+      updateCenter.toggle()
+    }
+  }
+
+  function toggleAppCenter() {
+    if (integratedFrameEnabled) shellFrame.toggleAppCenter()
+    else if (appCenterPanelEnabled) {
+      closeFramePanels("appcenter")
+      appCenterPanel.toggle()
+    } else {
+      appCenter.toggle()
+    }
+  }
+
+  function toggleWebApps() {
+    closeFramePanels("webapps")
+    webApps.toggle()
+  }
+
   function toggleControlCenter() {
     if (integratedFrameEnabled) shellFrame.closeDrawers("")
-    launcherPanel.close()
+    closeFramePanels("controlcenter")
     controlCenter.toggle()
   }
 
@@ -43,16 +138,31 @@ ShellRoot {
     active: integratedFrameEnabled
     onOpenControlCenter: toggleControlCenter()
     onCloseControlCenter: if (controlCenter.visible) controlCenter.close()
-    onOpenThemePicker: themePicker.toggle()
-    onOpenWallPickr: wallPickr.toggle()
-    onOpenAppCenter: appCenter.toggle()
-    onOpenUpdateCenter: updateCenter.toggle()
+    onOpenThemePicker: toggleThemePicker()
+    onOpenWallPickr: toggleWallPickr()
+    onOpenAppCenter: toggleAppCenter()
+    onOpenUpdateCenter: toggleUpdateCenter()
   }
   DynamicIslandCard {}
   TrayMenu {}
   CalendarMenu {}
   FrameEdges { visible: frameEdgesEnabled }
   LauncherPanel { id: launcherPanel }
+  ThemePickerPanel { id: themePickerPanel }
+  WallPickrPanel { id: wallPickrPanel }
+  PowerMenuPanel { id: powerMenuPanel }
+  ClipboardPanel { id: clipboardPanel }
+  SettingsCenterPanel {
+    id: settingsCenterPanel
+    onOpenControlCenter: toggleControlCenter()
+    onOpenThemePicker: toggleThemePicker()
+    onOpenWallPickr: toggleWallPickr()
+    onOpenAppCenter: toggleAppCenter()
+    onOpenWebApps: toggleWebApps()
+    onOpenUpdateCenter: toggleUpdateCenter()
+  }
+  UpdateCenterPanel { id: updateCenterPanel }
+  AppCenterPanel { id: appCenterPanel }
   Launcher { id: launcher }
   // Notifications {}
   OSD {}
@@ -69,11 +179,11 @@ ShellRoot {
   SettingsCenter {
     id: settingsCenter
     onOpenControlCenter: toggleControlCenter()
-    onOpenThemePicker: themePicker.toggle()
-    onOpenWallPickr: wallPickr.toggle()
-    onOpenAppCenter: appCenter.toggle()
-    onOpenWebApps: webApps.toggle()
-    onOpenUpdateCenter: updateCenter.toggle()
+    onOpenThemePicker: toggleThemePicker()
+    onOpenWallPickr: toggleWallPickr()
+    onOpenAppCenter: toggleAppCenter()
+    onOpenWebApps: toggleWebApps()
+    onOpenUpdateCenter: toggleUpdateCenter()
   }
 
   readonly property string clipboardDaemonScript: Qt.resolvedUrl("./scripts/clipboard-daemon.sh").toString().replace("file://", "")
@@ -99,6 +209,83 @@ ShellRoot {
     onLoaded: {
       const value = text().trim().toLowerCase()
       launcherPanelEnabled = value === "1" || value === "true" || value === "yes" || value === "on"
+    }
+  }
+
+  FileView {
+    id: themePickerPanelFlag
+    path: Paths.state + "/theme-picker-panel-enabled"
+    watchChanges: true
+    onFileChanged: reload()
+    onLoaded: {
+      const value = text().trim().toLowerCase()
+      themePickerPanelEnabled = value === "1" || value === "true" || value === "yes" || value === "on"
+    }
+  }
+
+  FileView {
+    id: wallPickrPanelFlag
+    path: Paths.state + "/wallpickr-panel-enabled"
+    watchChanges: true
+    onFileChanged: reload()
+    onLoaded: {
+      const value = text().trim().toLowerCase()
+      wallPickrPanelEnabled = value === "1" || value === "true" || value === "yes" || value === "on"
+    }
+  }
+
+  FileView {
+    id: powerMenuPanelFlag
+    path: Paths.state + "/powermenu-panel-enabled"
+    watchChanges: true
+    onFileChanged: reload()
+    onLoaded: {
+      const value = text().trim().toLowerCase()
+      powerMenuPanelEnabled = value === "1" || value === "true" || value === "yes" || value === "on"
+    }
+  }
+
+  FileView {
+    id: clipboardPanelFlag
+    path: Paths.state + "/clipboard-panel-enabled"
+    watchChanges: true
+    onFileChanged: reload()
+    onLoaded: {
+      const value = text().trim().toLowerCase()
+      clipboardPanelEnabled = value === "1" || value === "true" || value === "yes" || value === "on"
+    }
+  }
+
+  FileView {
+    id: settingsCenterPanelFlag
+    path: Paths.state + "/settingscenter-panel-enabled"
+    watchChanges: true
+    onFileChanged: reload()
+    onLoaded: {
+      const value = text().trim().toLowerCase()
+      settingsCenterPanelEnabled = value === "1" || value === "true" || value === "yes" || value === "on"
+    }
+  }
+
+  FileView {
+    id: updateCenterPanelFlag
+    path: Paths.state + "/updatecenter-panel-enabled"
+    watchChanges: true
+    onFileChanged: reload()
+    onLoaded: {
+      const value = text().trim().toLowerCase()
+      updateCenterPanelEnabled = value === "1" || value === "true" || value === "yes" || value === "on"
+    }
+  }
+
+  FileView {
+    id: appCenterPanelFlag
+    path: Paths.state + "/appcenter-panel-enabled"
+    watchChanges: true
+    onFileChanged: reload()
+    onLoaded: {
+      const value = text().trim().toLowerCase()
+      appCenterPanelEnabled = value === "1" || value === "true" || value === "yes" || value === "on"
     }
   }
 
@@ -338,7 +525,10 @@ ShellRoot {
     target: "launcher"
     function toggle(): void {
       if (integratedFrameEnabled) shellFrame.toggleLauncher()
-      else if (launcherPanelEnabled) launcherPanel.toggle()
+      else if (launcherPanelEnabled) {
+        closeFramePanels("launcher")
+        launcherPanel.toggle()
+      }
       else launcher.toggle()
     }
   }
@@ -348,56 +538,35 @@ ShellRoot {
   }
   IpcHandler {
     target: "powermenu"
-    function toggle(): void {
-      if (integratedFrameEnabled) shellFrame.togglePowerMenu()
-      else powerMenu.toggle()
-    }
+    function toggle(): void { togglePowerMenu() }
   }
   IpcHandler {
     target: "wallPickr"
-    function toggle(): void {
-      if (integratedFrameEnabled) shellFrame.toggleWallPickr()
-      else wallPickr.toggle()
-    }
+    function toggle(): void { toggleWallPickr() }
   }
   IpcHandler {
     target: "clipboard"
-    function toggle(): void {
-      if (integratedFrameEnabled) shellFrame.toggleClipboard()
-      else clipboard.toggle()
-    }
+    function toggle(): void { toggleClipboard() }
   }
   IpcHandler {
     target: "themepicker"
-    function toggle(): void {
-      if (integratedFrameEnabled) shellFrame.toggleThemePicker()
-      else themePicker.toggle()
-    }
+    function toggle(): void { toggleThemePicker() }
   }
   IpcHandler {
     target: "appcenter"
-    function toggle(): void {
-      if (integratedFrameEnabled) shellFrame.toggleAppCenter()
-      else appCenter.toggle()
-    }
+    function toggle(): void { toggleAppCenter() }
   }
   IpcHandler {
     target: "webapps"
-    function toggle(): void { webApps.toggle() }
+    function toggle(): void { toggleWebApps() }
   }
   IpcHandler {
     target: "updatecenter"
-    function toggle(): void {
-      if (integratedFrameEnabled) shellFrame.toggleUpdateCenter()
-      else updateCenter.toggle()
-    }
+    function toggle(): void { toggleUpdateCenter() }
   }
   IpcHandler {
     target: "settingscenter"
-    function toggle(): void {
-      if (integratedFrameEnabled) shellFrame.toggleSettingsCenter()
-      else settingsCenter.toggle()
-    }
+    function toggle(): void { toggleSettingsCenter() }
   }
   IpcHandler {
     target: "screenshot"

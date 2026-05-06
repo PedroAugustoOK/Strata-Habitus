@@ -1,18 +1,21 @@
-import Quickshell
-import Quickshell.Wayland
 import QtQuick
 import QtQuick.Layouts
 import ".."
+import "../frame"
 
-PanelWindow {
+ExactCenterPanelWindow {
   id: root
-  anchors { top: true; left: true; right: true; bottom: true }
-  color: "transparent"
-  exclusionMode: ExclusionMode.Ignore
-  focusable: true
-  visible: false
-  WlrLayershell.keyboardFocus: WlrKeyboardFocus.OnDemand
 
+  panelWidth: FrameTokens.webAppsWidth
+  panelHeight: FrameTokens.webAppsContentHeight
+  windowWidth: FrameTokens.webAppsWidth
+  windowHeight: FrameTokens.webAppsHeight
+  inputWidth: FrameTokens.webAppsWidth
+  inputHeight: FrameTokens.webAppsContentHeight
+  panelOpen: open
+  panelVisible: open || closeAnim.running
+
+  property bool open: false
   property int selected: 0
   property real cardYOffset: 18
   property string formName: ""
@@ -43,22 +46,24 @@ PanelWindow {
   readonly property color rowSelected: Qt.rgba(Colors.accent.r, Colors.accent.g, Colors.accent.b, Colors.darkMode ? 0.16 : 0.12)
 
   function toggle() {
-    if (visible) {
-      closeAnim.start()
+    if (open) {
+      close()
       return
     }
 
-    visible = true
+    open = true
     selected = 0
     store.query = ""
     store.reload()
     card.opacity = 0
-    card.scale = 0.988
+    card.scale = FrameTokens.panelOpenScale
     cardYOffset = 16
     openAnim.start()
   }
 
   function close() {
+    if (!open) return
+    open = false
     closeAnim.start()
   }
 
@@ -100,8 +105,8 @@ PanelWindow {
     }
   }
 
-  onVisibleChanged: {
-    if (visible) {
+  onOpenChanged: {
+    if (open) {
       focusGrabber.forceActiveFocus()
       nameInput.forceActiveFocus()
     }
@@ -110,38 +115,32 @@ PanelWindow {
   SequentialAnimation {
     id: openAnim
     ParallelAnimation {
-      NumberAnimation { target: root; property: "cardYOffset"; from: 16; to: 0; duration: 170; easing.type: Easing.OutCubic }
-      NumberAnimation { target: card; property: "opacity"; from: 0; to: 1; duration: 130; easing.type: Easing.OutQuad }
-      NumberAnimation { target: card; property: "scale"; from: 0.988; to: 1; duration: 170; easing.type: Easing.OutCubic }
+      NumberAnimation { target: root; property: "cardYOffset"; from: 16; to: 0; duration: FrameTokens.panelOpenDuration; easing.type: Easing.OutCubic }
+      NumberAnimation { target: card; property: "opacity"; from: 0; to: 1; duration: FrameTokens.panelOpenOpacityDuration; easing.type: Easing.OutQuad }
+      NumberAnimation { target: card; property: "scale"; from: FrameTokens.panelOpenScale; to: 1; duration: FrameTokens.panelOpenDuration; easing.type: Easing.OutCubic }
     }
   }
 
   SequentialAnimation {
     id: closeAnim
     ParallelAnimation {
-      NumberAnimation { target: root; property: "cardYOffset"; to: 10; duration: 110; easing.type: Easing.InCubic }
-      NumberAnimation { target: card; property: "scale"; to: 0.992; duration: 110; easing.type: Easing.InCubic }
-      NumberAnimation { target: card; property: "opacity"; to: 0; duration: 90; easing.type: Easing.InQuad }
+      NumberAnimation { target: root; property: "cardYOffset"; to: 10; duration: FrameTokens.panelCloseDuration; easing.type: Easing.InCubic }
+      NumberAnimation { target: card; property: "scale"; to: FrameTokens.panelCloseScale; duration: FrameTokens.panelCloseDuration; easing.type: Easing.InCubic }
+      NumberAnimation { target: card; property: "opacity"; to: 0; duration: FrameTokens.panelCloseOpacityDuration; easing.type: Easing.InQuad }
     }
-    ScriptAction { script: root.visible = false }
   }
 
   WebAppsStore {
     id: store
   }
 
-  MouseArea {
-    anchors.fill: parent
-    onClicked: root.close()
-  }
-
   Rectangle {
     id: card
     anchors.centerIn: parent
     anchors.verticalCenterOffset: root.cardYOffset
-    width: 1040
-    height: 628
-    radius: 32
+    width: FrameTokens.webAppsWidth
+    height: FrameTokens.webAppsContentHeight
+    radius: FrameTokens.webAppsRadius
     antialiasing: true
     color: root.cardFill
     border.width: 1

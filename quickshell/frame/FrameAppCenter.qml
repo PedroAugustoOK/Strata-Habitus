@@ -9,6 +9,9 @@ Item {
   property bool open: false
   property int selected: 0
   property real progressValue: 0
+  readonly property int panelWidth: FrameTokens.appCenterWidth
+  readonly property int panelHeight: FrameTokens.rightPanelHeight(Screen.height)
+  readonly property bool drawerVisible: drawer.visible
 
   readonly property var filters: [
     { key: "discover", label: "Destaques" },
@@ -149,14 +152,14 @@ Item {
 
   RightDrawer {
     id: drawer
-    width: Math.min(920, Math.max(760, Math.round(parent.width * 0.54)))
-    height: parent.height - 56
-    gutter: 10
+    width: root.panelWidth
+    height: root.panelHeight
+    gutter: FrameTokens.rightPanelGutter
     open: root.open
 
     FrameSurface {
       anchors.fill: parent
-      radius: 18
+      radius: FrameTokens.surfaceRadius
       attachedEdge: "right"
       fillColor: Colors.panelBackground
       borderColor: Qt.rgba(Colors.primary.r, Colors.primary.g, Colors.primary.b, 0.22)

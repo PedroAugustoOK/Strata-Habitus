@@ -1,6 +1,5 @@
 import QtQuick
 import QtQuick.Layouts
-import Caelestia.Blobs
 import ".."
 import "../launcher"
 
@@ -12,8 +11,8 @@ Item {
   property bool actionMode: false
   property int actionSelected: 0
   property bool closingForLaunch: false
-  property int panelWidth: 720
-  property int bottomInset: 22
+  property int panelWidth: FrameTokens.launcherWidth
+  property int bottomInset: FrameTokens.bottomInset
   property alias drawerVisible: drawer.visible
   property alias drawerOffsetScale: drawer.offsetScale
   readonly property int itemH: 62
@@ -103,42 +102,12 @@ Item {
     height: root.panelHeight
     open: root.open
 
-    BlobGroup {
-      id: launcherBlobGroup
-      color: Colors.panelBackground
-      smoothing: 8
-    }
-
-    BlobRect {
-      id: launcherBlob
+    FrameBlobSurface {
       anchors.fill: parent
-      group: launcherBlobGroup
-      radius: 16
-      bottomLeftRadius: 0
-      bottomRightRadius: 0
-      deformScale: 0.000018
-      stiffness: 185
-      damping: 18
-    }
-
-    Rectangle {
-      anchors.fill: parent
-      radius: 16
-      color: "transparent"
-      border.width: 1
-      border.color: Qt.rgba(Colors.accent.r, Colors.accent.g, Colors.accent.b, 0.18)
-
-      Rectangle {
-        anchors { left: parent.left; right: parent.right; bottom: parent.bottom }
-        height: parent.radius + 4
-        color: Colors.panelBackground
-      }
-
-      Rectangle {
-        anchors { left: parent.left; right: parent.right; bottom: parent.bottom; bottomMargin: parent.radius + 3 }
-        height: 1
-        color: Qt.rgba(Colors.panelBorder.r, Colors.panelBorder.g, Colors.panelBorder.b, Colors.darkMode ? 0.28 : 0.34)
-      }
+      radius: FrameTokens.compactSurfaceRadius
+      attachedEdge: "bottom"
+      fillColor: Colors.panelBackground
+      borderColor: Qt.rgba(Colors.accent.r, Colors.accent.g, Colors.accent.b, 0.18)
 
       ColumnLayout {
         anchors { fill: parent; bottomMargin: root.bottomInset }

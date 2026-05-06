@@ -12,10 +12,12 @@ Item {
   property color transitionColor: Colors.primary
   property real transitionOpacity: 0
   property var themes: []
+  readonly property bool drawerVisible: drawer.visible
 
   readonly property string themeListScript: Qt.resolvedUrl("../scripts/theme-list.js").toString().replace("file://", "")
   readonly property string nodeBin: "/run/current-system/sw/bin/node"
   readonly property var selectedTheme: themes.length > 0 ? themes[Math.max(0, Math.min(selectedIdx, themes.length - 1))] : null
+  readonly property int surfaceHeight: FrameTokens.themePickerContentHeight + FrameTokens.bottomInset
 
   function alphaColor(hex, alpha) {
     const value = String(hex || "#000000")
@@ -88,20 +90,21 @@ Item {
 
   BottomDrawer {
     id: drawer
-    width: Math.min(1040, parent.width - 96)
-    height: 430
-    gutter: 10
+    width: Math.min(FrameTokens.themePickerContentWidth, parent.width - FrameTokens.bottomWindowPad)
+    height: root.surfaceHeight
+    gutter: FrameTokens.rightPanelGutter
     open: root.open
 
-    FrameSurface {
+    FrameBlobSurface {
       anchors.fill: parent
-      radius: 18
+      radius: FrameTokens.surfaceRadius
       attachedEdge: "bottom"
+      fillColor: Colors.panelBackground
       borderColor: Qt.rgba(Colors.text1.r, Colors.text1.g, Colors.text1.b, Colors.darkMode ? 0.18 : 0.22)
 
       Rectangle {
         anchors.fill: parent
-        radius: 18
+        radius: FrameTokens.surfaceRadius
         color: root.transitionColor
         opacity: root.transitionOpacity
         visible: opacity > 0
@@ -135,8 +138,13 @@ Item {
       }
 
       ColumnLayout {
-        anchors.fill: parent
-        anchors.margins: 22
+        anchors {
+          fill: parent
+          leftMargin: 22
+          rightMargin: 22
+          topMargin: 22
+          bottomMargin: 22 + FrameTokens.bottomInset
+        }
         spacing: 16
 
         RowLayout {

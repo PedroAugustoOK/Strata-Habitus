@@ -9,14 +9,15 @@ import "../frame"
 
 PanelWindow {
   id: root
-  anchors { top: true; right: true; left: true; bottom: true }
-  implicitWidth: 370
-  implicitHeight: 800
+  anchors { top: true; right: true }
+  implicitWidth: (DeviceState.isDesktop ? FrameTokens.controlCenterDesktopWidth : FrameTokens.controlCenterLaptopWidth) + FrameTokens.controlCenterWindowPad
+  implicitHeight: FrameTokens.controlCenterTopOffset + panel.height
   color: "transparent"
   exclusionMode: ExclusionMode.Ignore
-  WlrLayershell.keyboardFocus: WlrKeyboardFocus.Exclusive
+  mask: Region { item: panel }
+  WlrLayershell.keyboardFocus: WlrKeyboardFocus.OnDemand
   WlrLayershell.layer: WlrLayer.Overlay
-  focusable: true
+  focusable: visible
   visible: false
   onVisibleChanged: {
     if (visible) OverlayState.setActive("controlcenter")
@@ -31,9 +32,9 @@ PanelWindow {
       refreshAll()
       keyGrabber.forceActiveFocus()
       panel.opacity = 0
-      panelXOffset = 28
-      panelScale.xScale = 0.965
-      panelScale.yScale = 0.985
+      panelXOffset = FrameTokens.rightPanelSlideOffset
+      panelScale.xScale = FrameTokens.controlCenterClosedXScale
+      panelScale.yScale = FrameTokens.controlCenterClosedYScale
       openAnim.start()
     }
   }
@@ -65,19 +66,19 @@ PanelWindow {
   SequentialAnimation {
     id: openAnim
     ParallelAnimation {
-      NumberAnimation { target: panel; property: "opacity"; from: 0; to: 1; duration: 120; easing.type: Easing.OutQuad }
-      NumberAnimation { target: root; property: "panelXOffset"; from: 28; to: 0; duration: 260; easing.type: Easing.OutCubic }
-      NumberAnimation { target: panelScale; property: "xScale"; from: 0.965; to: 1; duration: 260; easing.type: Easing.OutCubic }
-      NumberAnimation { target: panelScale; property: "yScale"; from: 0.985; to: 1; duration: 260; easing.type: Easing.OutCubic }
+      NumberAnimation { target: panel; property: "opacity"; from: 0; to: 1; duration: FrameTokens.controlCenterOpenOpacityDuration; easing.type: Easing.OutQuad }
+      NumberAnimation { target: root; property: "panelXOffset"; from: FrameTokens.rightPanelSlideOffset; to: 0; duration: FrameTokens.controlCenterOpenDuration; easing.type: Easing.OutCubic }
+      NumberAnimation { target: panelScale; property: "xScale"; from: FrameTokens.controlCenterClosedXScale; to: 1; duration: FrameTokens.controlCenterOpenDuration; easing.type: Easing.OutCubic }
+      NumberAnimation { target: panelScale; property: "yScale"; from: FrameTokens.controlCenterClosedYScale; to: 1; duration: FrameTokens.controlCenterOpenDuration; easing.type: Easing.OutCubic }
     }
   }
   SequentialAnimation {
     id: closeAnim
     ParallelAnimation {
-      NumberAnimation { target: root; property: "panelXOffset"; to: 28; duration: 150; easing.type: Easing.InCubic }
-      NumberAnimation { target: panelScale; property: "xScale"; to: 0.965; duration: 150; easing.type: Easing.InCubic }
-      NumberAnimation { target: panelScale; property: "yScale"; to: 0.985; duration: 150; easing.type: Easing.InCubic }
-      NumberAnimation { target: panel; property: "opacity"; to: 0; duration: 110; easing.type: Easing.InQuad }
+      NumberAnimation { target: root; property: "panelXOffset"; to: FrameTokens.rightPanelSlideOffset; duration: FrameTokens.controlCenterCloseDuration; easing.type: Easing.InCubic }
+      NumberAnimation { target: panelScale; property: "xScale"; to: FrameTokens.controlCenterClosedXScale; duration: FrameTokens.controlCenterCloseDuration; easing.type: Easing.InCubic }
+      NumberAnimation { target: panelScale; property: "yScale"; to: FrameTokens.controlCenterClosedYScale; duration: FrameTokens.controlCenterCloseDuration; easing.type: Easing.InCubic }
+      NumberAnimation { target: panel; property: "opacity"; to: 0; duration: FrameTokens.controlCenterCloseOpacityDuration; easing.type: Easing.InQuad }
     }
     ScriptAction { script: root.visible = false }
   }
@@ -210,14 +211,12 @@ PanelWindow {
       if (e.key === Qt.Key_Escape) root.close()
     }
   }
-  MouseArea { anchors.fill: parent; onClicked: root.close() }
-
   FrameSurface {
     id: panel
-    anchors { top: parent.top; right: parent.right; topMargin: 44; rightMargin: 10 - root.panelXOffset }
-    width: DeviceState.isDesktop ? 344 : 316
-    height: col.implicitHeight + 28
-    radius: 18
+    anchors { top: parent.top; right: parent.right; topMargin: FrameTokens.controlCenterTopOffset; rightMargin: FrameTokens.rightPanelGutter - root.panelXOffset }
+    width: DeviceState.isDesktop ? FrameTokens.controlCenterDesktopWidth : FrameTokens.controlCenterLaptopWidth
+    height: Math.min(FrameTokens.rightPanelHeight(Screen.height), col.implicitHeight + FrameTokens.contentHeightPad)
+    radius: FrameTokens.surfaceRadius
     attachedEdge: "right"
     fillColor: Colors.panelBackground
     borderColor: Qt.rgba(Colors.primary.r, Colors.primary.g, Colors.primary.b, Colors.darkMode ? 0.18 : 0.16)

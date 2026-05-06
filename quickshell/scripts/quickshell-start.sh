@@ -3,7 +3,7 @@ set -euo pipefail
 
 SHELL_ENTRY="${HOME}/dotfiles/quickshell/shell.qml"
 
-if pgrep -x quickshell >/dev/null 2>&1; then
+if quickshell list -p "${SHELL_ENTRY}" 2>/dev/null | grep -q '^Instance '; then
   exit 0
 fi
 

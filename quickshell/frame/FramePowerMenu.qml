@@ -8,6 +8,9 @@ Item {
 
   property bool open: false
   property int selectedIdx: 0
+  readonly property int panelWidth: row.implicitWidth + 26
+  readonly property int panelHeight: FrameTokens.powerMenuHeight
+  readonly property bool drawerVisible: drawer.visible
 
   readonly property var actions: [
     { icon: "⏻",  label: "Desligar", danger: true,  proc: poweroffProc },
@@ -45,14 +48,14 @@ Item {
 
   BottomDrawer {
     id: drawer
-    width: row.implicitWidth + 26
-    height: 58
-    gutter: 22
+    width: root.panelWidth
+    height: root.panelHeight
+    gutter: FrameTokens.bottomInset
     open: root.open
 
     FrameSurface {
       anchors.fill: parent
-      radius: 16
+      radius: FrameTokens.compactSurfaceRadius
       attachedEdge: "bottom"
       borderColor: Qt.rgba(Colors.accent.r, Colors.accent.g, Colors.accent.b, 0.14)
       gradientEnabled: false

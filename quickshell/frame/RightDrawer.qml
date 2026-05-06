@@ -6,13 +6,13 @@ Item {
 
   property bool open: false
   property int gutter: -10
-  property int animationDuration: 260
+  property int animationDuration: FrameTokens.rightDrawerDuration
   property real offsetScale: open ? 0 : 1
-  property int frameBlend: 12
+  property int frameBlend: FrameTokens.frameBlend
 
   visible: offsetScale < 1
   opacity: 1 - offsetScale
-  scale: 1 - (offsetScale * 0.025)
+  scale: 1 - (offsetScale * FrameTokens.rightDrawerClosedScale)
   transformOrigin: Item.Right
   anchors.verticalCenter: parent ? parent.verticalCenter : undefined
   anchors.right: parent ? parent.right : undefined

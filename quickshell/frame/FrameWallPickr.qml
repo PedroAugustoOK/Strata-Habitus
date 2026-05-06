@@ -12,8 +12,12 @@ Item {
   property var wallpapers: []
   property string currentWall: ""
   property int selectedIdx: 0
+  readonly property bool drawerVisible: drawer.visible
 
   readonly property int gridColumns: 3
+  readonly property int gridRows: Math.max(1, Math.ceil(wallpapers.length / gridColumns))
+  readonly property int panelWidth: Math.min(FrameTokens.wallPickrMaxWidth, width > 0 ? width - FrameTokens.bottomWindowPad : FrameTokens.wallPickrMaxWidth)
+  readonly property int panelHeight: Math.min(FrameTokens.wallPickrMaxHeight, Math.max(FrameTokens.wallPickrMinHeight, 112 + gridRows * 118))
   readonly property var selectedWallpaper: wallpapers.length > 0
     ? wallpapers[Math.max(0, Math.min(selectedIdx, wallpapers.length - 1))]
     : ({})
@@ -59,14 +63,14 @@ Item {
 
   BottomDrawer {
     id: drawer
-    width: Math.min(820, parent.width - 96)
-    height: Math.min(500, parent.height - 90)
-    gutter: 10
+    width: root.panelWidth
+    height: root.panelHeight
+    gutter: FrameTokens.rightPanelGutter
     open: root.open
 
     FrameSurface {
       anchors.fill: parent
-      radius: 18
+      radius: FrameTokens.surfaceRadius
       attachedEdge: "bottom"
       borderColor: Qt.rgba(Colors.text1.r, Colors.text1.g, Colors.text1.b, Colors.darkMode ? 0.10 : 0.14)
       topToneOpacity: Colors.darkMode ? 0.95 : 0.92

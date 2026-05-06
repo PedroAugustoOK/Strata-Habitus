@@ -30,10 +30,4 @@ Region {
     height: root.thickness
   }
 
-  Region {
-    x: Math.max(0, FrameDrawerState.launcherX - 18)
-    y: Math.max(0, FrameDrawerState.launcherY + 8 + 20 * FrameDrawerState.launcherOffsetScale)
-    width: FrameDrawerState.launcherProgress > 0.001 ? FrameDrawerState.launcherWidth + 36 : 0
-    height: FrameDrawerState.launcherProgress > 0.001 ? FrameDrawerState.launcherHeight : 0
-  }
 }

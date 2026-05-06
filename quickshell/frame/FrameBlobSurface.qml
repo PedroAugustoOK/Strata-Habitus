@@ -1,4 +1,5 @@
 import QtQuick
+import Caelestia.Blobs
 import ".."
 
 Item {
@@ -9,42 +10,42 @@ Item {
   property int radius: FrameTokens.surfaceRadius
   property color fillColor: Colors.panelBackground
   property color borderColor: Colors.panelBorder
-  property bool gradientEnabled: true
   property string attachedEdge: "none"
-  property real topToneOpacity: Colors.darkMode ? 0.56 : 0.42
-  property real bottomToneOpacity: Colors.darkMode ? 0.96 : 0.90
+  property int smoothing: 8
+  property real deformScale: 0.000018
+  property real stiffness: 185
+  property real damping: 18
+
+  BlobGroup {
+    id: blobGroup
+    color: root.fillColor
+    smoothing: root.smoothing
+  }
+
+  BlobRect {
+    id: blobSurface
+    anchors.fill: parent
+    group: blobGroup
+    radius: root.radius
+    bottomLeftRadius: root.attachedEdge === "bottom" ? 0 : root.radius
+    topRightRadius: root.attachedEdge === "right" ? 0 : root.radius
+    bottomRightRadius: root.attachedEdge === "right" ? 0 : (root.attachedEdge === "bottom" ? 0 : root.radius)
+    deformScale: root.deformScale
+    stiffness: root.stiffness
+    damping: root.damping
+  }
 
   Rectangle {
-    id: surface
     anchors.fill: parent
     radius: root.radius
-    antialiasing: true
-    color: root.fillColor
+    color: "transparent"
     border.width: 1
     border.color: root.borderColor
-    clip: false
-
-    Rectangle {
-      anchors.fill: parent
-      radius: parent.radius
-      antialiasing: true
-      visible: root.gradientEnabled
-      gradient: Gradient {
-        GradientStop {
-          position: 0.0
-          color: Qt.rgba(Colors.panelRaised.r, Colors.panelRaised.g, Colors.panelRaised.b, root.topToneOpacity)
-        }
-        GradientStop {
-          position: 1.0
-          color: Qt.rgba(Colors.panelBackground.r, Colors.panelBackground.g, Colors.panelBackground.b, root.bottomToneOpacity)
-        }
-      }
-    }
 
     Rectangle {
       anchors { left: parent.left; right: parent.right; top: parent.top }
       height: 1
-      color: Qt.rgba(Colors.text0.r, Colors.text0.g, Colors.text0.b, Colors.darkMode ? 0.045 : 0.28)
+      color: Qt.rgba(Colors.text0.r, Colors.text0.g, Colors.text0.b, Colors.darkMode ? 0.045 : 0.22)
     }
 
     Rectangle {
@@ -63,21 +64,14 @@ Item {
 
     Rectangle {
       anchors { top: parent.top; right: parent.right; bottom: parent.bottom }
-      width: root.radius + 2
+      width: FrameTokens.attachedEdgeDepth
       visible: root.attachedEdge === "right"
       color: root.fillColor
     }
+  }
 
-    Rectangle {
-      anchors { top: parent.top; right: parent.right; bottom: parent.bottom }
-      width: 2
-      visible: root.attachedEdge === "right"
-      color: Qt.rgba(Colors.primary.r, Colors.primary.g, Colors.primary.b, Colors.darkMode ? 0.14 : 0.11)
-    }
-
-    Item {
-      id: contentHost
-      anchors.fill: parent
-    }
+  Item {
+    id: contentHost
+    anchors.fill: parent
   }
 }

@@ -6,23 +6,26 @@ import ".."
 
 PanelWindow {
   id: root
-  anchors { top: true; left: true; right: true; bottom: true }
+  anchors { top: true }
+  implicitWidth: cardWidth
+  implicitHeight: cardY + cardHeight
   color: "transparent"
   exclusionMode: ExclusionMode.Ignore
   WlrLayershell.layer: WlrLayer.Overlay
   WlrLayershell.keyboardFocus: DynamicIslandState.mode === "notification" ? WlrKeyboardFocus.None : WlrKeyboardFocus.OnDemand
   focusable: DynamicIslandState.mode !== "notification"
   visible: DynamicIslandState.visible || closing
-  mask: Region { item: DynamicIslandState.mode === "notification" ? cardInputRegion : fullInputRegion }
+  mask: Region { item: cardInputRegion }
 
   readonly property real cardWidth: DynamicIslandState.mode === "media" ? 416 : 380
   readonly property real cardHeight: DynamicIslandState.mode === "media" ? 200
     : DynamicIslandState.mode === "notification" ? 104
     : 100
   readonly property real cardRadius: DynamicIslandState.mode === "media" ? 28 : 22
-  readonly property real cardX: Math.max(12, Math.min(width - cardWidth - 12, OverlayState.islandCenterX - cardWidth / 2))
+  readonly property real windowX: Math.max(0, (Screen.width - cardWidth) / 2)
+  readonly property real cardX: 0
   readonly property real cardY: Math.max(4, OverlayState.islandY)
-  readonly property real startX: OverlayState.islandWidth > 0 ? OverlayState.islandX : cardX + cardWidth / 2 - 120
+  readonly property real startX: OverlayState.islandWidth > 0 ? OverlayState.islandX - windowX : cardX + cardWidth / 2 - 120
   readonly property real startY: OverlayState.islandHeight > 0 ? OverlayState.islandY : cardY - 39
   readonly property real startWidth: Math.max(80, OverlayState.islandWidth)
   readonly property real startHeight: Math.max(30, OverlayState.islandHeight)
@@ -71,11 +74,6 @@ PanelWindow {
   }
 
   Item {
-    id: fullInputRegion
-    anchors.fill: parent
-  }
-
-  Item {
     id: cardInputRegion
     x: card.x
     y: card.y
@@ -84,7 +82,7 @@ PanelWindow {
   }
 
   MouseArea {
-    anchors.fill: parent
+    anchors.fill: card
     enabled: DynamicIslandState.mode !== "notification"
     onClicked: root.close()
   }

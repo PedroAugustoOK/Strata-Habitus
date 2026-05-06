@@ -22,12 +22,21 @@ import "frame"
 ShellRoot {
   property bool integratedFrameEnabled: false
   property bool screenFrameVisible: false
+  property bool launcherPanelEnabled: false
+  property bool frameEdgesEnabled: false
+  property bool strataDrawersEnabled: false
 
   function toggleControlCenter() {
     if (integratedFrameEnabled) shellFrame.closeDrawers("")
+    launcherPanel.close()
     controlCenter.toggle()
   }
 
+  Loader {
+    active: strataDrawersEnabled
+    source: strataDrawersEnabled ? Qt.resolvedUrl("frame/StrataDrawers.qml") : ""
+    onLoaded: item.active = Qt.binding(function() { return strataDrawersEnabled })
+  }
   Bar {}
   ShellFrame {
     id: shellFrame
@@ -42,6 +51,8 @@ ShellRoot {
   DynamicIslandCard {}
   TrayMenu {}
   CalendarMenu {}
+  FrameEdges { visible: frameEdgesEnabled }
+  LauncherPanel { id: launcherPanel }
   Launcher { id: launcher }
   // Notifications {}
   OSD {}
@@ -77,6 +88,39 @@ ShellRoot {
     onLoaded: {
       const value = text().trim().toLowerCase()
       integratedFrameEnabled = value === "1" || value === "true" || value === "yes" || value === "on"
+    }
+  }
+
+  FileView {
+    id: launcherPanelFlag
+    path: Paths.state + "/launcher-panel-enabled"
+    watchChanges: true
+    onFileChanged: reload()
+    onLoaded: {
+      const value = text().trim().toLowerCase()
+      launcherPanelEnabled = value === "1" || value === "true" || value === "yes" || value === "on"
+    }
+  }
+
+  FileView {
+    id: frameEdgesFlag
+    path: Paths.state + "/frame-edges-enabled"
+    watchChanges: true
+    onFileChanged: reload()
+    onLoaded: {
+      const value = text().trim().toLowerCase()
+      frameEdgesEnabled = value !== "0" && value !== "false" && value !== "no" && value !== "off"
+    }
+  }
+
+  FileView {
+    id: strataDrawersFlag
+    path: Paths.state + "/strata-drawers-enabled"
+    watchChanges: true
+    onFileChanged: reload()
+    onLoaded: {
+      const value = text().trim().toLowerCase()
+      strataDrawersEnabled = value === "1" || value === "true" || value === "yes" || value === "on"
     }
   }
 
@@ -294,6 +338,7 @@ ShellRoot {
     target: "launcher"
     function toggle(): void {
       if (integratedFrameEnabled) shellFrame.toggleLauncher()
+      else if (launcherPanelEnabled) launcherPanel.toggle()
       else launcher.toggle()
     }
   }

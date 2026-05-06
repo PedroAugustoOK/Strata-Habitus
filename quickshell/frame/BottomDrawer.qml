@@ -6,7 +6,7 @@ Item {
 
   property bool open: false
   property int gutter: -10
-  property int animationDuration: 260
+  property int animationDuration: 320
   property real offsetScale: open ? 0 : 1
   property int frameBlend: 12
 
@@ -40,13 +40,14 @@ Item {
   Behavior on offsetScale {
     NumberAnimation {
       duration: root.animationDuration
-      easing.type: Easing.OutCubic
+      easing.type: Easing.BezierSpline
+      easing.bezierCurve: [0.23, 1, 0.61, 1, 1, 1]
     }
   }
 
   Behavior on opacity {
     NumberAnimation {
-      duration: root.animationDuration
+      duration: 180
       easing.type: Easing.OutCubic
     }
   }
@@ -54,7 +55,8 @@ Item {
   Behavior on scale {
     NumberAnimation {
       duration: root.animationDuration
-      easing.type: Easing.OutCubic
+      easing.type: Easing.BezierSpline
+      easing.bezierCurve: [0.23, 1, 0.61, 1, 1, 1]
     }
   }
 }

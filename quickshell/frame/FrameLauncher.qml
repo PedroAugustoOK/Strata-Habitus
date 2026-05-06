@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Layouts
+import Caelestia.Blobs
 import ".."
 import "../launcher"
 
@@ -11,14 +12,19 @@ Item {
   property bool actionMode: false
   property int actionSelected: 0
   property bool closingForLaunch: false
+  property int panelWidth: 720
+  property int bottomInset: 22
+  property alias drawerVisible: drawer.visible
+  property alias drawerOffsetScale: drawer.offsetScale
   readonly property int itemH: 62
   readonly property int actionItemH: 42
-  readonly property int rows: Math.max(1, Math.min(8, store.results.length > 0 ? store.results.length : 4))
+  readonly property int rows: Math.max(1, Math.min(5, store.results.length > 0 ? store.results.length : 4))
   readonly property int listH: rows * itemH + 8
   readonly property var selectedItem: store.results.length > 0 ? store.results[selected] : null
   readonly property var currentActions: selectedItem && selectedItem.actions ? selectedItem.actions : []
   readonly property int actionRows: Math.max(1, Math.min(4, currentActions.length > 0 ? currentActions.length : 1))
   readonly property int actionsH: actionMode ? actionRows * actionItemH + 46 : 0
+  readonly property int panelHeight: 62 + root.listH + root.actionsH + 36 + root.bottomInset + (store.launchError !== "" ? 26 : 0)
 
   function toggle() {
     if (open) {
@@ -93,19 +99,49 @@ Item {
 
   BottomDrawer {
     id: drawer
-    width: 720
-    height: 62 + root.listH + root.actionsH + 36 + (store.launchError !== "" ? 26 : 0)
+    width: root.panelWidth
+    height: root.panelHeight
     open: root.open
 
-    FrameSurface {
+    BlobGroup {
+      id: launcherBlobGroup
+      color: Colors.panelBackground
+      smoothing: 8
+    }
+
+    BlobRect {
+      id: launcherBlob
       anchors.fill: parent
-      radius: 18
-      attachedEdge: "bottom"
-      borderColor: Qt.rgba(Colors.accent.r, Colors.accent.g, Colors.accent.b, 0.18)
-      gradientEnabled: false
+      group: launcherBlobGroup
+      radius: 16
+      bottomLeftRadius: 0
+      bottomRightRadius: 0
+      deformScale: 0.000018
+      stiffness: 185
+      damping: 18
+    }
+
+    Rectangle {
+      anchors.fill: parent
+      radius: 16
+      color: "transparent"
+      border.width: 1
+      border.color: Qt.rgba(Colors.accent.r, Colors.accent.g, Colors.accent.b, 0.18)
+
+      Rectangle {
+        anchors { left: parent.left; right: parent.right; bottom: parent.bottom }
+        height: parent.radius + 4
+        color: Colors.panelBackground
+      }
+
+      Rectangle {
+        anchors { left: parent.left; right: parent.right; bottom: parent.bottom; bottomMargin: parent.radius + 3 }
+        height: 1
+        color: Qt.rgba(Colors.panelBorder.r, Colors.panelBorder.g, Colors.panelBorder.b, Colors.darkMode ? 0.28 : 0.34)
+      }
 
       ColumnLayout {
-        anchors.fill: parent
+        anchors { fill: parent; bottomMargin: root.bottomInset }
         spacing: 0
 
         Rectangle {
@@ -405,7 +441,7 @@ Item {
 
   LauncherStore {
     id: store
-    resultLimit: 8
+    resultLimit: 5
     onLaunched: function(ok) {
       if (ok) return
 

@@ -1,8 +1,9 @@
 # STRATA_CONTEXT
 
 ## Repo
-- Working repo: `/home/ankh/dotfiles`
-- Primary development host: `desktop`
+- Working repo on current notebook session: `/home/ankh-intel/dotfiles`
+- Historical desktop repo path: `/home/ankh/dotfiles`
+- Primary development host was originally `desktop`, but current active implementation is happening on notebook host `strata`.
 - Notebook release host: `strata`
 
 ## Release model
@@ -12,6 +13,15 @@
   - `desktop` -> `main`
   - `nixos` -> `stable`
   - `strata` -> `stable`
+
+## Current session override - 2026-05-05/06
+- This session intentionally continued development directly on notebook host `strata`.
+- `main` is currently the working branch for the active drawer/frame implementation.
+- Earlier in the session, the channels were aligned so that:
+  - `main == stable == origin/main == origin/stable`
+  - commit: `0f2ae7b`
+- The current worktree is dirty with experimental Quickshell frame/drawer files and should not be promoted until validated.
+- Treat `desktop -> main` / `strata -> stable` as the normal release model, not as the exact state of this in-progress notebook session.
 
 ## Current validated state
 - Notebook `strata`
@@ -87,6 +97,175 @@ cd ~/dotfiles && ./strata-apply-channel.sh
   - `Proton Pass` launcher icon
   - Proton app workspace glyph resolution
   - `Proton Authenticator` login callback flow
+
+## Active open item - Strata frame/drawers
+- Goal:
+  - implement the thick continuous Strata frame/bar surface using the same architectural idea as Caelestia, not by stacking manual edge bars.
+- Current local references:
+  - `/home/ankh-intel/Projects/references/caelestia-shell`
+  - `/home/ankh-intel/Projects/references/caelestia-dotfiles`
+- Key Caelestia files:
+  - `modules/drawers/ContentWindow.qml`
+  - `modules/drawers/Regions.qml`
+  - `modules/drawers/Exclusions.qml`
+  - `modules/drawers/Panels.qml`
+  - `modules/drawers/Interactions.qml`
+- Current Strata prototype files:
+  - `quickshell/frame/StrataDrawers.qml`
+  - `quickshell/frame/StrataFrameExclusions.qml`
+  - `quickshell/frame/StrataFrameRegions.qml`
+  - `quickshell/frame/STRATA_DRAWERS_NOTES.md`
+  - `quickshell/frame/FrameEdges.qml` exists only as rejected experimental fallback
+- Caelestia plugin state:
+  - built successfully at `/nix/store/whjm0zgmflq05wzdl6rnv0qnpkcn9ii3-caelestia-qml-plugin`
+  - QML module path: `/nix/store/whjm0zgmflq05wzdl6rnv0qnpkcn9ii3-caelestia-qml-plugin/lib/qt-6/qml`
+  - minimal `Caelestia.Blobs` import test passed
+- Immediate next step:
+  - package the Caelestia QML plugin through Nix/Strata instead of relying on the current local store path
+  - keep validating the drawer frame visually across tiled, floating, fullscreen, launcher, notification, and overlay states
+- Known caveat:
+  - the plugin path is currently hardcoded in the startup script as a prototype
+  - this must become reproducible through Nix before final commit/promotion
+
+## Active continuation point - 2026-05-05 late session
+
+### What was validated
+- Full `shell.qml` validation with `Caelestia.Blobs` succeeded with real Wayland access.
+- The live Quickshell instance loaded successfully through:
+```bash
+/home/ankh-intel/dotfiles/quickshell/scripts/quickshell-start.sh
+```
+- A final live Quickshell instance was started as a transient user service:
+```bash
+systemd-run --user --unit=strata-quickshell --collect /home/ankh-intel/dotfiles/quickshell/scripts/quickshell-start.sh
+```
+- Confirmed service:
+  - `strata-quickshell.service`
+  - active/running
+  - Quickshell instance id at validation time: `5qjmm3flet`
+
+### Current frame/drawer behavior
+- `StrataDrawers.qml` imports `Caelestia.Blobs`.
+- The visual drawer window is on `WlrLayer.Bottom`.
+- The existing Strata top bar remains on the top layer and is no longer visually covered by the fullscreen drawer surface.
+- Tiny exclusion windows still reserve edge space.
+- Confirmed Hyprland layer shape:
+  - background: wallpaper
+  - bottom: fullscreen drawer visual surface
+  - top: Strata bar, existing utility layer windows, and tiny exclusion windows
+
+### Current geometry
+- Active tiled window geometry on notebook `strata`:
+  - position: `15,34`
+  - size: `1890x1031`
+- Effective reserved regions:
+  - top: existing Strata bar exclusive zone, 34px
+  - left/right/bottom: Strata drawer exclusions, 15px
+- Current Hyprland gaps:
+  - `gaps_in = 3`
+  - `gaps_out = 0`
+
+### Current warning state
+- No fatal QML/plugin error after the Caelestia import.
+- Remaining warnings seen in logs are known/non-blocking:
+  - `Could not attach Keys property ... is not an Item`
+  - missing App Center rebuild status file:
+    `~/.cache/strata/appcenter/rebuild-status.txt`
+
+### Next practical step
+- The Caelestia plugin is now wired as a reproducible flake source/package instead of only a hardcoded store path:
+  - `flake.nix` adds `caelestia-shell` as a non-flake source input pinned to `54cdd80c1b7671deeb057cc554f83e436765596a`
+  - overlay exposes `pkgs.caelestia-qml-plugin`
+  - `modules/packages.nix` installs `caelestia-qml-plugin`
+  - `quickshell/scripts/quickshell-start.sh` discovers `Caelestia/Blobs` under profile/system Qt QML paths
+- `StrataDrawers` is loaded dynamically from `shell.qml` only when `state/strata-drawers-enabled` is true, so the stable shell can load without the plugin before rebuild.
+- Current local runtime baseline:
+  - `state/strata-drawers-enabled`: `false`
+  - `state/shell-frame-enabled`: `false`
+- Follow-up runtime validation on notebook:
+  - after rebuilding, `/run/current-system/sw/lib/qt-6/qml/Caelestia/Blobs` exists
+  - enabling `state/strata-drawers-enabled=true` restores the side/bottom exclusions
+  - active tiled window moved from `0,34` back to a reserved geometry
+  - Hyprland gaps were restored to the earlier margin model:
+    - `gaps_in = 3`
+    - `gaps_out = 5, 15, 15, 15`
+    - `border_size = 3`
+  - `LauncherPanel.qml` was adjusted from full-width bottom layer to exact-width centered layer:
+    - initial observed layer: `x=600 y=460 w=720 h=620` on 1920x1080
+    - after visual correction: `x=600 y=624 w=720 h=456`
+    - frame launcher is now limited to 5 visible rows with `22px` bottom inset
+    - launcher surface now uses `Caelestia.Blobs` `BlobRect`
+    - launcher panel remains alive through close animation via `drawerVisible`
+    - `BottomDrawer` uses Strata/Zephyr bezier `[0.23, 1, 0.61, 1, 1, 1]`
+    - `FrameDrawerState.qml` now shares launcher geometry/progress with `StrataDrawers`
+    - `StrataDrawers` draws a masked launcher pocket in the same blob group as the frame
+    - `StrataFrameRegions` includes the launcher pocket region
+    - `StrataDrawers` was briefly tested on `WlrLayer.Top`, but that visual was rejected
+    - current safe state is back to `WlrLayer.Bottom`
+- After packaging, validate:
+  - normal tiled windows
+  - two tiled windows side by side
+  - floating windows
+  - fullscreen windows
+  - launcher panel
+  - notifications/dynamic island
+  - reboot/login startup path
+
+## Desktop handoff - 2026-05-06
+
+### Current branch and publish target
+- Active branch for this work: `main`
+- Remote:
+  - `git@github.com:PedroAugustoOK/Strata-Habitus.git`
+- This handoff is intended so development can continue on the desktop machine.
+
+### What changed in this pass
+- Caelestia QML plugin is now reproducible through the Strata flake:
+  - `flake.nix` adds `caelestia-shell` as a pinned non-flake input
+  - overlay exposes `pkgs.caelestia-qml-plugin`
+  - `modules/packages.nix` installs `caelestia-qml-plugin`
+  - `quickshell-start.sh` discovers `Caelestia/Blobs` from system/profile QML paths
+- `StrataDrawers` is loaded dynamically only when:
+  - `state/strata-drawers-enabled=true`
+- Current local intended runtime:
+  - `state/strata-drawers-enabled=true` for the experimental frame path
+  - `state/shell-frame-enabled=false`
+  - `state/launcher-panel-enabled=true`
+- Hyprland margins restored:
+  - `gaps_in = 3`
+  - `gaps_out = 5, 15, 15, 15`
+  - `border_size = 3`
+- Launcher moved to first small-panel drawer path:
+  - exact bottom panel window
+  - `720x456` on 1920x1080
+  - 5 visible rows
+  - bottom inset for footer
+  - Zephyr-like drawer animation
+- Added shared launcher/frame state:
+  - `quickshell/FrameDrawerState.qml`
+  - registered in `quickshell/qmldir`
+  - publishes launcher geometry/progress to `StrataDrawers`
+- `StrataDrawers` draws a launcher pocket using the same Caelestia blob group as the frame.
+
+### Important rejected experiment
+- `StrataDrawers` was tested on `WlrLayer.Top`.
+- Result was visually wrong:
+  - top/bar composition disappeared or looked broken
+  - launcher pocket became an ugly dark cutout
+- Rollback applied:
+  - `StrataDrawers.qml` is back on `WlrLayer.Bottom`
+- Do not retry top-layer fullscreen frame without a more precise mask/input design.
+
+### Current validated live state
+- `hyprctl layers`:
+  - background: wallpaper
+  - bottom: fullscreen `StrataDrawers`
+  - top: Strata bar plus small exclusions
+  - overlay: no launcher left open after final validation
+- Active tiled window stayed around:
+  - `at: 33,42`
+  - `size: 1854x1005`
+- `git diff --check` passed before publish.
 
 ## Notebook divergence note - 2026-04-28
 - Current session work is being done directly on notebook host `strata`

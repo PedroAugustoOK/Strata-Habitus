@@ -1,5 +1,22 @@
 {
   "nodes": {
+    "caelestia-shell": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1777891103,
+        "narHash": "sha256-/b87CUV9NEh4YYtG6tGGbbSJurqkfwZQ5rZNiIBJWYw=",
+        "owner": "caelestia-dots",
+        "repo": "shell",
+        "rev": "54cdd80c1b7671deeb057cc554f83e436765596a",
+        "type": "github"
+      },
+      "original": {
+        "owner": "caelestia-dots",
+        "repo": "shell",
+        "rev": "54cdd80c1b7671deeb057cc554f83e436765596a",
+        "type": "github"
+      }
+    },
     "home-manager": {
       "inputs": {
         "nixpkgs": [
@@ -38,6 +55,7 @@
     },
     "root": {
       "inputs": {
+        "caelestia-shell": "caelestia-shell",
         "home-manager": "home-manager",
         "nixpkgs": "nixpkgs"
       }

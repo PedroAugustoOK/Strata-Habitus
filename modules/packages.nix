@@ -27,7 +27,7 @@ in {
         cp ${../wallpaper.jpg} $out/share/sddm/themes/strata/background.jpg
       '';
     })
-    git wget curl neovim nodejs_22 kitty chromium quickshell
+    git wget curl neovim nodejs_22 kitty chromium quickshell caelestia-qml-plugin
     (pkgs.vimPlugins.nvim-treesitter.withPlugins (p: [
       p.nix p.lua p.bash p.python p.javascript p.typescript
       p.json p.yaml p.toml p.markdown p.html p.css p.c p.cpp

@@ -49,16 +49,16 @@ Item {
 
     Rectangle {
       anchors { left: parent.left; right: parent.right; bottom: parent.bottom }
-      height: root.radius + 2
+      height: root.radius + 4
       visible: root.attachedEdge === "bottom"
       color: root.fillColor
     }
 
     Rectangle {
-      anchors { left: parent.left; right: parent.right; bottom: parent.bottom }
-      height: 2
+      anchors { left: parent.left; right: parent.right; bottom: parent.bottom; bottomMargin: root.radius + 3 }
+      height: 1
       visible: root.attachedEdge === "bottom"
-      color: Qt.rgba(Colors.primary.r, Colors.primary.g, Colors.primary.b, Colors.darkMode ? 0.14 : 0.11)
+      color: Qt.rgba(Colors.panelBorder.r, Colors.panelBorder.g, Colors.panelBorder.b, Colors.darkMode ? 0.28 : 0.34)
     }
 
     Rectangle {

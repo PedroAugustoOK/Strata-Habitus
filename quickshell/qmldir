@@ -5,4 +5,5 @@ singleton NotificationService 1.0 NotificationService.qml
 singleton SystemState 1.0 SystemState.qml
 singleton OverlayState 1.0 OverlayState.qml
 singleton DynamicIslandState 1.0 DynamicIslandState.qml
+singleton FrameDrawerState 1.0 FrameDrawerState.qml
 singleton Paths 1.0 Paths.qml

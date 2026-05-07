@@ -132,6 +132,7 @@ ShellRoot {
     source: strataDrawersEnabled ? Qt.resolvedUrl("frame/StrataDrawers.qml") : ""
     onLoaded: item.active = Qt.binding(function() { return strataDrawersEnabled })
   }
+  FrameSharedSurface {}
   Bar {}
   ShellFrame {
     id: shellFrame

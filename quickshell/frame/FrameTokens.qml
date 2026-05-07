@@ -49,6 +49,9 @@ QtObject {
   readonly property int surfaceRadius: Math.round(18 * Colors.radiusScale)
   readonly property int compactSurfaceRadius: Math.round(16 * Colors.radiusScale)
   readonly property int frameBlend: 12
+  readonly property int activeFrameExpansion: 6
+  readonly property int activeBottomExpansion: 22
+  readonly property int sharedSurfaceShoulder: 28
   readonly property int attachedEdgeDepth: compactSurfaceRadius + 4
   readonly property int attachedEdgeStrokeOffset: compactSurfaceRadius + 3
   readonly property real bottomDrawerClosedScale: 0.035

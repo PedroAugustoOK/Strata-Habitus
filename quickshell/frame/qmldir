@@ -9,6 +9,7 @@ BottomDrawer 1.0 BottomDrawer.qml
 RightDrawer 1.0 RightDrawer.qml
 FrameSurface 1.0 FrameSurface.qml
 FrameBlobSurface 1.0 FrameBlobSurface.qml
+FrameSharedSurface 1.0 FrameSharedSurface.qml
 FrameEdges 1.0 FrameEdges.qml
 StrataFrameExclusions 1.0 StrataFrameExclusions.qml
 StrataFrameRegions 1.0 StrataFrameRegions.qml

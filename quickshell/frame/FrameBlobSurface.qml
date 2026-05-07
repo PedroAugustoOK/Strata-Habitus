@@ -15,6 +15,12 @@ Item {
   property real deformScale: 0.000018
   property real stiffness: 185
   property real damping: 18
+  property bool deformContent: true
+  property bool edgeSocketEnabled: attachedEdge !== "none"
+  property bool drawSurface: true
+
+  readonly property alias deformMatrix: blobSurface.deformMatrix
+  readonly property alias rawDeformMatrix: blobSurface.rawDeformMatrix
 
   BlobGroup {
     id: blobGroup
@@ -24,6 +30,7 @@ Item {
 
   BlobRect {
     id: blobSurface
+    visible: root.drawSurface
     anchors.fill: parent
     group: blobGroup
     radius: root.radius
@@ -35,7 +42,40 @@ Item {
     damping: root.damping
   }
 
+  BlobRect {
+    id: bottomSocket
+    visible: root.drawSurface && root.edgeSocketEnabled && root.attachedEdge === "bottom"
+    x: -FrameTokens.frameBlend
+    y: root.height - FrameTokens.attachedEdgeDepth - 2
+    implicitWidth: root.width + FrameTokens.frameBlend * 2
+    implicitHeight: FrameTokens.attachedEdgeDepth + FrameTokens.frameBlend + 2
+    group: blobGroup
+    radius: Math.max(4, root.radius - 4)
+    bottomLeftRadius: 0
+    bottomRightRadius: 0
+    deformScale: root.deformScale
+    stiffness: root.stiffness
+    damping: root.damping
+  }
+
+  BlobRect {
+    id: rightSocket
+    visible: root.drawSurface && root.edgeSocketEnabled && root.attachedEdge === "right"
+    x: root.width - FrameTokens.attachedEdgeDepth - 2
+    y: -FrameTokens.frameBlend
+    implicitWidth: FrameTokens.attachedEdgeDepth + FrameTokens.frameBlend + 2
+    implicitHeight: root.height + FrameTokens.frameBlend * 2
+    group: blobGroup
+    radius: Math.max(4, root.radius - 4)
+    topRightRadius: 0
+    bottomRightRadius: 0
+    deformScale: root.deformScale
+    stiffness: root.stiffness
+    damping: root.damping
+  }
+
   Rectangle {
+    visible: root.drawSurface
     anchors.fill: parent
     radius: root.radius
     color: "transparent"
@@ -73,5 +113,13 @@ Item {
   Item {
     id: contentHost
     anchors.fill: parent
+
+    transform: Matrix4x4 {
+      matrix: root.deformContent ? blobSurface.deformMatrix : identityMatrix.matrix
+    }
+  }
+
+  Matrix4x4 {
+    id: identityMatrix
   }
 }

@@ -102,12 +102,22 @@ Item {
     height: root.panelHeight
     open: root.open
 
+    Binding { target: FramePanelState; property: "launcherOpen"; value: root.open }
+    Binding { target: FramePanelState; property: "launcherVisible"; value: drawer.visible }
+    Binding { target: FramePanelState; property: "launcherOffsetScale"; value: drawer.offsetScale }
+    Binding { target: FramePanelState; property: "launcherWidth"; value: root.panelWidth }
+    Binding { target: FramePanelState; property: "launcherHeight"; value: root.panelHeight }
+
     FrameBlobSurface {
       anchors.fill: parent
+      drawSurface: false
       radius: FrameTokens.compactSurfaceRadius
       attachedEdge: "bottom"
       fillColor: Colors.panelBackground
       borderColor: Qt.rgba(Colors.accent.r, Colors.accent.g, Colors.accent.b, 0.18)
+      deformScale: 0.000028
+      stiffness: 165
+      damping: 20
 
       ColumnLayout {
         anchors { fill: parent; bottomMargin: root.bottomInset }

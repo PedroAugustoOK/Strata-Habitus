@@ -2220,3 +2220,395 @@ Theme Picker: 392,608 1136x472
 - Point 6 is next:
   - final QA before publish.
   - Validate click/keyboard/Esc, notifications, fullscreen, tiled/floating windows, restart/login startup, and light/dark themes.
+
+## Session update - 2026-05-06 - point 6 final QA
+
+### Scope
+- Completed point 6 from the Caelestia-readiness plan:
+  - final QA before publish for the exact-size panel foundation.
+- Point 5 had already been completed:
+  - `FrameBlobSurface.qml` is active for Launcher and Theme Picker.
+
+### Validation completed
+- Static validation passed:
+```bash
+timeout 5 quickshell -p /home/ankh-intel/dotfiles/quickshell/shell.qml --no-color
+git diff --check
+bash -n /home/ankh-intel/dotfiles/quickshell/scripts/quickshell-start.sh
+```
+- Caelestia plugin path exists:
+```bash
+/run/current-system/sw/lib/qt-6/qml/Caelestia/Blobs
+```
+- Quickshell was restarted through Hyprland outside the Codex sandbox:
+```bash
+hyprctl dispatch exec /home/ankh-intel/dotfiles/quickshell/scripts/quickshell-start.sh
+```
+- Final live instance:
+  - id: `emk1is2net`
+  - pid: `73382`
+
+### Layer and panel QA
+- Idle layer state is clean:
+  - background wallpaper
+  - bottom `StrataDrawers`
+  - top bar/exclusion layers
+  - no overlay layer active
+- Panel smoke geometry on 1920x1080:
+```text
+Launcher:        600,624 720x456
+Theme Picker:    392,608 1136x472
+WallPickr:       502,758 916x322
+Power Menu:      816,1000 288x80
+Clipboard:       452,438 1016x642
+Settings Center: 1282,28 638x1024
+Update Center:   1182,28 738x1024
+App Center:       982,28 938x1024
+Web Apps:         440,216 1040x648
+Control Center:  1576,0 344x714
+```
+- Opening/closing returned to a clean layer state.
+- Some transient `pid: -1` layer entries were observed only during close animation; they cleared after waiting.
+
+### Notification QA
+- A real notification had to be sent outside the sandbox:
+```bash
+notify-send -a Strata 'Strata QA ponto 6' 'notificação fora da sandbox'
+```
+- Dynamic Island notification opened at:
+```text
+770,0 380x108
+```
+- It autocleared and returned to no overlay layer.
+- Important sandbox note:
+  - `notification-history.js` returns `[]` when run from the Codex sandbox because `makoctl` cannot open the user bus (`EPERM`).
+  - This was not a shell bug; the same path works when Quickshell is launched through Hyprland.
+
+### Fullscreen QA
+- Focused the live Kitty window and toggled fullscreen:
+  - before: `fullscreen: 0`
+  - during: `fullscreen: 1`
+  - after: `fullscreen: 0`
+- Launcher opened over the fullscreen client as a single exact-size top-layer panel:
+```text
+600,624 720x456
+```
+
+### Theme QA
+- Light and dark theme switching was validated outside the sandbox:
+```bash
+bash /home/ankh-intel/dotfiles/quickshell/scripts/set-theme.sh rosepine
+bash /home/ankh-intel/dotfiles/quickshell/scripts/set-theme.sh kanagawa
+```
+- `rosepine` light applied successfully.
+- `kanagawa` dark was restored successfully.
+- Running `set-theme.sh` inside the Codex sandbox can fail on Wayland/Hyprland/wallpaper socket access; do theme QA outside the sandbox.
+
+### Escape/key caveat
+- Synthetic Escape injection through:
+```bash
+hyprctl dispatch sendshortcut , Escape, activewindow
+```
+  returned:
+```text
+sendshortcut: window not found
+```
+- Reason:
+  - Hyprland's `activewindow` target does not address layer-shell panel surfaces.
+- Close behavior was validated through IPC toggles and layer cleanup.
+- Manual keyboard/Escape testing remains useful before release, but no automated regression was found in layer state.
+
+### Final state
+- Current theme restored:
+  - `kanagawa`
+- Current repo status after QA:
+  - `main...origin/main`
+  - only memory/context updates should be committed if preserving this QA note
+- Strict log scan shows only known non-blocking warnings:
+  - `Could not attach Keys property ... is not an Item`
+- Point 6 is closed for this live notebook session.
+
+### Next step
+- Publish/handoff:
+  - commit memory/context QA notes if desired
+  - push `main`
+  - promote only after deciding this experimental visual direction is ready for the target channel
+
+## Session update - 2026-05-06 - points 7 and 8 Caelestia follow-up
+
+### User correction
+- The earlier saved plan had no explicit point 7 or point 8.
+- User clarified the real objective:
+  - implement Caelestia Shell's philosophy in Strata
+  - especially borders/drawers that visually integrate when opening, with animation/deformation
+  - current Strata screenshots still look too much like a separate attached panel
+
+### Point 7 - refresh and re-read Caelestia references
+- Existing local references were confirmed:
+  - `/home/ankh-intel/Projects/references/caelestia-shell`
+  - `/home/ankh-intel/Projects/references/caelestia-dotfiles`
+- `caelestia-shell` was fetched from GitHub:
+```text
+54cdd80c..4763a690  main -> origin/main
+```
+- `caelestia-dotfiles` was also fetched successfully.
+- Current Caelestia files inspected from `origin/main`:
+  - `modules/drawers/ContentWindow.qml`
+  - `modules/drawers/Regions.qml`
+  - `modules/drawers/Panels.qml`
+  - `modules/drawers/Exclusions.qml`
+  - `modules/launcher/Wrapper.qml`
+- Important updated finding:
+  - Caelestia keeps the fullscreen drawer content window, bar, frame `BlobInvertedRect`, and attached panel `BlobRect`s in the same visual layer and same `BlobGroup`.
+  - Panel wrappers animate with `offsetScale`.
+  - The matching `PanelBg` `BlobRect` shares that geometry.
+  - Panel content receives the same deformation matrix:
+```qml
+launcher.transform: Matrix4x4 {
+    matrix: launcherBg.deformMatrix
+}
+```
+  - The Strata exact-size panel approach is stable, but it cannot fully reproduce the Caelestia single-surface illusion while each panel owns an isolated `BlobGroup`.
+
+### Point 8 - first Strata deformation pass
+- Implemented a narrow, stable first pass in:
+  - `quickshell/frame/FrameBlobSurface.qml`
+  - `quickshell/frame/FrameLauncher.qml`
+  - `quickshell/frame/FrameThemePicker.qml`
+- `FrameBlobSurface.qml` now exposes:
+  - `deformMatrix`
+  - `rawDeformMatrix`
+  - `deformContent`
+  - `edgeSocketEnabled`
+- Panel content is transformed with the blob deformation matrix through:
+```qml
+transform: Matrix4x4 {
+  matrix: root.deformContent ? blobSurface.deformMatrix : identityMatrix.matrix
+}
+```
+- Added same-group edge sockets for `bottom` and `right` attached surfaces.
+  - These live inside `FrameBlobSurface`'s own `BlobGroup`.
+  - This is not the old rejected `StrataDrawers` pocket/bridge surface.
+  - It is still only a local approximation because it does not share a `BlobGroup` with the global frame.
+- Launcher and Theme Picker now use slightly stronger blob deformation tuning:
+  - Launcher: `deformScale: 0.000028`, `stiffness: 165`, `damping: 20`
+  - Theme Picker: `deformScale: 0.000022`, `stiffness: 170`, `damping: 20`
+
+### Validation
+- QML load passed:
+```bash
+timeout 5 quickshell -p /home/ankh-intel/dotfiles/quickshell/shell.qml --no-color
+```
+- Diff whitespace check passed:
+```bash
+git diff --check
+```
+- Live Quickshell was restarted through Hyprland.
+- Live instance after restart:
+  - `q6g5ow3net`
+  - pid `254258`
+- Launcher opened with expected layer geometry:
+```text
+600,624 720x456
+```
+- Final layer state returned clean:
+  - no active overlay
+  - no open exact panel
+- Strict log scan still only shows the known non-blocking `Keys property ... is not an Item` warnings.
+- Screenshot captured:
+```text
+/tmp/strata-point8-launcher-socket-open.png
+```
+
+### Important conclusion
+- Point 8 is a technical step, not the final visual destination.
+- Static screenshot still reads more like an attached exact panel than a true Caelestia single surface.
+- To actually reach the requested effect, the next implementation must introduce a shared visual surface/group for at least:
+  - the passive frame
+  - Launcher background
+  - Theme Picker background
+- But it must not regress into the old fullscreen `ShellFrame` input-capture failure.
+- The next safe direction is a visual-only shared surface with strict zero/bounded input, while exact-size panel windows continue owning keyboard/pointer input.
+
+## Session update - 2026-05-06 - shared visual surface implementation
+
+### User feedback
+- User pointed out correctly that the previous deformation pass did not visibly change enough.
+- The requested direction remains:
+  - Caelestia-like border/drawer integration
+  - frame and opened drawer should feel like one animated shell surface
+
+### Structural change implemented
+- Added shared panel state singleton:
+  - `quickshell/FramePanelState.qml`
+  - registered in `quickshell/qmldir`
+- Added visual-only shared surface:
+  - `quickshell/frame/FrameSharedSurface.qml`
+  - registered in `quickshell/frame/qmldir`
+- `shell.qml` now instantiates:
+```qml
+FrameSharedSurface {}
+```
+  before the exact-size panel windows.
+
+### How it works
+- `FrameSharedSurface` is a fullscreen top-layer visual surface.
+- It draws, in one `BlobGroup`:
+  - frame shape through `BlobInvertedRect`
+  - active Launcher or Theme Picker background through `BlobRect`
+- It uses `FramePanelState` to track:
+  - open/visible state
+  - `offsetScale`
+  - panel width/height
+- `FrameLauncher` and `FrameThemePicker` now publish their drawer state to `FramePanelState`.
+- Their local `FrameBlobSurface` instances now run with:
+```qml
+drawSurface: false
+```
+  so those exact-size windows are primarily content/input layers on top of the shared visual surface.
+
+### Important layer-order fix
+- First attempt mapped the shared surface only while active.
+- That put the fullscreen visual surface above the exact panel content, turning the Launcher into an empty block.
+- Fix:
+  - keep `FrameSharedSurface` mapped from startup
+  - use opacity/mask dimensions so it is visually empty when inactive
+  - this preserves stacking order under the exact panel content when drawers open
+
+### Validation
+- QML load passed:
+```bash
+timeout 5 quickshell -p /home/ankh-intel/dotfiles/quickshell/shell.qml --no-color
+```
+- Diff whitespace check passed:
+```bash
+git diff --check
+```
+- Live Quickshell restarted and loaded.
+- Live instance:
+  - `88u7im4net`
+  - pid `365768`
+- Launcher opened with:
+```text
+600,624 720x456
+```
+- Theme Picker opened with:
+```text
+392,608 1136x472
+```
+- Screenshots:
+```text
+/tmp/strata-shared-launcher-fixed.png
+/tmp/strata-shared-theme.png
+```
+- Final panel state was closed and overlay layer remained empty.
+- Strict log scan showed only known non-blocking `Keys property ... is not an Item` warnings.
+
+### Tradeoff introduced
+- Because the shared surface must remain mapped to stay below panel content, idle `hyprctl layers` now includes one fullscreen top-layer Quickshell surface.
+- Its mask is empty and opacity is zero when inactive, so it should not be a visual or input surface.
+- This needs explicit click-through validation in normal work, because earlier fullscreen surfaces caused input problems.
+- If it causes input regressions, do not keep fighting layer order. Move to a different design:
+  - draw the shared visual and content in one panel window for each drawer, or
+  - build a purpose-specific visual surface with a guaranteed lower stacking order.
+
+### Current status
+- The architecture now matches the Caelestia idea more closely than the previous pass:
+  - shared `BlobGroup`
+  - frame and drawer background in one visual surface
+  - exact panel window only owns content/input
+- It is still not final polish.
+- Next pass should tune the visual shape:
+  - reduce the hard card silhouette
+  - improve attachment between bottom frame and drawer body
+  - animate frame/panel deformation more noticeably during open/close
+  - validate no input capture while idle
+
+## Session update - 2026-05-07 - keep NixOS and clean Launcher shared surface
+
+### Decision
+- User asked whether it was worth continuing on NixOS or moving to Arch.
+- Current decision:
+  - keep NixOS for now.
+- Reasoning recorded for future sessions:
+  - Arch may feel nicer day to day, but Strata is currently relying on the NixOS declarative model for reproducibility and cross-device handoff.
+  - Do not start an Arch migration while the shell/frame/drawer architecture is still unsettled.
+
+### Screenshot review
+- User shared screenshots of the live system.
+- Main defect:
+  - Launcher/frame integration looked bad at the lower panel corners.
+  - The added socket/shoulder blobs looked like fake white bulges rather than a connected frame.
+- Live screenshot captured during validation:
+```text
+/tmp/strata-launcher-shared-surface-nosockets.png
+```
+- That screenshot also revealed that `FrameSharedSurface` was tinting/drawing a large fullscreen frame effect while Launcher was open.
+
+### Code cleanup
+- Edited:
+  - `quickshell/frame/FrameSharedSurface.qml`
+- Removed:
+  - the two `BlobRect` side sockets/shoulders around the active bottom panel
+  - the fullscreen `BlobInvertedRect` frame drawing
+  - the fullscreen side/bottom mask regions
+- Kept:
+  - active panel `BlobRect`
+  - exact-size panel content/input windows
+  - mapped shared surface with bounded mask
+- Resulting behavior:
+  - shared surface mask is now limited to:
+```qml
+x: activePanelX
+y: activePanelY - FrameTokens.frameBlend
+width: activePanelWidth
+height: activePanelHeight + FrameTokens.frameBlend * 2
+```
+  - no fake bottom corner blobs
+  - no fullscreen frame/tint from `FrameSharedSurface`
+
+### Validation
+- QML load:
+```bash
+timeout 5 quickshell -p /home/ankh-intel/dotfiles/quickshell/shell.qml --no-color
+```
+  - passed
+- Whitespace:
+```bash
+git diff --check
+```
+  - passed
+- Live restart:
+```bash
+quickshell kill
+systemd-run --user --unit=strata-quickshell --collect /home/ankh-intel/dotfiles/quickshell/scripts/quickshell-start.sh
+```
+- Service state:
+  - `strata-quickshell.service` active/running
+  - pid observed: `770369`
+- Launcher smoke:
+```bash
+quickshell ipc call launcher toggle
+hyprctl layers
+```
+  - Launcher geometry:
+```text
+600,624 720x456
+```
+- Screenshot after cleanup:
+```text
+/tmp/strata-launcher-panel-only-shared-surface.png
+```
+- Launcher was closed after the smoke test.
+- Final `hyprctl layers` showed no open exact panel layer.
+
+### Next-session guidance
+- Pull `main` on desktop and continue from this cleanup.
+- Treat `FrameSharedSurface` as experimental and visually conservative.
+- Do not bring back:
+  - fake side sockets/shoulders
+  - fullscreen frame drawing in `FrameSharedSurface`
+  - old fullscreen `ShellFrame`
+  - `StrataDrawers` top-layer quick fix
+- Next useful visual work:
+  - decide whether the shared-surface idea should become a true single-surface panel implementation, or whether Launcher should stay as a clean exact-size attached panel without forced Caelestia mimicry.

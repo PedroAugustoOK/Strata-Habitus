@@ -95,12 +95,22 @@ Item {
     gutter: FrameTokens.rightPanelGutter
     open: root.open
 
+    Binding { target: FramePanelState; property: "themePickerOpen"; value: root.open }
+    Binding { target: FramePanelState; property: "themePickerVisible"; value: drawer.visible }
+    Binding { target: FramePanelState; property: "themePickerOffsetScale"; value: drawer.offsetScale }
+    Binding { target: FramePanelState; property: "themePickerWidth"; value: drawer.width }
+    Binding { target: FramePanelState; property: "themePickerHeight"; value: drawer.height }
+
     FrameBlobSurface {
       anchors.fill: parent
+      drawSurface: false
       radius: FrameTokens.surfaceRadius
       attachedEdge: "bottom"
       fillColor: Colors.panelBackground
       borderColor: Qt.rgba(Colors.text1.r, Colors.text1.g, Colors.text1.b, Colors.darkMode ? 0.18 : 0.22)
+      deformScale: 0.000022
+      stiffness: 170
+      damping: 20
 
       Rectangle {
         anchors.fill: parent

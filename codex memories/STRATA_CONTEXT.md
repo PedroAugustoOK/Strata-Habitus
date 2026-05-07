@@ -1978,3 +1978,147 @@ systemd-run --user --unit=strata-quickshell --collect /home/ankh-intel/dotfiles/
 - If the goal is true Caelestia visual integration, the next pass should design a cleaner single-surface strategy, but exact-size panel windows should continue owning input.
 - Current published branch target for desktop continuation:
   - `main`
+
+## Solace transition handoff - 2026-05-07
+
+### Project direction changed
+- User decided to abandon the current Strata project implementation and reformulate the system completely.
+- Strata should now be treated as reference/history, not as the foundation to keep patching.
+- The new project is named:
+  - `Solace`
+- Solace is intended to be:
+  - personal only
+  - not a public distro
+  - not an ISO project
+  - a portable system repo for the user's own devices
+  - Arch-based, because Arch is the user's preferred distro
+
+### Design and architecture carryover
+- Keep from Strata:
+  - repo as source of truth
+  - Hyprland
+  - Quickshell
+  - launcher indexed from `.desktop`
+  - clipboard/history ideas
+  - screenshot selector idea
+  - Theme Picker/previews idea
+  - mako as notification backend/history with Quickshell UI
+  - host-specific profiles
+- Do not carry over:
+  - fullscreen `ShellFrame`
+  - permanent fullscreen transparent layer-shell surfaces
+  - fake pockets/bridges/sockets/shoulders
+  - permanent fullscreen click-catchers
+  - heavy App Center / Update Center complexity early
+  - current Strata frame/drawer architecture
+- Core Solace principle:
+  - first build a small, clean, predictable system
+  - then make it beautiful
+  - only then make it ambitious
+
+### Arch install decisions for first notebook
+- Host/system name:
+  - `Solace`
+- Installed via:
+  - `archinstall`
+- Target:
+  - notebook first
+- Chosen/recommended install shape:
+  - minimal profile
+  - `systemd-boot`
+  - Btrfs
+  - Btrfs compression enabled
+  - no LVM
+  - zram preferred
+  - timezone `America/Porto_Velho`
+  - automatic time sync enabled
+  - testing repos disabled
+  - pacman color enabled
+  - NetworkManager acceptable/preferred for final setup, although initial network was through `iwctl`
+  - PipeWire for audio
+  - Bluetooth acceptable for notebook
+  - no print service initially
+  - firewall enabled/preferred through `ufw`
+- Extra packages intended/installed:
+  - `git`
+  - `base-devel`
+  - `sudo`
+  - `curl`
+  - `wget`
+  - `vim`
+  - `nano`
+  - `openssh`
+  - `pacman-contrib`
+  - `btrfs-progs`
+  - `reflector`
+  - `nodejs`
+  - `npm`
+  - `man-db`
+  - `man-pages`
+  - `github-cli`
+- Some packages such as `vim`/`nano` appeared missing after install, suggesting the archinstall package step may have failed or not applied as expected.
+
+### Codex and GitHub on Solace
+- Codex was installed successfully on the new Arch system.
+- User started Codex there.
+- Because there was no browser initially, `gh auth login` used token login.
+- User reported GitHub connection succeeded.
+- User does not want to type a long context manually into TTY/Codex.
+- A bridge file was created and pushed from Strata:
+  - `codex memories/SOLACE_HANDOFF.md`
+- Commit:
+  - `c3b2e60 Add Solace handoff context`
+- Later this file was expanded with the latest TTY/bootstrap details.
+
+### Handoff transfer problems
+- Raw GitHub download of `SOLACE_HANDOFF.md` returned an HTML `400 Bad Request` page from OpenResty.
+- Authenticated `gh api` attempt returned:
+  - `gh: Not Found (HTTP 404)`
+- Likely causes:
+  - token did not have access to private `Strata-Habitus`
+  - path with space caused awkward API addressing
+  - repo/path/branch access issue
+- ABNT2 TTY keyboard issue:
+  - user could not type backslash
+  - avoid commands requiring `\` line continuation
+  - prefer one-line commands or separate commands
+
+### Temporary graphical bootstrap
+- Because pure TTY was too painful for token/copy/browser work, the next practical step is installing a temporary graphical environment:
+```bash
+sudo pacman -Syu
+sudo pacman -S --needed hyprland kitty firefox xdg-desktop-portal xdg-desktop-portal-hyprland qt6-wayland polkit dbus wayland xorg-xwayland
+```
+- If PipeWire pieces are missing:
+```bash
+sudo pacman -S --needed pipewire pipewire-pulse wireplumber
+systemctl --user enable --now pipewire pipewire-pulse wireplumber
+```
+- Minimal Hyprland config:
+```bash
+mkdir -p ~/.config/hypr
+printf 'monitor=,preferred,auto,1\nexec-once=kitty\nbind=SUPER,Return,exec,kitty\nbind=SUPER,B,exec,firefox\nbind=SUPER,Q,killactive\nbind=SUPER,M,exit\n' > ~/.config/hypr/hyprland.conf
+```
+- Start with:
+```bash
+Hyprland
+```
+- Keybinds:
+  - `Super+Enter` opens Kitty
+  - `Super+B` opens Firefox
+  - `Super+Q` closes active window
+  - `Super+M` exits Hyprland
+- If pacman asks for TTF font provider:
+  - choose `noto-fonts`
+  - also install `noto-fonts-emoji` if available
+
+### Desired seamless continuation
+- When continuing on Solace, read `SOLACE_HANDOFF.md` if available.
+- Do not make the user retype long context.
+- First Solace repo task:
+  - create `codex memories/SOLACE_CONTEXT.md`
+  - create `codex memories/SOLACE_MEMORY.md`
+  - create `docs/DESIGN.md`
+  - create `scripts/`, `packages/`, `hosts/notebook/`, `config/`, `docs/`
+  - create placeholders for `scripts/bootstrap`, `scripts/apply`, `scripts/update`, `scripts/clean`, `scripts/doctor`
+  - commit and push the initial Solace repo

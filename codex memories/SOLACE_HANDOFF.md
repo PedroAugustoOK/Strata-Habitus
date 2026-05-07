@@ -185,3 +185,148 @@ Create:
   - `scripts/doctor`
 
 Keep the first scripts conservative. They should not install a full desktop yet unless the user explicitly asks.
+
+## Live bootstrap continuation - 2026-05-07
+
+### What happened after the first handoff
+
+- User installed Arch on the notebook and named the system `Solace`.
+- User started Codex successfully on the new Arch system.
+- User does not want to manually type long context into the TTY.
+- Therefore this handoff file should be used as the bridge for Codex on the new machine.
+
+### GitHub/token state on the Arch notebook
+
+- `github-cli` / `gh` was installed or intended to be installed.
+- User chose token login because there was no browser yet.
+- Token login succeeded enough for the user to say "consegui conectar".
+- User likely selected broad token permissions. This is acceptable temporarily, but later the token should be deleted and replaced by a narrower token.
+- Do not ask the user to paste secrets into chat.
+
+### Attempted handoff download
+
+The first raw GitHub download attempt produced an HTML `400 Bad Request` page from OpenResty.
+
+The recommended authenticated API command was:
+
+```bash
+gh api repos/PedroAugustoOK/Strata-Habitus/contents/'codex memories/SOLACE_HANDOFF.md' --jq .content > handoff.b64
+base64 -d handoff.b64 > SOLACE_HANDOFF.md
+```
+
+That returned:
+
+```text
+gh: Not Found (HTTP 404)
+```
+
+Likely causes:
+
+- token did not have access to `PedroAugustoOK/Strata-Habitus`
+- path with space was awkward in GitHub API
+- branch/path access issue
+
+Alternative command that was suggested but not yet confirmed:
+
+```bash
+gh api 'repos/PedroAugustoOK/Strata-Habitus/contents/codex%20memories/SOLACE_HANDOFF.md?ref=main' --jq .content > handoff.b64
+base64 -d handoff.b64 > SOLACE_HANDOFF.md
+```
+
+### TTY keyboard issue
+
+- User is on a notebook ABNT2 keyboard in a TTY.
+- The backslash key could not be produced.
+- `AltGr + Q`, `AltGr + W`, `Ctrl+Alt+Q`, and similar guesses did not work.
+- Avoid giving commands that require `\` line continuations.
+- Prefer one-line commands or commands split into separate lines without backslash.
+- If needed later, try:
+
+```bash
+sudo loadkeys br-abnt2
+```
+
+or:
+
+```bash
+sudo loadkeys br-abnt
+```
+
+But at the time of handoff, the user asked for another approach instead of fighting the TTY keyboard.
+
+### Decision: install a temporary graphical environment
+
+Because doing GitHub/token/code transfer in pure TTY was too painful, the user decided to install just enough graphical environment to use a browser and copy commands.
+
+Recommended temporary install command:
+
+```bash
+sudo pacman -Syu
+sudo pacman -S --needed hyprland kitty firefox xdg-desktop-portal xdg-desktop-portal-hyprland qt6-wayland polkit dbus wayland xorg-xwayland
+```
+
+If PipeWire pieces are missing:
+
+```bash
+sudo pacman -S --needed pipewire pipewire-pulse wireplumber
+systemctl --user enable --now pipewire pipewire-pulse wireplumber
+```
+
+Create minimal Hyprland config:
+
+```bash
+mkdir -p ~/.config/hypr
+printf 'monitor=,preferred,auto,1\nexec-once=kitty\nbind=SUPER,Return,exec,kitty\nbind=SUPER,B,exec,firefox\nbind=SUPER,Q,killactive\nbind=SUPER,M,exit\n' > ~/.config/hypr/hyprland.conf
+```
+
+Start:
+
+```bash
+Hyprland
+```
+
+Keybinds:
+
+- `Super+Enter`: open Kitty
+- `Super+B`: open Firefox
+- `Super+Q`: close active window
+- `Super+M`: exit Hyprland
+
+### Font prompt during graphical install
+
+Pacman asked for a TTF font provider while installing the graphical stack.
+
+Recommended choice:
+
+- `noto-fonts`
+
+If available, also install:
+
+- `noto-fonts-emoji`
+
+Reason:
+
+- good default coverage for accents, symbols, Firefox, Hyprland and future Quickshell work.
+
+### Current immediate continuation for Codex on Solace
+
+If this file is successfully present on the Solace machine, Codex should:
+
+1. Read this file.
+2. Create `codex memories/SOLACE_CONTEXT.md`.
+3. Create `codex memories/SOLACE_MEMORY.md`.
+4. Create `docs/DESIGN.md`.
+5. Create the first repo structure.
+6. Add the real current facts:
+   - Arch installed
+   - Codex installed and running
+   - temporary Hyprland/Firefox environment may have been installed to make browser access possible
+   - token/TTY transfer was painful and should not be the normal workflow
+7. Commit and push the initial Solace repo.
+
+### Important UX note for future assistance
+
+The user wants the machine transition to feel seamless.
+
+When continuing on the Solace machine, do not ask the user to retype long context.
+Prefer reading local handoff/memory files and doing the repo setup directly.

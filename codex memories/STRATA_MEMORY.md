@@ -2612,3 +2612,193 @@ hyprctl layers
   - `StrataDrawers` top-layer quick fix
 - Next useful visual work:
   - decide whether the shared-surface idea should become a true single-surface panel implementation, or whether Launcher should stay as a clean exact-size attached panel without forced Caelestia mimicry.
+
+## Session update - 2026-05-07 - Solace migration planning and Arch bootstrap
+
+### Project decision
+- User decided to abandon the current Strata implementation.
+- User still likes ideas from Strata but wants a new design and a new system foundation.
+- New project name:
+  - `Solace`
+- Solace is not intended to be an ISO or public distro.
+- Solace is a personal system repo for the user's own devices.
+- Base distro:
+  - Arch Linux
+- Quickshell should still be used.
+
+### Design lessons to carry forward
+- Strata did not fail for lack of ideas; it became too coupled too early.
+- Keep:
+  - repo as source of truth
+  - Hyprland + Quickshell
+  - strong personal visual identity
+  - launcher indexed by `.desktop`
+  - clipboard/history
+  - screenshot selector idea
+  - theme picker/previews
+  - mako backend with Quickshell UI
+  - host profiles
+- Avoid:
+  - fullscreen `ShellFrame`
+  - permanent fullscreen transparent layer-shell surfaces
+  - fake visual integration through pockets/bridges/sockets/shoulders
+  - permanent click-catchers
+  - too many centers/panels before the base is stable
+  - advanced Caelestia-like frame/drawer work before input/layer behavior is proven
+- Rule:
+  - every shell surface must have clear visual/input/content/lifecycle responsibility.
+- Principle:
+  - first small, clean and predictable
+  - then beautiful
+  - only then ambitious
+
+### Arch cleanliness model
+- Arch will be mutable but controlled by the repo.
+- Package lists should become source of truth.
+- Configs should be linked/applied from repo.
+- Scripts should audit drift.
+- Use `paccache`/`pacman-contrib` for cache cleanup.
+- Review orphan packages before removal.
+- Prefer pacman/AUR/Flatpak/local PKGBUILD over random manual installs.
+- Large or proprietary apps can be isolated with Flatpak when useful.
+
+### Archinstall guidance used
+- Notebook first.
+- System name/hostname chosen:
+  - `Solace`
+- Minimal profile.
+- Locale recommendation:
+  - `en_US.UTF-8` for searchable logs/errors
+- Keyboard:
+  - ABNT2 intended, but TTY layout later caused problems.
+- Timezone:
+  - `America/Porto_Velho`
+- Automatic time sync:
+  - enabled
+- Mirrors:
+  - Brazil + United States + Worldwide were recommended
+- Repositories:
+  - core/extra implicit
+  - testing repos disabled
+  - multilib enabled if available/needed
+- Disk:
+  - Btrfs
+  - compression enabled
+  - no LVM
+  - encryption recommended for notebook if desired
+- Swap:
+  - zram preferred unless hibernation is needed
+- Bootloader:
+  - `systemd-boot`
+- Kernels:
+  - `linux`
+  - `linux-lts` recommended as fallback
+- UKI:
+  - not needed for first install
+- Applications:
+  - PipeWire
+  - Bluetooth yes if useful
+  - print/CUPS no initially
+  - power management through `power-profiles-daemon` if available
+  - firewall enabled, preferably `ufw`
+- Pacman color:
+  - enabled
+- Additional packages recommended:
+  - `git`
+  - `base-devel`
+  - `sudo`
+  - `curl`
+  - `wget`
+  - `vim`
+  - `nano`
+  - `openssh`
+  - `pacman-contrib`
+  - `btrfs-progs`
+  - `reflector`
+  - `nodejs`
+  - `npm`
+  - `man-db`
+  - `man-pages`
+  - `github-cli`
+
+### Post-install reality
+- User was connected through `iwctl`.
+- `npm` was initially missing, so the package installation from archinstall likely did not apply fully.
+- Recommended recovery:
+```bash
+sudo pacman -Syu
+sudo pacman -S --needed nodejs npm
+```
+- Codex was installed successfully afterward using npm.
+- User started Codex on the new Arch system.
+
+### GitHub/repo bootstrap issue
+- User wanted memory/context available on the Solace machine without manually typing long prompts.
+- A bridge file was created in Strata:
+  - `codex memories/SOLACE_HANDOFF.md`
+- First commit/push:
+  - `c3b2e60 Add Solace handoff context`
+- The handoff was intended to be downloaded into `~/Projects/Solace` and read by Codex there.
+- Raw GitHub download produced an OpenResty `400 Bad Request` HTML page.
+- `gh api` authenticated attempt returned `HTTP 404`.
+- Likely issue:
+  - token access to private repo and/or awkward path with spaces.
+
+### TTY friction
+- User could not type backslash on notebook ABNT2 in TTY.
+- Avoid commands requiring backslash line continuations.
+- `AltGr` combinations did not work as expected.
+- Suggested but not confirmed:
+```bash
+sudo loadkeys br-abnt2
+```
+or:
+```bash
+sudo loadkeys br-abnt
+```
+
+### Temporary GUI decision
+- Because terminal-only token/copy/browser work was too painful, next step is to install a minimal graphical environment.
+- Recommended:
+```bash
+sudo pacman -Syu
+sudo pacman -S --needed hyprland kitty firefox xdg-desktop-portal xdg-desktop-portal-hyprland qt6-wayland polkit dbus wayland xorg-xwayland
+```
+- If audio services are missing:
+```bash
+sudo pacman -S --needed pipewire pipewire-pulse wireplumber
+systemctl --user enable --now pipewire pipewire-pulse wireplumber
+```
+- Minimal Hyprland config:
+```bash
+mkdir -p ~/.config/hypr
+printf 'monitor=,preferred,auto,1\nexec-once=kitty\nbind=SUPER,Return,exec,kitty\nbind=SUPER,B,exec,firefox\nbind=SUPER,Q,killactive\nbind=SUPER,M,exit\n' > ~/.config/hypr/hyprland.conf
+```
+- Start:
+```bash
+Hyprland
+```
+- During the font provider prompt, choose:
+  - `noto-fonts`
+  - `noto-fonts-emoji` if available
+
+### Seamless continuation goal
+- User explicitly wants to pass the conversation to the new machine and not feel the machine switch.
+- Future Codex on Solace should read the local handoff/memory files and continue directly.
+- First Solace tasks:
+  - create `codex memories/SOLACE_CONTEXT.md`
+  - create `codex memories/SOLACE_MEMORY.md`
+  - create `docs/DESIGN.md`
+  - create base repo dirs:
+    - `scripts/`
+    - `packages/`
+    - `hosts/notebook/`
+    - `config/`
+    - `docs/`
+  - create conservative executable placeholders:
+    - `scripts/bootstrap`
+    - `scripts/apply`
+    - `scripts/update`
+    - `scripts/clean`
+    - `scripts/doctor`
+  - commit and push initial Solace repo
